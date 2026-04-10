@@ -92,7 +92,7 @@ const services = [
     priceRange: "Nu. 100K - 2M+",
     icon: Code2,
     color: "neon",
-    projects: 150
+    stats: { projects: "150+", users: "10K+" }
   },
   {
     id: "power",
@@ -107,7 +107,7 @@ const services = [
     priceRange: "Nu. 12K - 180K",
     icon: Zap,
     color: "neon",
-    clients: "400+"
+    stats: { clients: "400+", uptime: "99.9%" }
   },
   {
     id: "network",
@@ -122,7 +122,7 @@ const services = [
     priceRange: "Nu. 15K - 600K+",
     icon: Wifi,
     color: "neon",
-    projects: "300+"
+    stats: { projects: "300+", speed: "10Gbps" }
   }
 ];
 

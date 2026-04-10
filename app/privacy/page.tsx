@@ -1,3 +1,9 @@
+import { Metadata } from "next";
+import { Navigation } from "@/components/navigation";
+import { FooterSection } from "@/components/footer-section";
+import { WhatsAppButton } from "@/components/whatsapp-button";
+import { Shield } from "lucide-react";
+
 export const metadata: Metadata = {
   title: 'Compliance Protocols & Data Governance | INNOVATE BHUTAN',
   description: 'Operational governance, data protocols, and terms of engagement for the Innovate Bhutan talent brokerage network.',
