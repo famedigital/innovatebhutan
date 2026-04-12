@@ -161,7 +161,7 @@ export default function ClientPortal() {
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
-              <p className="text[10px] text-[#717171] uppercase">AMC Status</p>
+              <p className="text-[10px] text-[#717171] uppercase">AMC Status</p>
               <Badge className={activeAMC ? 'bg-green-100 text-green-700' : 'bg-gray-100'}>
                 {activeAMC ? 'Active' : 'None'}
               </Badge>

@@ -3,6 +3,7 @@
 import { BookOpen, Search, ChevronRight, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 const docsSections = [
   {
@@ -104,7 +105,7 @@ export default function DocsPage() {
             <CardContent className="pt-0">
               <div className="space-y-2">
                 {section.items.map((item, i) => (
-                  <button key={i} className="w-full flex items-center justify-between p-2 rounded hover:bg-[#F3F3F1] text-left transition-colors">
+                  <button key={i} className="w-full flex items-center justify-between p-2 rounded hover:bg-[#F3F3F1] text-left transition-colors" onClick={() => toast.info("Documentation coming soon", { description: `${item.title} documentation will be available shortly.` })}>
                     <div>
                       <p className="text-sm font-medium">{item.title}</p>
                       <p className="text-xs text-[#717171]">{item.description}</p>
