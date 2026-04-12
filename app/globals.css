@@ -5,44 +5,100 @@
 
 /* ULTRA LUXURY PREMIUM DESIGN SYSTEM */
 :root {
-  /* CORE LUXE PALETTE - Solar Hub (Light Mode) */
+  /* COLORFUL LIGHT MODE - Vibrant & Premium */
   --white: #FFFFFF;
-  --off-white: #F8FAFC;
-  --pure-black: #000000;
-  --midnight: #020617;
+  --off-white: #FAFBFC;
+  --pure-black: #0A0A0A;
+  --midnight: #0F172A;
   
-  /* ULTRA LUXURY: IVORY PRECISION */
-  --background: #F9F9F7; /* Alabaster / Bone */
-  --foreground: #2D2D2D; /* Deep Charcoal */
-  --card: rgba(253, 253, 251, 0.8);
-  --card-foreground: #2D2D2D;
-  --primary: #2D2D2D;  
-  --primary-foreground: #F9F9F7;
-  --accent: #D4AF37; /* Muted Gold */
-  --muted: #708090; /* Slate Grey */
-  --border: #E5E5E1; 
+  /* Vibrant Colorful Palette */
+  --background: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 50%, #FEF3C7 100%);
+  --background-solid: #F8FAFC;
+  --foreground: #1E293B;
+  
+  /* Colorful Cards */
+  --card: rgba(255, 255, 255, 0.95);
+  --card-foreground: #1E293B;
+  
+  /* Vibrant Primary - Emerald Green */
+  --primary: #10B981;
+  --primary-foreground: #FFFFFF;
+  --primary-light: #D1FAE5;
+  --primary-glow: rgba(16, 185, 129, 0.3);
+  
+  /* Secondary Colors for Variety */
+  --secondary: #8B5CF6; /* Purple */
+  --secondary-light: #EDE9FE;
+  --accent: #F59E0B; /* Amber/Gold */
+  --accent-light: #FEF3C7;
+  
+  /* Info & Warm Colors */
+  --info: #3B82F6; /* Blue */
+  --info-light: #DBEAFE;
+  --warning: #F97316; /* Orange */
+  --warning-light: #FFEDD5;
+  --success: #22C55E;
+  --success-light: #DCFCE7;
+  --destructive: #EF4444;
+  --destructive-light: #FEE2E2;
+  
+  --muted: #64748B;
+  --muted-light: #F1F5F9;
+  --border: #E2E8F0;
   --radius: 20px;
-  --glass-stroke: rgba(255, 255, 255, 0.6);
-  --luxury-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.04);
   
-  /* CRYSTAL EFFECTS */
-  --glass-bg: rgba(255, 255, 255, 0.45);
-  --glass-border: rgba(255, 255, 255, 0.6);
-  --glass-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.03);
-  --prestige-blur: blur(40px);
+  /* Glass Effects */
+  --glass-stroke: rgba(255, 255, 255, 0.8);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(16, 185, 129, 0.2);
+  --glass-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);
+  --prestige-blur: blur(20px);
+  
+  /* Vibrant Shadows */
+  --shadow-primary: 0 4px 20px rgba(16, 185, 129, 0.25);
+  --shadow-secondary: 0 4px 20px rgba(139, 92, 246, 0.25);
+  --shadow-accent: 0 4px 20px rgba(245, 158, 11, 0.25);
+  --luxury-shadow: 0 20px 60px -15px rgba(16, 185, 129, 0.15);
 }
 
 .dark {
-  /* COMMAND CORE (Dark Mode) */
-  --background: #000000; /* Deep Apple Black */
-  --foreground: #F5F5F7; /* Apple Off-White */
-  --card: rgba(28, 28, 30, 0.6); /* Apple Dark Gray */
+  /* NEON GLOW DARK MODE - Premium & Glowing */
+  --background: #000000;
+  --foreground: #F8FAFC;
+  --card: rgba(10, 10, 10, 0.9);
   --card-foreground: #FFFFFF;
-  --border: rgba(255, 255, 255, 0.1); 
-  --primary: #FFFFFF; /* Pure White */
+  --border: rgba(255, 255, 255, 0.08);
+  
+  /* Neon Primary */
+  --primary: #10B981;
   --primary-foreground: #000000;
-  --neon-shadow: 0 4px 30px rgba(255, 255, 255, 0.05); /* Subtle White Glow */
+  --primary-light: rgba(16, 185, 129, 0.15);
+  
+  /* Neon Accent */
+  --secondary: #A855F7;
+  --accent: #22D3EE; /* Cyan neon */
+  
+  --info: #3B82F6;
+  --warning: #FB923C;
+  --success: #4ADE80;
+  --destructive: #F87171;
+  
+  --muted: #94A3B8;
+  --border: rgba(255, 255, 255, 0.1);
+  --radius: 20px;
+  
+  /* Neon Glass Effects */
+  --glass-bg: rgba(20, 20, 20, 0.8);
+  --glass-border: rgba(16, 185, 129, 0.3);
+  --glass-shadow: 0 0 40px rgba(16, 185, 129, 0.2), 0 0 80px rgba(168, 85, 247, 0.1);
   --prestige-blur: blur(30px);
+  
+  /* Neon Glows */
+  --neon-shadow: 0 0 30px rgba(16, 185, 129, 0.4), 0 0 60px rgba(16, 185, 129, 0.2);
+  --shadow-primary: 0 0 30px rgba(16, 185, 129, 0.5), 0 0 60px rgba(16, 185, 129, 0.3);
+  --shadow-secondary: 0 0 30px rgba(168, 85, 247, 0.5);
+  --shadow-accent: 0 0 30px rgba(34, 211, 238, 0.5);
+  --luxury-shadow: 0 0 60px rgba(16, 185, 129, 0.3);
 }
 
 @layer base {
@@ -65,6 +121,18 @@
 
 .animate-marquee {
   animation: marquee 40s linear infinite;
+}
+
+/* Animated text color for BHUTAN */
+@keyframes textColorCycle {
+  0%, 100% { color: #10B981; }
+  25% { color: #8B5CF6; }
+  50% { color: #F59E0B; }
+  75% { color: #3B82F6; }
+}
+
+.animate-text-color {
+  animation: textColorCycle 4s ease-in-out infinite;
 }
 
 @layer utilities {
@@ -142,14 +210,27 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
+  
+  html {
+    @apply scroll-smooth;
+  }
+  
   html, body {
     @apply bg-background text-foreground h-full selection:bg-primary/20 selection:text-primary;
   }
-  /* Ensure Next.js root fills viewport */
-  #__next, [data-overlay-container] {
-    height: 100%;
+  
+  /* Light mode gradient background */
+  body {
+    background: var(--background);
+    background-attachment: fixed;
+  }
+  
+  /* Dark mode solid background */
+  .dark body,
+  body.dark {
+    background: var(--background);
   }
 }
 
