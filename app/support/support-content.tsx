@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  MessageCircle, 
-  Phone, 
-  Mail, 
-  FileText, 
-  Clock, 
-  Shield, 
+import { toast } from "sonner";
+import {
+  MessageCircle,
+  Phone,
+  Mail,
+  FileText,
+  Clock,
+  Shield,
   Wrench,
   ChevronDown,
   ChevronUp,
@@ -60,18 +61,61 @@ function ServiceRequestForm() {
     location: "",
     description: ""
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const dzongkhags = [
-    "Thimphu", "Paro", "Punakha", "Wangdue Phodrang", "Phuentsholing", 
-    "Bumthang", "Trongsa", "Zhemgang", "Bajoton", "Sarpang", 
+    "Thimphu", "Paro", "Punakha", "Wangdue Phodrang", "Phuentsholing",
+    "Bumthang", "Trongsa", "Zhemgang", "Bajoton", "Sarpang",
     "Chhukha", "Dagana", "Tsirang", "Ha", "Samtse",
     "Gasa", "Lhuentse", "Mongar", "Tashigang", "Tromshoen", "Yongkha", "Zhongar"
   ];
 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          service: formData.serviceType,
+          message: formData.description,
+          formType: 'service-request'
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success('System Request Executed!', {
+          description: 'Your service request has been logged. Our team will contact you shortly.'
+        });
+        setFormData({
+          name: "",
+          phone: "",
+          email: "",
+          serviceType: "",
+          location: "",
+          description: ""
+        });
+      } else {
+        toast.error('Request Failed', {
+          description: result.error || 'Something went wrong. Please try again.'
+        });
+      }
+    } catch (error) {
+      toast.error('Network Error', {
+        description: 'Please check your connection and try again.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <form name="service-request" method="POST" data-netlify="true" className="space-y-6">
-      <input type="hidden" name="form-name" value="service-request" />
-      
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid sm:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-2">Identity Signature</label>
@@ -153,10 +197,11 @@ function ServiceRequestForm() {
 
       <button
         type="submit"
-        className="w-full py-5 bg-primary text-[#020617] font-bold uppercase text-[10px] tracking-[0.3em] rounded-2xl flex items-center justify-center gap-3 hover:bg-white hover:scale-[1.02] transition-all shadow-[0_0_20px_rgba(57,255,20,0.2)]"
+        disabled={isSubmitting}
+        className="w-full py-5 bg-primary text-[#020617] font-bold uppercase text-[10px] tracking-[0.3em] rounded-2xl flex items-center justify-center gap-3 hover:bg-white hover:scale-[1.02] transition-all shadow-[0_0_20px_rgba(57,255,20,0.2)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
         <Send className="w-4 h-4" />
-        Execute System Request
+        {isSubmitting ? 'Processing...' : 'Execute System Request'}
       </button>
     </form>
   );

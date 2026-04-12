@@ -8,7 +8,7 @@
 - **Database**: Supabase (PostgreSQL) + Drizzle ORM
 - **Styling**: Tailwind CSS v4 + Radix UI
 - **Validation**: React Hook Form + Zod
-- **Deployment**: Netlify
+- **Deployment**: Vercel
 - **Media**: Cloudinary
 
 ## Project Structure
