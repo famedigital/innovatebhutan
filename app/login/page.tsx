@@ -177,14 +177,14 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleAuth}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-[#717171] text-xs font-medium">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder={loginAs === "client" ? "your@company.bt" : "admin@innovate.bt"} 
-                required 
+              <Input
+                id="email"
+                type="email"
+                placeholder={loginAs === "client" ? "your@company.bt" : "admin@innovate.bt"}
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="border-[#E5E5E1] bg-[#FAFAFA] text-[#1A1A1A] placeholder:text-[#A3A3A3] focus:border-[#3ECF8E] focus:ring-[#3ECF8E]/20 transition-all h-10"
@@ -192,25 +192,25 @@ export default function LoginPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password" className="text-[#717171] text-xs font-medium">Password</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                required 
+              <Input
+                id="password"
+                type="password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="border-[#E5E5E1] bg-[#FAFAFA] text-[#1A1A1A] placeholder:text-[#A3A3A3] focus:border-[#3ECF8E] focus:ring-[#3ECF8E]/20 transition-all h-10"
               />
             </div>
-            
+
             {loginAs === "client" && !isSignUp && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mt-4">
                 <p className="text-xs text-blue-700">
                   🔐 Client Portal: Access your invoices, AMC contracts, and support tickets.
                 </p>
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex flex-col gap-4">
+          <CardFooter className="flex flex-col gap-6">
             <Button 
               type="submit" 
               disabled={loading}
