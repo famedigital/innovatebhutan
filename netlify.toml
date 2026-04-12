@@ -1,9 +1,14 @@
 [build]
-  command = "npm install && npm run build"
+  command = "npm install && npm run build && cp -r .next/static .next/server/app/ && cp -r public .next/server/app/"
   publish = ".next/server/app"
+
+[[redirects]]
+  from = "/_next/*"
+  to = "/_next/:splat"
+  status = 200
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  force = true
+  force = false
