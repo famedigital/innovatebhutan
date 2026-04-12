@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function ServicesPage() {
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-slate-50 dark:bg-black transition-colors">
       <Navigation />
       <ServicesContent />
       <FooterSection />

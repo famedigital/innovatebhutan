@@ -14,7 +14,7 @@ export function WhatsAppButton() {
 
   return (
     <motion.a
-      href="https://wa.me/97517000000?text=Hi, I'd like to inquire about your services"
+      href="https://wa.me/97517268753?text=Hi, I'd like to inquire about your services"
       target="_blank"
       rel="noopener noreferrer"
       initial={{ opacity: 0, scale: 0.8, y: 20 }}
@@ -43,3 +43,4 @@ export function WhatsAppButton() {
     </motion.a>
   );
 }
+

@@ -165,7 +165,7 @@ const brands = [
 
 function BrandModal({ brand, onClose, onNext, onPrev }: { 
   brand: typeof brands[0]; 
-  onClose: () => void;
+  onClose: () => void; 
   onNext: () => void;
   onPrev: () => void;
 }) {
@@ -187,19 +187,19 @@ function BrandModal({ brand, onClose, onNext, onPrev }: {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="relative w-full max-w-4xl bg-[#0f172a] rounded-3xl shadow-[0_0_50px_rgba(57,255,20,0.1)] overflow-hidden border border-white/10"
+        className="relative w-full max-w-4xl bg-white dark:bg-[#0f172a] rounded-[40px] shadow-2xl overflow-hidden border border-slate-100 dark:border-white/10"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-[#39FF14] hover:text-[#020617] text-white/70 transition-all border border-white/10"
+          className="absolute top-6 right-6 z-10 w-12 h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-[#10B981] hover:text-white text-white transition-all border border-white/10"
         >
-          <X className="w-5 h-5" />
+          <X className="w-6 h-6" />
         </button>
 
         <div className="flex flex-col md:flex-row">
           {/* Left 60% - Image Slider */}
-          <div className="w-full md:w-[60%] relative h-64 md:h-[480px] bg-black">
+          <div className="w-full md:w-[60%] relative h-72 md:h-[520px] bg-black">
             <AnimatePresence mode="wait">
               <motion.img
                 key={currentImage}
@@ -209,20 +209,20 @@ function BrandModal({ brand, onClose, onNext, onPrev }: {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
-                className="w-full h-full object-cover grayscale opacity-70"
+                className="w-full h-full object-cover opacity-90"
               />
             </AnimatePresence>
 
             {/* Slider Controls */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2">
               {brand.images.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentImage(idx)}
-                  className={`w-2 h-2 rounded-full transition-all ${
+                  className={`h-1.5 transition-all rounded-full ${
                     idx === currentImage 
-                      ? "bg-[#39FF14] shadow-[0_0_10px_rgba(57,255,20,0.8)] w-6" 
-                      : "bg-white/30 hover:bg-white/70"
+                      ? "bg-[#10B981] w-8 shadow-[0_0_15px_#10B981]" 
+                      : "bg-white/30 hover:bg-white/60 w-4"
                   }`}
                 />
               ))}
@@ -231,63 +231,61 @@ function BrandModal({ brand, onClose, onNext, onPrev }: {
             {/* Arrow Controls */}
             <button
               onClick={() => setCurrentImage((prev) => (prev === 0 ? brand.images.length - 1 : prev - 1))}
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-[#39FF14] text-white hover:text-[#020617] transition-all border border-white/10"
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-[#10B981] text-white transition-all border border-white/10"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-6 h-6" />
             </button>
             <button
               onClick={() => setCurrentImage((prev) => (prev === brand.images.length - 1 ? 0 : prev + 1))}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-[#39FF14] text-white hover:text-[#020617] transition-all border border-white/10"
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-[#10B981] text-white transition-all border border-white/10"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-6 h-6" />
             </button>
           </div>
 
           {/* Right 40% - Brand Details */}
-          <div className="w-full md:w-[40%] p-6 md:p-8 flex flex-col relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#39FF14]/5 rounded-bl-full blur-2xl pointer-events-none" />
-            
+          <div className="w-full md:w-[40%] p-8 md:p-10 flex flex-col relative overflow-hidden bg-white dark:bg-[#0f172a]">
             {/* Header */}
-            <div className="mb-6 relative z-10">
-              <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#39FF14] bg-[#39FF14]/10 px-2 py-1 rounded inline-block">
-                {brand.category} Node
+            <div className="mb-8 relative z-10">
+              <span className="text-[10px] uppercase font-black tracking-[0.2em] text-[#10B981] bg-[#10B981]/10 px-3 py-1.5 rounded-full inline-block">
+                {brand.category} Excellence
               </span>
-              <h2 className="text-3xl font-bold text-white mt-3 tracking-tight uppercase">{brand.name}</h2>
+              <h2 className="text-4xl font-black text-[#0F172A] dark:text-white mt-4 tracking-tighter uppercase leading-none">{brand.name}</h2>
             </div>
 
             {/* Description */}
-            <div className="mb-5 relative z-10">
-              <h3 className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-2">Operational Spec</h3>
-              <p className="text-sm text-white/60 leading-relaxed font-medium">{brand.description}</p>
-            </div>
-
-            {/* Famous For */}
-            <div className="mb-5 relative z-10">
-              <h3 className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-2">Primary Arsenal</h3>
-              <p className="text-sm text-white font-medium">{brand.famousFor}</p>
+            <div className="mb-6 relative z-10">
+              <h3 className="text-[10px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.2em] mb-3">Service Narrative</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">{brand.description}</p>
             </div>
 
             {/* Matrix Data */}
-            <div className="grid grid-cols-2 gap-4 mb-8 relative z-10">
-              <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-                <h3 className="text-[10px] font-bold text-[#39FF14] uppercase tracking-[0.2em] mb-1">Cap Range</h3>
-                <p className="text-[11px] text-white font-mono">{brand.priceRange}</p>
+            <div className="grid grid-cols-1 gap-4 mb-10 relative z-10">
+              <div className="bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5">
+                <h3 className="text-[10px] font-black text-[#10B981] uppercase tracking-[0.2em] mb-1">Primary Specialty</h3>
+                <p className="text-xs text-[#0F172A] dark:text-white font-bold">{brand.famousFor}</p>
               </div>
-              <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-                <h3 className="text-[10px] font-bold text-[#39FF14] uppercase tracking-[0.2em] mb-1">Resilience</h3>
-                <p className="text-[11px] text-white font-mono">{brand.lifespan}</p>
+              <div className="flex gap-4">
+                <div className="flex-1 bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5 text-center">
+                  <h3 className="text-[8px] font-black text-slate-400 uppercase mb-1">Scale</h3>
+                  <p className="text-[10px] text-[#0F172A] dark:text-white font-mono font-bold tracking-tight">{brand.priceRange}</p>
+                </div>
+                <div className="flex-1 bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5 text-center">
+                  <h3 className="text-[8px] font-black text-slate-400 uppercase mb-1">Index</h3>
+                  <p className="text-[10px] text-[#0F172A] dark:text-white font-mono font-bold tracking-tight">{brand.lifespan}</p>
+                </div>
               </div>
             </div>
 
             {/* CTA */}
             <div className="mt-auto relative z-10">
               <a
-                href="https://wa.me/97517000000"
+                href="https://wa.me/97517268753"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 bg-[#39FF14] text-[#020617] text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-white hover:scale-[1.02] transition-all shadow-[0_0_20px_rgba(57,255,20,0.2)]"
+                className="w-full inline-flex items-center justify-center gap-3 px-8 py-5 bg-[#10B981] text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-[#059669] hover:scale-[1.02] transition-all shadow-xl shadow-emerald-100 dark:shadow-none"
               >
-                Initiate Link-Up
+                Sync with Expert
                 <ExternalLink className="w-4 h-4" />
               </a>
             </div>
@@ -301,28 +299,57 @@ function BrandModal({ brand, onClose, onNext, onPrev }: {
 export function BrandsSection() {
   const [selectedBrand, setSelectedBrand] = useState<number | null>(null);
 
+  const trustedClients = [
+    "Chimi Jamyang Pvt Ltd", "Baleno", "T.T Extra", "YOYO Bhutan",
+    "Malaya Jewelry", "Capital P.M.S", "Hayate Ramen", "Namsey Medical",
+    "Khuenphen Pharmacy", "Yangki Enterprise Paro", "Idesire", "Smilers Bistero",
+    "E-World Digital", "Shoe Space", "Dokar Mart", "SPCG", "Explore Pizza",
+    "Lilly Traders", "Urban Dumra", "Kuensel Corporation", "Zeeling Tshongkhang",
+    "DSB Book Store", "Paro Canteen", "Paro Momo Corner", "Zeppo Sales",
+    "Shopper's Store", "Daily Chew Cafe", "Lhoden Automobile Workshop", "Shoponline.Bt",
+    "Indra & Kausila Pvt Ltd", "Sakten Tours & Treks", "Namgay Venture Pvt Ltd",
+    "Druk Main Liquor Shop", "Burger Point", "Druk Pizza Thimphu"
+  ];
+
   return (
     <div className="h-full">
-      <div className="mb-6">
+      {/* Enterprise Verification Marquee */}
+      <div className="mb-12 overflow-hidden border-y border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02] py-4 -mx-4 sm:-mx-0 sm:rounded-[32px] transition-colors">
+        <div className="flex items-center gap-4 px-8 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-white/30 mb-3">
+          <Shield className="w-4 h-4 text-[#10B981]" />
+          Validated By 350+ Enterprises
+        </div>
+        <div className="relative flex overflow-x-hidden group">
+          <div className="animate-marquee whitespace-nowrap flex items-center gap-12 py-2">
+            {[...trustedClients, ...trustedClients].map((client, i) => (
+              <span key={i} className="text-xl font-black tracking-tighter text-slate-300 dark:text-white/20 hover:text-[#10B981] dark:hover:text-primary dark:hover:neon-text transition-all cursor-default uppercase">
+                {client}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-8">
         <motion.span
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="text-xs font-bold uppercase tracking-[0.2em] text-[#39FF14] mb-2 block"
+          className="text-xs font-bold uppercase tracking-[0.3em] text-[#10B981] dark:text-primary mb-2 block"
         >
-          AUTHORIZED NODES
+          AUTHORIZED SUPPLY CHAIN
         </motion.span>
         <motion.h2
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-3xl sm:text-4xl font-bold tracking-tighter text-white uppercase text-shadow-sm"
+          className="text-3xl sm:text-4xl font-black tracking-tighter text-[#0F172A] dark:text-white uppercase dark:neon-text"
         >
-          Partnership Matrix
+          Hardware Alliances
         </motion.h2>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {brands.map((brand, index) => (
           <motion.button
             key={brand.name}
@@ -331,11 +358,10 @@ export function BrandsSection() {
             viewport={{ once: true }}
             transition={{ delay: index * 0.03 }}
             onClick={() => setSelectedBrand(index)}
-            className="group relative bg-[#0f172a]/50 backdrop-blur-md border border-white/5 rounded-2xl p-4 text-center hover:border-[#39FF14]/40 hover:bg-[#39FF14]/5 transition-all duration-300 cursor-pointer overflow-hidden"
+            className="group relative bg-white dark:bg-[#0A0A0A] backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl p-5 text-center hover:border-[#10B981] dark:hover:border-primary dark:hover:shadow-[0_0_20px_rgba(57,255,20,0.1)] transition-all duration-300 cursor-pointer overflow-hidden shadow-sm"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-[#39FF14]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative z-10 text-base font-bold text-white mb-1 tracking-tight group-hover:text-[#39FF14] transition-colors">{brand.name}</div>
-            <div className="relative z-10 text-[10px] font-mono uppercase tracking-widest text-[#39FF14]/50 group-hover:text-[#39FF14]/80">{brand.category}</div>
+            <div className="relative z-10 text-base font-black text-[#0F172A] dark:text-white mb-1 tracking-tight group-hover:text-[#10B981] dark:group-hover:text-primary transition-colors">{brand.name}</div>
+            <div className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-[#10B981]/50 dark:text-primary/50 group-hover:text-[#10B981] dark:group-hover:text-primary">{brand.category}</div>
           </motion.button>
         ))}
       </div>
@@ -357,25 +383,25 @@ export function BrandsSection() {
         initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="mt-6 flex flex-wrap items-center gap-4 p-5 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm"
+        className="mt-8 flex flex-wrap items-center gap-6 p-6 bg-[#10B981]/5 rounded-[32px] border border-[#10B981]/10 backdrop-blur-sm"
       >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#39FF14]/10 border border-[#39FF14]/20 rounded-xl flex items-center justify-center">
-            <Shield className="w-5 h-5 text-[#39FF14]" />
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-sm">
+            <Shield className="w-6 h-6 text-[#10B981]" />
           </div>
           <div>
-            <div className="text-xs font-bold text-white uppercase tracking-widest">Authorized</div>
-            <div className="text-[10px] font-mono text-[#39FF14]/60 uppercase mt-0.5">Matrix Command</div>
+            <div className="text-sm font-black text-[#0F172A] dark:text-white uppercase tracking-tight">Authorized</div>
+            <div className="text-[10px] font-bold text-[#10B981]/60 uppercase tracking-widest mt-0.5">Supply Matrix</div>
           </div>
         </div>
-        <div className="w-px h-10 bg-white/10 hidden sm:block" />
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#39FF14]/10 border border-[#39FF14]/20 rounded-xl flex items-center justify-center">
-            <BadgeCheck className="w-5 h-5 text-[#39FF14]" />
+        <div className="w-px h-10 bg-[#10B981]/10 hidden sm:block" />
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-sm">
+            <BadgeCheck className="w-6 h-6 text-[#10B981]" />
           </div>
           <div>
-            <div className="text-xs font-bold text-white uppercase tracking-widest">Resilience Guard</div>
-            <div className="text-[10px] font-mono text-[#39FF14]/60 uppercase mt-0.5">Tier-1 Validation</div>
+            <div className="text-sm font-black text-[#0F172A] dark:text-white uppercase tracking-tight">Tier-1 Partner</div>
+            <div className="text-[10px] font-bold text-[#10B981]/60 uppercase tracking-widest mt-0.5">Nationwide Support</div>
           </div>
         </div>
       </motion.div>

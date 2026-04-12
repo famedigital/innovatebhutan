@@ -5,73 +5,111 @@
 
 /* ULTRA LUXURY PREMIUM DESIGN SYSTEM */
 :root {
-  /* Core Palette */
+  /* CORE LUXE PALETTE - Solar Hub (Light Mode) */
   --white: #FFFFFF;
-  --off-white: #FAFBFC;
-  --gray-50: #F8FAFC;
-  --gray-100: #F1F5F9;
-  --gray-200: #E2E8F0;
-  --gray-300: #CBD5E1;
-  --gray-400: #94A3B8;
-  --gray-500: #64748B;
-  --gray-600: #475569;
-  --gray-700: #334155;
-  --gray-800: #1E293B;
-  --gray-900: #0F172A;
-  --black: #020617;
+  --off-white: #F8FAFC;
+  --pure-black: #000000;
+  --midnight: #020617;
   
-  /* TECH FUTURISTIC GREEN - Neon & Midnight System */
-  --emerald-50: #f0fdf4;
-  --emerald-100: #dcfce7;
-  --emerald-400: #4ade80;
-  --emerald-500: #22c55e;
-  --emerald-600: #16a34a;
-  --neon-green: #39FF14;
-  --cyber-green: #00FF41;
-  --midnight-green: #022c22;
+  /* ULTRA LUXURY: IVORY PRECISION */
+  --background: #F9F9F7; /* Alabaster / Bone */
+  --foreground: #2D2D2D; /* Deep Charcoal */
+  --card: rgba(253, 253, 251, 0.8);
+  --card-foreground: #2D2D2D;
+  --primary: #2D2D2D;  
+  --primary-foreground: #F9F9F7;
+  --accent: #D4AF37; /* Muted Gold */
+  --muted: #708090; /* Slate Grey */
+  --border: #E5E5E1; 
+  --radius: 20px;
+  --glass-stroke: rgba(255, 255, 255, 0.6);
+  --luxury-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.04);
   
-  /* Luxe Accent Colors */
-  --gold-400: #fbbf24;
-  --gold-500: #f59e0b;
-  --teal-400: #2dd4bf;
-  --teal-500: #14b8a6;
+  /* CRYSTAL EFFECTS */
+  --glass-bg: rgba(255, 255, 255, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.03);
+  --prestige-blur: blur(40px);
+}
+
+.dark {
+  /* COMMAND CORE (Dark Mode) */
+  --background: #000000; /* Deep Apple Black */
+  --foreground: #F5F5F7; /* Apple Off-White */
+  --card: rgba(28, 28, 30, 0.6); /* Apple Dark Gray */
+  --card-foreground: #FFFFFF;
+  --border: rgba(255, 255, 255, 0.1); 
+  --primary: #FFFFFF; /* Pure White */
+  --primary-foreground: #000000;
+  --neon-shadow: 0 4px 30px rgba(255, 255, 255, 0.05); /* Subtle White Glow */
+  --prestige-blur: blur(30px);
+}
+
+@layer base {
+  ::selection {
+    @apply bg-[#10B981] text-white dark:bg-primary dark:text-black;
+  }
+}
+
+/* NEON GLOW UTILITIES */
+.neon-glow {
+  box-shadow: var(--neon-shadow);
+  border: 1px solid var(--neon-border);
+}
+
+/* MARQUEE ANIMATION */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 40s linear infinite;
+}
+
+@layer utilities {
+  .neon-text {
+    text-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+  }
   
-  /* Futuristic Glassmorphism */
-  --glass-bg: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  .animate-shimmer {
+    animation: shimmer 2s linear infinite;
+  }
   
-  /* Dark Glass (The Primary Vibe) */
-  --dark-glass-bg: rgba(2, 6, 23, 0.7);
-  --dark-glass-border: rgba(57, 255, 20, 0.2);
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
   
-  /* System Colors */
-  --background: #020617; /* Deep midnight-navy */
-  --foreground: #f8fafc;
-  --card: #0f172a;
-  --card-foreground: #f8fafc;
-  --popover: #0f172a;
-  --popover-foreground: #f8fafc;
-  --primary: #22c55e;
-  --primary-foreground: #ffffff;
-  --secondary: #022c22;
-  --secondary-foreground: #4ade80;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #064e3b;
-  --accent-foreground: #4ade80;
-  --destructive: #ef4444;
-  --destructive-foreground: #f8fafc;
-  --border: #1e293b;
-  --input: #1e293b;
-  --ring: #39FF14;
-  --radius: 12px;
+  .animate-float-0 {
+    animation: float0 4s ease-in-out infinite;
+  }
+  .animate-float-1 {
+    animation: float1 5s ease-in-out infinite;
+  }
+  .animate-float-2 {
+    animation: float2 3.5s ease-in-out infinite;
+  }
+  .animate-float-3 {
+    animation: float3 4.5s ease-in-out infinite;
+  }
   
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(57, 255, 20, 0.15);
+  @keyframes float0 {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+  @keyframes float1 {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(12px); }
+  }
+  @keyframes float2 {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes float3 {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(8px); }
+  }
 }
 
 @theme inline {
@@ -106,8 +144,12 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
+  html, body {
+    @apply bg-background text-foreground h-full overflow-hidden selection:bg-primary/20 selection:text-primary;
+  }
+  /* Ensure Next.js root fills viewport */
+  #__next, [data-overlay-container] {
+    height: 100%;
   }
 }
 
@@ -259,6 +301,14 @@ html {
   animation: marquee 25s linear infinite;
 }
 
+/* Scanning Line Animation */
+@keyframes scan {
+  0% { top: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
 /* Fade In Up */
 @keyframes fadeInUp {
   from {
@@ -296,4 +346,42 @@ html {
     linear-gradient(rgba(5, 150, 105, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(5, 150, 105, 0.05) 1px, transparent 1px);
   background-size: 50px 50px;
+}
+
+/* ⚡ ELECTRIC PULSE — sweeps left → right like a voltage scan */
+@keyframes electric-pulse {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(400%);
+    opacity: 0;
+  }
+}
+
+.animate-electric-pulse {
+  animation: electric-pulse 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: 0.8s;
+}
+
+/* ⚡ BORDER FLICKER — top border of marquee pulses like a live wire */
+@keyframes border-flicker {
+  0%, 100% { opacity: 1; }
+  48%       { opacity: 1; }
+  50%       { opacity: 0.3; }
+  52%       { opacity: 1; }
+  94%       { opacity: 1; }
+  96%       { opacity: 0.4; }
+  98%       { opacity: 1; }
+}
+
+.animate-border-flicker {
+  animation: border-flicker 4s ease-in-out infinite;
 }

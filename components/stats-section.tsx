@@ -1,9 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useInView } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { useRef, useEffect, useState } from "react";
-import { Trophy, Users, Clock, Heart } from "lucide-react";
+import { Trophy, MapPin, Clock, Heart } from "lucide-react";
 
 const stats = [
   { value: 500, suffix: "+", label: "Talent Linked", icon: Trophy },
@@ -43,63 +42,44 @@ function AnimatedCounter({ value, suffix }: { value: number; suffix: string }) {
   );
 }
 
-function MapPin(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-      <circle cx="12" cy="10" r="3"/>
-    </svg>
-  );
-}
-
 export function StatsSection() {
   return (
-    <div className="h-full flex flex-col justify-center">
-      <div className="mb-8">
-        <motion.span
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="text-[10px] font-bold text-[#39FF14] mb-2 block uppercase tracking-[0.3em]"
-        >
-          Operational Metrics
-        </motion.span>
-        <motion.h2
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-2xl sm:text-3xl font-bold text-white tracking-tighter"
-        >
-          Network Intelligence
-        </motion.h2>
-      </div>
+    <div className="w-full">
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-8 py-4 px-8 bg-card rounded-2xl border border-border transition-all hover:border-primary/30 group">
+        
+        {/* 📟 COMPACT HEADER */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          <h2 className="text-[10px] font-black text-foreground uppercase tracking-[0.4em] leading-none">
+            Network Intelligence
+          </h2>
+        </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1, duration: 0.5 }}
-              className="p-6 bg-[#0f172a]/50 backdrop-blur-md rounded-2xl border border-white/5 hover:border-[#39FF14]/30 transition-all group"
-            >
-              <div className="flex flex-col gap-4">
-                <div className="w-10 h-10 bg-[#39FF14]/5 rounded-xl flex items-center justify-center border border-[#39FF14]/20 group-hover:bg-[#39FF14] transition-colors">
-                  <Icon className="w-5 h-5 text-[#39FF14] group-hover:text-[#020617] transition-colors" />
+        {/* 📊 HORIZONTAL DATA STREAM */}
+        <div className="flex flex-wrap items-center justify-center lg:justify-end gap-10 lg:gap-16 flex-1">
+          {stats.map((stat, index) => (
+            <div key={stat.label} className="flex items-center gap-10">
+              {index !== 0 && (
+                <div className="hidden lg:block w-[1px] h-4 bg-border/50" />
+              )}
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="flex flex-col lg:flex-row items-center lg:items-baseline gap-2 lg:gap-3"
+              >
+                <div className="text-xl lg:text-2xl font-black text-foreground font-mono tracking-tighter dark:neon-text leading-none">
+                  <AnimatedCounter value={stat.value} suffix={stat.suffix} />
                 </div>
-                <div>
-                  <div className="text-3xl sm:text-4xl font-bold text-white mb-1">
-                    <AnimatedCounter value={stat.value} suffix={stat.suffix} />
-                  </div>
-                  <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest leading-tight">{stat.label}</div>
+                <div className="text-[9px] text-foreground/30 font-black uppercase tracking-[0.2em] whitespace-nowrap leading-none">
+                  {stat.label}
                 </div>
-              </div>
-            </motion.div>
-          );
-        })}
+              </motion.div>
+            </div>
+          ))}
+        </div>
+
       </div>
     </div>
   );
