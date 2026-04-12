@@ -402,7 +402,7 @@ export function HeroSection() {
   };
 
   return (
-    <div className="relative flex flex-col lg:flex-row max-w-[1300px] mx-auto pt-6 lg:pt-10 pb-20 lg:pb-24 px-5 items-center gap-10 lg:gap-[50px] transition-colors rounded-[32px] overflow-hidden">
+    <div className="relative flex flex-col lg:flex-row max-w-[1300px] mx-auto pt-6 lg:pt-10 pb-20 lg:pb-24 px-5 items-center gap-10 lg:gap-[50px] transition-colors rounded-[32px] overflow-visible">
       
       {/* 🏙️ LEFT SIDE: SERVICES */}
       <div className="flex-1 w-full">
@@ -412,12 +412,10 @@ export function HeroSection() {
             className="text-[32px] lg:text-[44px] font-bold text-foreground leading-[1.1] mb-8 transition-colors"
           >
             Your space, professionally managed, anywhere in{" "}
-            <span className="relative inline-block">
-              <span className="relative z-10 text-primary">BHUTAN</span>
-              <span className="absolute inset-0 animate-pulse bg-primary/20 blur-xl rounded-full" />
-              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/50 to-transparent animate-shimmer bg-[length:200%_100%] rounded-lg" />
-            </span>
-          </motion.h1>
+              <span className="text-primary animate-text-color">
+                BHUTAN
+              </span>
+            </motion.h1>
 
         <div className="bg-white dark:bg-[#050505] border border-[#ebebeb] dark:border-white/10 rounded-[16px] p-8 shadow-[0_10px_30px_rgba(0,0,0,0.04)] dark:shadow-none transition-all">
           <div className="flex items-center justify-between mb-8">

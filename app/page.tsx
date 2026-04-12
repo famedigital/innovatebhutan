@@ -15,7 +15,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
-    <main className="min-h-screen bg-background text-foreground selection:bg-[#10B981] selection:text-white dark:selection:bg-primary dark:selection:text-black overflow-x-hidden transition-colors duration-500">
+    <main className="min-h-screen bg-background text-foreground selection:bg-[#10B981] selection:text-white dark:selection:bg-primary dark:selection:text-black transition-colors duration-500">
       <Navigation />
       
       {/* Hero Section */}

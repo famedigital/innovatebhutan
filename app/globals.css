@@ -145,7 +145,7 @@
     @apply border-border outline-ring/50;
   }
   html, body {
-    @apply bg-background text-foreground h-full overflow-hidden selection:bg-primary/20 selection:text-primary;
+    @apply bg-background text-foreground h-full selection:bg-primary/20 selection:text-primary;
   }
   /* Ensure Next.js root fills viewport */
   #__next, [data-overlay-container] {

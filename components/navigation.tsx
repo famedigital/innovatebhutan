@@ -90,9 +90,9 @@ export function Navigation() {
             <a href="/" className="flex flex-col group relative z-10 transition-transform hover:scale-105">
               <div className="text-2xl font-black tracking-tighter text-[#0F172A] dark:text-white leading-none relative">
                 INNOVATE<span className="text-primary relative">
-                  .
-                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-ping" />
-                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+                .
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-ping" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
                 </span>
               </div>
               <div className="text-[8px] font-mono tracking-[0.4em] text-primary uppercase mt-0.5 ml-1 opacity-80 group-hover:opacity-100 transition-all relative">
