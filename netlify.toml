@@ -6,4 +6,4 @@
   NODE_VERSION = "20"
 
 [[plugins]]
-  package = "@netlify/next-runtime"
+  package = "@netlify/plugin-nextjs"
