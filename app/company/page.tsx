@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function CompanyPage() {
   return (
-    <main className="min-h-screen bg-[#020617] selection:bg-[#39FF14]/30">
+    <main className="min-h-screen bg-background text-foreground transition-colors duration-500">
       <Navigation />
       <CompanyContent />
       <FooterSection />

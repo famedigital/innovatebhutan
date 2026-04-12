@@ -48,8 +48,8 @@ export function ContactSection() {
               >
                 <Phone className="w-5 h-5 text-[#16A34A] mb-3" />
                 <div className="text-sm text-[#6B7280] mb-1">Phone</div>
-                <a href="tel:+97517000000" className="font-medium text-[#030712] hover:text-[#16A34A] transition-colors">
-                  +975 17 000 000
+                <a href="tel:+97517268753" className="font-medium text-[#030712] hover:text-[#16A34A] transition-colors">
+                  +975 17268753
                 </a>
               </motion.div>
 
@@ -102,7 +102,7 @@ export function ContactSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.4 }}
-              href="https://wa.me/97517000000?text=Hi, I'd like to inquire about your services"
+              href="https://wa.me/97517268753?text=Hi, I'd like to inquire about your services"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-3 px-6 py-4 bg-[#14532D] text-white font-medium rounded-xl hover:bg-[#166534] transition-colors"
@@ -177,7 +177,7 @@ export function ContactSection() {
 
               <p className="text-xs text-center text-[#9CA3AF]">
                 Or message us directly on{" "}
-                <a href="https://wa.me/97517000000" className="text-[#16A34A] hover:underline">
+                <a href="https://wa.me/97517268753" className="text-[#16A34A] hover:underline">
                   WhatsApp
                 </a>{" "}
                 for instant response

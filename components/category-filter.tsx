@@ -2,22 +2,20 @@
 
 import { motion } from "framer-motion";
 import { 
-  LayoutGrid, 
   Monitor, 
-  ShieldCheck, 
-  Fingerprint, 
-  Hotel, 
-  Code2, 
-  Zap 
+  Database, 
+  Cable, 
+  Settings, 
+  Hammer,
+  ShieldCheck 
 } from "lucide-react";
 
 const categories = [
   { id: "pos", name: "POS Ops", icon: Monitor },
-  { id: "security", name: "Security AI", icon: ShieldCheck },
-  { id: "biometric", name: "Identity", icon: Fingerprint },
-  { id: "hospitality", name: "Hospitality", icon: Hotel },
-  { id: "software", name: "Digital", icon: Code2 },
-  { id: "power", name: "Energy", icon: Zap },
+  { id: "data", name: "SaaS & Data", icon: Database },
+  { id: "networking", name: "Networking", icon: Cable },
+  { id: "it", name: "IT Support", icon: Settings },
+  { id: "labor", name: "Labor / Install", icon: Hammer },
 ];
 
 interface CategoryFilterProps {
@@ -39,12 +37,12 @@ export function CategoryFilter({ activeCategory, setActiveCategory }: CategoryFi
             className={`
               group flex items-center gap-2.5 px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all duration-300
               ${isActive 
-                ? "bg-[#39FF14] text-[#020617] shadow-[0_0_20px_rgba(57,255,20,0.3)]" 
+                ? "bg-primary text-[#020617] shadow-[0_0_20px_rgba(57,255,20,0.3)]" 
                 : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white border border-white/5"
               }
             `}
           >
-            <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-[#020617]" : "text-white/30 group-hover:text-[#39FF14]"}`} />
+            <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-[#020617]" : "text-white/30 group-hover:text-primary"}`} />
             {category.name}
           </button>
         );

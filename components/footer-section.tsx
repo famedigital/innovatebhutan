@@ -39,7 +39,7 @@ const footerLinks = {
       { name: "Help Center", href: "/support" },
       { name: "Warranty", href: "/support" },
       { name: "Service Request", href: "/support" },
-      { name: "WhatsApp Support", href: "https://wa.me/97517000000" },
+      { name: "WhatsApp Support", href: "https://wa.me/97517268753" },
     ]
   }
 };
@@ -53,18 +53,18 @@ export function FooterSection() {
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-4 lg:col-span-1 mb-8 lg:mb-0">
             <Link href="/" className="flex flex-col group relative z-10 transition-transform hover:scale-105 w-fit mb-6">
-              <div className="absolute -inset-2 bg-[#39FF14] rounded-full blur-xl opacity-0 group-hover:opacity-20 transition-opacity" />
+              <div className="absolute -inset-2 bg-primary rounded-full blur-xl opacity-0 group-hover:opacity-20 transition-opacity" />
               <div className="text-3xl font-bold tracking-tighter text-white leading-none relative">
-                INNOVATE<span className="text-[#39FF14] [text-shadow:0_0_15px_#39FF14]">.</span>
+                INNOVATE<span className="text-primary [text-shadow:0_0_15px_var(--primary)]">.</span>
               </div>
-              <div className="text-[10px] font-mono tracking-[0.4em] text-[#39FF14] uppercase ml-1 opacity-80 group-hover:opacity-100 group-hover:[text-shadow:0_0_10px_#39FF14] transition-all">
+              <div className="text-[10px] font-mono tracking-[0.4em] text-primary uppercase ml-1 opacity-80 group-hover:opacity-100 group-hover:[text-shadow:0_0_10px_var(--primary)] transition-all">
                 BHUTAN
               </div>
             </Link>
             <div className="text-sm text-[#9CA3AF] mb-6 space-y-1">
               <p className="font-bold text-white mb-2">Manish Sharma (Owner)</p>
               <p>Thimphu, Bhutan</p>
-              <p className="text-[#39FF14] font-mono">+975 17268753</p>
+              <p className="text-primary font-mono">+975 17268753</p>
               <p><a href="https://www.innovate.bt" className="hover:text-white transition-colors">www.innovate.bt</a></p>
             </div>
             <div className="flex items-center gap-3">
@@ -107,7 +107,7 @@ export function FooterSection() {
             <p className="text-sm text-[#6B7280]">
               2026 Innovate Bhutan. All rights reserved. <br className="sm:hidden" />
               <span className="sm:ml-2">
-                Designed & Developed by <a href="https://famedigital.netlify.app" target="_blank" rel="noopener noreferrer" className="text-[#39FF14] hover:underline">Famedigital</a>
+                Designed & Developed by <a href="https://famedigital.netlify.app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Famedigital</a>
               </span>
             </p>
             <div className="flex items-center gap-6 text-sm text-[#6B7280]">

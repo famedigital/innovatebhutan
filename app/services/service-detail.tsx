@@ -112,7 +112,7 @@ export function ServiceDetail({ service }: ServiceProps) {
             {/* CTA */}
             <div className="flex flex-col sm:flex-row gap-3">
               <a
-                href={`https://wa.me/97517000000?text=Hi, I'm interested in ${encodeURIComponent(service.name)}`}
+                href={`https://wa.me/97517268753?text=Hi, I'm interested in ${encodeURIComponent(service.name)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#14532D] text-white text-sm font-medium rounded-lg hover:bg-[#166534] transition-colors"
