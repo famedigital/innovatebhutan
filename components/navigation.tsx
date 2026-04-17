@@ -13,7 +13,7 @@ function ModernLogo() {
     return () => clearTimeout(timer);
   }, []);
 
-  const text = "innovate.bt";
+  const text = "innovates.bt";
   const letters = text.split("");
 
   return (
@@ -26,7 +26,7 @@ function ModernLogo() {
       <motion.div
         className="relative"
         animate={introComplete ? {
-          y: [0, -3, 0],
+          y: [0, -2, 0],
         } : {}}
         transition={{
           duration: 2,
@@ -34,38 +34,78 @@ function ModernLogo() {
           ease: "easeInOut"
         }}
       >
-        {letters.map((letter, index) => (
-          <motion.span
-            key={index}
-            className={`inline-block text-xl font-black tracking-tight ${
-              letter === '.'
-                ? 'text-primary'
-                : 'text-[#0F172A] dark:text-white'
-            }`}
-            initial={{
-              opacity: 0,
-              y: 20,
-              filter: 'blur(10px)'
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              filter: introComplete ? 'blur(0px)' : 'blur(0px)',
-            }}
-            transition={{
-              duration: 0.8,
-              delay: index * 0.05,
-              ease: [0.43, 0.13, 0.23, 0.96]
-            }}
-            style={{
-              textShadow: introComplete ? '0 0 20px rgba(57, 255, 20, 0.3)' : 'none',
-              transition: 'text-shadow 0.5s ease-in-out'
-            }}
-          >
-            {letter}
-          </motion.span>
-        ))}
+        {letters.map((letter, index) => {
+          const isS = letter === 's';
+          const isDot = letter === '.';
+
+          return (
+            <motion.span
+              key={index}
+              className={`inline-block text-xl font-black tracking-tight`}
+              initial={{
+                opacity: 0,
+                y: 20,
+                filter: 'blur(10px)'
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                filter: introComplete ? 'blur(0px)' : 'blur(0px)',
+              }}
+              transition={{
+                duration: 0.8,
+                delay: index * 0.05,
+                ease: [0.43, 0.13, 0.23, 0.96]
+              }}
+              style={{
+                color: isS || isDot ? '#10B981' : undefined,
+                textShadow: isS
+                  ? introComplete
+                    ? '0 0 10px rgba(16, 185, 129, 0.8), 0 0 20px rgba(16, 185, 129, 0.6), 0 0 30px rgba(16, 185, 129, 0.4)'
+                    : 'none'
+                  : isDot
+                  ? '0 0 10px rgba(16, 185, 129, 0.5)'
+                  : introComplete
+                  ? '0 0 10px rgba(16, 185, 129, 0.2)'
+                  : 'none',
+              }}
+            >
+              <motion.span
+                animate={isS && introComplete ? {
+                  scale: [1, 1.1, 1],
+                  textShadow: [
+                    '0 0 10px rgba(16, 185, 129, 0.8)',
+                    '0 0 20px rgba(16, 185, 129, 1), 0 0 40px rgba(16, 185, 129, 0.8)',
+                    '0 0 10px rgba(16, 185, 129, 0.8)'
+                  ]
+                } : {}}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className={!isS && !isDot ? "text-[#0F172A] dark:text-white" : ""}
+              >
+                {letter}
+              </motion.span>
+            </motion.span>
+          );
+        })}
       </motion.div>
+
+      {/* Electric pulse effect behind 's' */}
+      <motion.div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-primary/20 blur-xl"
+        animate={{
+          scale: [1, 1.5, 1],
+          opacity: [0.3, 0.6, 0.3],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
 
       {/* Shimmer effect on hover */}
       <motion.div
