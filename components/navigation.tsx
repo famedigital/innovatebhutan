@@ -2,10 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Phone, MapPin, ChevronRight, Moon, Sun, LogIn } from "lucide-react";
+import { Menu, X, Moon, Sun, LogIn } from "lucide-react";
 
 // Modern Logo Component with PNG Image + Text
 function ModernLogo() {
+  // Ultra luxury green color
+  const luxuryGreen = '#047857';
+  const shimmerGreen = '#10B981';
+
   return (
     <motion.div
       className="relative flex items-center gap-2"
@@ -27,9 +31,11 @@ function ModernLogo() {
         }}
       />
       <motion.span
-        className="text-lg font-bold text-foreground"
+        className="text-lg font-bold"
+        style={{ color: luxuryGreen }}
         animate={{
           y: [0, -2, 0],
+          color: [luxuryGreen, shimmerGreen, luxuryGreen],
         }}
         transition={{
           duration: 3,
@@ -42,39 +48,6 @@ function ModernLogo() {
     </motion.div>
   );
 }
-
-const marqueeItems = [
-  "Chimi Jamyang Pvt Ltd",
-  "Baleno",
-  "T.T Extra",
-  "YOYO Bhutan",
-  "Malaya Jewelry",
-  "Capital P.M.S",
-  "Hayate Ramen",
-  "Namsey Medical",
-  "Khuenphen Pharmacy",
-  "Yangki Enterprise",
-  "Idesire",
-  "Smilers Bistero",
-  "E-World Digital",
-  "Shoe Space",
-  "Dokar Mart",
-  "SPCG",
-  "Explore Pizza",
-  "Lilly Traders",
-  "Urban Dumra",
-  "Kuensel Corporation",
-  "DSB Book Store",
-  "Paro Canteen",
-  "Paro Momo Corner",
-  "Zeppo Sales",
-  "Shopper's Store",
-  "Daily Chew Cafe",
-  "Lhoden Automobile",
-  "Shoponline.Bt",
-  "Burger Point",
-  "Druk Pizza Thimphu",
-];
 
 const navLinks = [
   { name: "Home", href: "/" },
@@ -144,37 +117,6 @@ export function Navigation() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
-      {/* Top Bar with Luxe Marquee */}
-      <div className="bg-[#F1F5F9] dark:bg-black text-[#059669] dark:text-[#10B981] border-b border-slate-200 dark:border-white/10 overflow-hidden shadow-sm transition-colors">
-        <div className="flex items-center h-8">
-          {/* Phone & Location */}
-          <div className="flex items-center gap-4 px-4 sm:px-6 shrink-0 z-10 bg-[#F1F5F9] dark:bg-black">
-            <a href="tel:+97517268753" className="flex items-center gap-1 hover:text-[#0F172A] dark:hover:text-white transition-colors">
-              <Phone className="w-3 h-3" />
-              <span className="text-[10px] font-mono font-bold">+975 17268753</span>
-            </a>
-            <span className="hidden sm:flex items-center gap-1 text-slate-400">
-              <MapPin className="w-3 h-3" />
-              <span className="text-[10px] uppercase tracking-widest font-medium text-slate-500">Thimphu Hub</span>
-            </span>
-          </div>
-
-          {/* Marquee */}
-          <div className="flex-1 overflow-hidden relative">
-            <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[#F1F5F9] dark:from-black to-transparent z-10" />
-            <div className="flex animate-marquee whitespace-nowrap">
-              {[...marqueeItems, ...marqueeItems].map((item, idx) => (
-                <span key={idx} className="inline-flex items-center gap-1 px-4 text-[9px] tracking-tight uppercase text-slate-600 dark:text-white/50">
-                  {item}
-                  <span className="text-[#10B981]">•</span>
-                </span>
-              ))}
-            </div>
-            <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#F1F5F9] dark:from-black to-transparent z-10" />
-          </div>
-        </div>
-      </div>
-
       {/* Main Nav */}
       <nav className="bg-white/90 dark:bg-black/80 backdrop-blur-xl border-b border-slate-100 dark:border-white/5 transition-colors">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">

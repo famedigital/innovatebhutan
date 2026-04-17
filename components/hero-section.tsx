@@ -50,7 +50,7 @@ function useTypewriter(phrases: string[], typingSpeed = 80, deletingSpeed = 40, 
   return { text, isDeleting, isPaused };
 }
 
-// Apple-style Service Card
+// Apple-style Service Card - Icon Left, Text Right
 function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
   service: any;
   onClick: () => void;
@@ -78,49 +78,57 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
       <div
         className={`
           relative rounded-xl bg-white dark:bg-zinc-900 cursor-pointer
-          flex flex-col items-center justify-center p-4 gap-3
+          flex items-center p-4 gap-4 min-h-[80px]
           transition-all duration-300 ease-out
         `}
         style={{
           boxShadow: isHovered
             ? '0 8px 30px rgba(0,0,0,0.12)'
             : '0 2px 8px rgba(0,0,0,0.04)',
-          transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
-          border: isHovered ? '1px solid rgba(0,0,0,0.08)' : '1px solid transparent',
+          transform: isHovered ? 'translateY(-3px)' : 'translateY(0)',
+          border: isHovered ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(0,0,0,0.06)',
         }}
       >
-        {/* Icon - Apple SF Symbols style */}
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center`} style={{background: `${service.color.split(' ')[0]}20`}}>
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center`} style={{background: `linear-gradient(135deg, ${service.color.split(' ')[1]} 0%, ${service.color.split(' ')[2]} 100%)`}}>
-            <Icon className="w-5 h-5 text-white" />
-          </div>
+        {/* Icon - Left side, consistent size */}
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{background: `${service.color.split(' ')[1]}15`}}>
+          <Icon className="w-6 h-6" style={{color: service.color.split(' ')[1]}} />
         </div>
 
-        {/* Title - Title case, not uppercase */}
-        <span className="text-[11px] font-medium text-center text-foreground/90 leading-snug">
-          {service.name}
-        </span>
-
-        {/* Badge - subtle */}
-        {service.badge && (
-          <span className="text-[9px] text-foreground/40">
-            {service.badge}
+        {/* Content - Right side */}
+        <div className="flex-1 min-w-0">
+          {/* Main service name */}
+          <span className="text-[12px] font-semibold text-foreground block leading-tight mb-1">
+            {service.name}
           </span>
-        )}
 
-        {/* Sub-services - appear as clean chips below */}
-        {hasSubs && (
-          <div className={`flex flex-wrap gap-1 justify-center transition-all duration-300 ${isHovered ? 'opacity-100 mt-1' : 'opacity-60'}`}>
-            {(service as any).subs.map((sub: string) => (
-              <span
-                key={sub}
-                className="text-[8px] px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-foreground/60"
-              >
-                {sub}
-              </span>
-            ))}
-          </div>
-        )}
+          {/* Badge */}
+          {service.badge && (
+            <span className="text-[9px] text-primary/80 inline-block mb-1">
+              {service.badge}
+            </span>
+          )}
+
+          {/* Sub-services - listed below */}
+          {hasSubs && (
+            <div className="flex flex-col gap-1 mt-2">
+              {(service as any).subs.map((sub: string) => (
+                <div key={sub} className="flex items-center gap-2">
+                  <div className="w-1 h-1 rounded-full" style={{background: service.color.split(' ')[1]}} />
+                  <span className="text-[10px] text-foreground/60">
+                    {sub}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Arrow indicator */}
+        <div className="text-foreground/20">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M4 2L8 6L4 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
       </div>
     </div>
   );
