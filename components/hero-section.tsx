@@ -922,9 +922,9 @@ export function HeroSection() {
                   onMouseLeave={() => setHoveredService(null)}
                   whileHover={{ scale: 1.05, y: -4 }}
                   className={`
-                    relative rounded-[12px] p-[15px_10px]
-                    flex flex-col items-center text-center cursor-pointer group transition-all overflow-hidden
-                    ${(service as any).wide ? "col-span-2 flex-row gap-4 text-left px-5" : "col-span-1"}
+                    relative rounded-[12px] p-3
+                    flex items-center gap-3 cursor-pointer group transition-all overflow-hidden
+                    ${(service as any).wide ? "col-span-2 px-5" : "col-span-1"}
                   `}
                   style={{
                     boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
@@ -936,20 +936,17 @@ export function HeroSection() {
                   {/* White/light overlay for text readability */}
                   <div className={`absolute inset-0 bg-white/90 dark:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
 
-                  <div className={`relative z-10 ${(service as any).wide ? "flex-shrink-0" : ""}`}>
-                    <div className={`
-                      w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-all duration-300
-                      ${(service as any).wide ? "" : ""}
-                    `}>
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                        <Icon className="w-6 h-6 text-white drop-shadow-md" />
-                      </div>
+                  {/* Icon on left */}
+                  <div className="relative z-10 flex-shrink-0">
+                    <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                      <Icon className="w-5 h-5 text-white drop-shadow-md" />
                     </div>
-
-                    <span className="text-[13px] font-bold text-foreground/70 group-hover:text-foreground transition-all duration-300 block">
-                      {service.name}
-                    </span>
                   </div>
+
+                  {/* Text on right */}
+                  <span className="relative z-10 text-[12px] font-bold text-foreground/70 group-hover:text-foreground transition-all duration-300 leading-tight">
+                    {service.name}
+                  </span>
 
                   {service.badge && (
                     <div className="absolute -top-2 right-2 bg-primary/10 text-primary text-[11px] font-black px-2 py-0.5 rounded-sm border border-primary/20 whitespace-nowrap z-20">
