@@ -14,31 +14,29 @@ const footerLinks = {
       { name: "Custom Development", href: "/services" },
     ]
   },
-  brands: {
-    title: "Brands",
+  directory: {
+    title: "Directory",
     links: [
-      { name: "Hikvision", href: "/brands" },
-      { name: "ZKTeco", href: "/brands" },
-      { name: "Rancelab", href: "/brands" },
-      { name: "TYSSO", href: "/brands" },
-      { name: "View All", href: "/brands" },
+      { name: "Browse All", href: "/directory" },
+      { name: "By Category", href: "/directory" },
+      { name: "By Location", href: "/directory" },
+      { name: "List Your Business", href: "/directory" },
     ]
   },
   company: {
     title: "Company",
     links: [
       { name: "About Us", href: "/company" },
-      { name: "Our Team", href: "/company" },
-      { name: "Careers", href: "/company" },
-      { name: "Contact", href: "/support" },
+      { name: "Our Team", href: "/company/team" },
+      { name: "Careers", href: "/company/careers" },
     ]
   },
   support: {
     title: "Support",
     links: [
-      { name: "Help Center", href: "/support" },
-      { name: "Warranty", href: "/support" },
-      { name: "Service Request", href: "/support" },
+      { name: "Help Center", href: "/support/help" },
+      { name: "Warranty", href: "/support/warranty" },
+      { name: "Service Request", href: "/support/service" },
       { name: "WhatsApp Support", href: "https://wa.me/97517268753" },
     ]
   }

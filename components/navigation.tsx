@@ -4,6 +4,88 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Phone, MapPin, ChevronRight, Moon, Sun, LogIn } from "lucide-react";
 
+// Modern Logo Component with Intro Animation
+function ModernLogo() {
+  const [introComplete, setIntroComplete] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIntroComplete(true), 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const text = "innovate.bt";
+  const letters = text.split("");
+
+  return (
+    <motion.div
+      className="relative"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <motion.div
+        className="relative"
+        animate={introComplete ? {
+          y: [0, -3, 0],
+        } : {}}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      >
+        {letters.map((letter, index) => (
+          <motion.span
+            key={index}
+            className={`inline-block text-xl font-black tracking-tight ${
+              letter === '.'
+                ? 'text-primary'
+                : 'text-[#0F172A] dark:text-white'
+            }`}
+            initial={{
+              opacity: 0,
+              y: 20,
+              filter: 'blur(10px)'
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              filter: introComplete ? 'blur(0px)' : 'blur(0px)',
+            }}
+            transition={{
+              duration: 0.8,
+              delay: index * 0.05,
+              ease: [0.43, 0.13, 0.23, 0.96]
+            }}
+            style={{
+              textShadow: introComplete ? '0 0 20px rgba(57, 255, 20, 0.3)' : 'none',
+              transition: 'text-shadow 0.5s ease-in-out'
+            }}
+          >
+            {letter}
+          </motion.span>
+        ))}
+      </motion.div>
+
+      {/* Shimmer effect on hover */}
+      <motion.div
+        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+        initial={{ x: '-100%' }}
+        animate={introComplete ? {
+          x: ['100%', '-100%'],
+        } : {}}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          repeatDelay: 2,
+          ease: "linear"
+        }}
+        style={{ mixBlendMode: 'overlay' }}
+      />
+    </motion.div>
+  );
+}
+
 const marqueeItems = [
   "Expert POS Engineers",
   "AI Surveillance Architects",
@@ -19,14 +101,47 @@ const marqueeItems = [
 const navLinks = [
   { name: "Home", href: "/" },
   { name: "Service Portal", href: "/services" },
-  { name: "Brand Partners", href: "/brands" },
-  { name: "Strategy", href: "/company" },
-  { name: "Support Hub", href: "/support" },
+  { name: "Directory", href: "/directory" },
+  {
+    name: "Company",
+    submenu: [
+      { name: "About Us", href: "/company" },
+      { name: "Our Team", href: "/company/team" },
+      { name: "Careers", href: "/company/careers" },
+    ]
+  },
+  {
+    name: "Support Hub",
+    submenu: [
+      { name: "Help Center", href: "/support/help" },
+      { name: "Warranty", href: "/support/warranty" },
+      { name: "Service Request", href: "/support/service" },
+      { name: "WhatsApp Support", href: "https://wa.me/97517268753", external: true },
+    ]
+  },
 ];
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const [mobileOpenSubmenu, setMobileOpenSubmenu] = useState<string | null>(null);
+  const [submenuTimeout, setSubmenuTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  const handleSubmenuEnter = (name: string) => {
+    if (submenuTimeout) {
+      clearTimeout(submenuTimeout);
+      setSubmenuTimeout(null);
+    }
+    setOpenSubmenu(name);
+  };
+
+  const handleSubmenuLeave = () => {
+    const timeout = setTimeout(() => {
+      setOpenSubmenu(null);
+    }, 200); // 200ms delay before closing
+    setSubmenuTimeout(timeout);
+  };
 
   useEffect(() => {
     // Check local storage or system preference on mount
@@ -86,31 +201,66 @@ export function Navigation() {
       <nav className="bg-white/90 dark:bg-black/80 backdrop-blur-xl border-b border-slate-100 dark:border-white/5 transition-colors">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-12">
-            {/* Logo */}
-            <a href="/" className="flex flex-col group relative z-10 transition-transform hover:scale-105">
-              <div className="text-2xl font-black tracking-tighter text-[#0F172A] dark:text-white leading-none relative">
-                INNOVATE<span className="text-primary relative">
-                .
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-ping" />
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
-                </span>
-              </div>
-              <div className="text-[8px] font-mono tracking-[0.4em] text-primary uppercase mt-0.5 ml-1 opacity-80 group-hover:opacity-100 transition-all relative">
-                BHUTAN
-                <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
-              </div>
+            {/* Modern Logo Animation */}
+            <a href="/" className="flex items-center gap-2 group relative z-10 transition-transform hover:scale-105">
+              <ModernLogo />
             </a>
 
             {/* Desktop Nav */}
             <div className="hidden md:flex items-center gap-1">
               {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className="px-4 py-2 text-[11px] uppercase tracking-widest font-bold text-slate-500 dark:text-white/50 hover:text-primary dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-full transition-all duration-300"
-                >
-                  {link.name}
-                </a>
+                'submenu' in link ? (
+                  <div
+                    key={link.name}
+                    className="relative"
+                    onMouseEnter={() => handleSubmenuEnter(link.name)}
+                    onMouseLeave={handleSubmenuLeave}
+                  >
+                    <button className="px-4 py-2 text-[11px] uppercase tracking-widest font-bold text-slate-500 dark:text-white/50 hover:text-primary dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-full transition-all duration-300 flex items-center gap-1">
+                      {link.name}
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {openSubmenu === link.name && (
+                      <div
+                        className="absolute top-full left-0 mt-2 bg-white dark:bg-black border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl min-w-[200px] overflow-hidden z-50"
+                        onMouseEnter={() => handleSubmenuEnter(link.name)}
+                        onMouseLeave={handleSubmenuLeave}
+                      >
+                        {link.submenu.map((subLink) => (
+                          subLink.external ? (
+                            <a
+                              key={subLink.name}
+                              href={subLink.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block px-4 py-3 text-sm text-slate-600 dark:text-white/70 hover:text-primary dark:hover:text-primary hover:bg-slate-50 dark:hover:bg-white/5 transition-all border-b border-slate-100 dark:border-white/5 last:border-0"
+                            >
+                              {subLink.name}
+                            </a>
+                          ) : (
+                            <a
+                              key={subLink.name}
+                              href={subLink.href}
+                              className="block px-4 py-3 text-sm text-slate-600 dark:text-white/70 hover:text-primary dark:hover:text-primary hover:bg-slate-50 dark:hover:bg-white/5 transition-all border-b border-slate-100 dark:border-white/5 last:border-0"
+                            >
+                              {subLink.name}
+                            </a>
+                          )
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    className="px-4 py-2 text-[11px] uppercase tracking-widest font-bold text-slate-500 dark:text-white/50 hover:text-primary dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-full transition-all duration-300"
+                  >
+                    {link.name}
+                  </a>
+                )
               ))}
             </div>
 
@@ -176,17 +326,66 @@ export function Navigation() {
             >
               <div className="p-4 space-y-2">
                 {navLinks.map((link, index) => (
-                  <motion.a
-                    key={link.name}
-                    href={link.href}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => setIsOpen(false)}
-                    className="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-white/70 hover:text-[#10B981] hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all"
-                  >
-                    {link.name}
-                  </motion.a>
+                  'submenu' in link ? (
+                    <div key={link.name}>
+                      <motion.button
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        onClick={() => setMobileOpenSubmenu(mobileOpenSubmenu === link.name ? null : link.name)}
+                        className="w-full px-4 py-3 text-sm font-bold text-slate-600 dark:text-white/70 hover:text-[#10B981] hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all flex items-center justify-between"
+                      >
+                        {link.name}
+                        <svg className={`w-4 h-4 transition-transform ${mobileOpenSubmenu === link.name ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </motion.button>
+                      {mobileOpenSubmenu === link.name && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="pl-4 space-y-1 mt-1"
+                        >
+                          {link.submenu.map((subLink) => (
+                            subLink.external ? (
+                              <a
+                                key={subLink.name}
+                                href={subLink.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => setIsOpen(false)}
+                                className="block px-4 py-2 text-sm text-slate-600 dark:text-white/60 hover:text-[#10B981] hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all"
+                              >
+                                {subLink.name}
+                              </a>
+                            ) : (
+                              <a
+                                key={subLink.name}
+                                href={subLink.href}
+                                onClick={() => setIsOpen(false)}
+                                className="block px-4 py-2 text-sm text-slate-600 dark:text-white/60 hover:text-[#10B981] hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all"
+                              >
+                                {subLink.name}
+                              </a>
+                            )
+                          ))}
+                        </motion.div>
+                      )}
+                    </div>
+                  ) : (
+                    <motion.a
+                      key={link.name}
+                      href={link.href}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => setIsOpen(false)}
+                      className="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-white/70 hover:text-[#10B981] hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all"
+                    >
+                      {link.name}
+                    </motion.a>
+                  )
                 ))}
                 <motion.a
                   href="https://wa.me/97517268753"
@@ -194,7 +393,7 @@ export function Navigation() {
                   rel="noopener noreferrer"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
+                  transition={{ delay: 0.3 }}
                   className="block mt-4 px-4 py-4 bg-[#10B981] text-white text-center text-sm font-bold rounded-2xl shadow-lg"
                 >
                   Connect with Expert

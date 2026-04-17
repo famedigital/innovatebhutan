@@ -3,16 +3,258 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Search, MapPin, Monitor, Shield, Fingerprint, Hotel, 
-  Code2, Zap, Wifi, CheckCircle2, MessageSquare, 
+import {
+  Search, MapPin, Monitor, Shield, Fingerprint, Hotel,
+  Code2, Zap, Wifi, CheckCircle2, MessageSquare,
   ChevronRight, Star, ArrowRight, LayoutGrid, Filter, X, Plus,
   Clock, Cpu, Settings, Box, BarChart3, ShieldCheck,
   Globe, ZapIcon, HardDrive, Layers, Workflow, Eye,
-  ArrowLeft, ExternalLink, Play, ShoppingCart, Tag, Info
+  ArrowLeft, ExternalLink, Play, ShoppingCart, Info,
+  FileText, CreditCard, Users, Wrench
 } from "lucide-react";
 import { getMediaUrl } from "@/lib/cloudinary";
 import { createClient } from "@/utils/supabase/client";
+
+// 📸 Service Slideshow Component with Smart Lazy Loading
+function ServiceSlideshow({ images }: { images: string[] }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isInView, setIsInView] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          setTimeout(() => setShouldLoad(true), 100);
+        }
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Load on hover as well
+  useEffect(() => {
+    if (isHovered && !shouldLoad) {
+      setShouldLoad(true);
+    }
+  }, [isHovered, shouldLoad]);
+
+  // Only start slideshow when in view and loaded
+  useEffect(() => {
+    if (!isInView || !shouldLoad) return;
+
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % images.length);
+    }, 3000); // 3 seconds per slide
+    return () => clearInterval(interval);
+  }, [isInView, shouldLoad, images.length]);
+
+  return (
+    <div
+      ref={ref}
+      className="absolute inset-0 overflow-hidden bg-slate-900"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {shouldLoad ? (
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={currentIndex}
+            src={images[currentIndex]}
+            loading="lazy"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
+            className="absolute inset-0 w-full h-full object-cover"
+            alt={`Service image ${currentIndex + 1}`}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+          />
+        </AnimatePresence>
+      ) : (
+        // Elegant placeholder before loading
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-800">
+          <div className="absolute inset-0 opacity-10">
+            <div className="w-full h-full" style={{
+              backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.05) 10px, rgba(255,255,255,.05) 20px)'
+            }} />
+          </div>
+        </div>
+      )}
+      {/* Very light overlay - images now clearly visible */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black/30 via-black/15 to-black/30" />
+      {/* Minimal top gradient for text */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20" />
+    </div>
+  );
+}
+
+// 📋 Service Detail Modal
+function ServiceDetailModal({ service, onClose }: { service: any; onClose: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ x: "100%" }}
+        animate={{ x: 0 }}
+        exit={{ x: "100%" }}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        className="w-full max-w-4xl bg-card rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 border-b border-border backdrop-blur-xl">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center border-2 border-primary/30">
+                <service.icon className="w-8 h-8 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-foreground uppercase tracking-tight">{service.name}</h2>
+                <p className="text-sm font-bold text-primary uppercase tracking-wider">{service.category}</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-red-500/10 text-foreground/40 hover:text-red-500 transition-all rounded-xl"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-8 space-y-8">
+          {/* Description */}
+          <div>
+            <h3 className="text-xl font-black text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Info className="w-5 h-5 text-primary" />
+              Service Overview
+            </h3>
+            <p className="text-foreground/70 leading-relaxed text-lg">{service.description}</p>
+          </div>
+
+          {/* Pricing & Plans */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
+              <div className="flex items-center gap-3 mb-4">
+                <Star className="w-6 h-6 text-primary fill-primary" />
+                <h4 className="text-lg font-black text-foreground uppercase">Premium Plan</h4>
+              </div>
+              <ul className="space-y-3">
+                {service.specs.map((spec: string, i: number) => (
+                  <li key={i} className="flex items-start gap-2 text-foreground/70">
+                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span className="text-sm">{spec}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6 pt-6 border-t border-primary/20">
+                <div className="text-2xl font-black text-primary">{service.price}</div>
+                <p className="text-xs text-foreground/50 uppercase tracking-wider mt-1">Premium tier pricing</p>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-muted border-2 border-border">
+              <div className="flex items-center gap-3 mb-4">
+                <Shield className="w-6 h-6 text-foreground/40" />
+                <h4 className="text-lg font-black text-foreground/60 uppercase">Standard Plan</h4>
+              </div>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-2 text-foreground/50">
+                  <CheckCircle2 className="w-4 h-4 text-foreground/40 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">Basic installation & setup</span>
+                </li>
+                <li className="flex items-start gap-2 text-foreground/50">
+                  <CheckCircle2 className="w-4 h-4 text-foreground/40 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">Standard support (9-5)</span>
+                </li>
+                <li className="flex items-start gap-2 text-foreground/50">
+                  <CheckCircle2 className="w-4 h-4 text-foreground/40 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">1-year warranty included</span>
+                </li>
+              </ul>
+              <div className="mt-6 pt-6 border-t border-border">
+                <div className="text-xl font-black text-foreground/60">Contact for pricing</div>
+                <p className="text-xs text-foreground/40 uppercase tracking-wider mt-1">Standard tier</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Project Execution Process */}
+          <div>
+            <h3 className="text-xl font-black text-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Project Execution Process
+            </h3>
+            <div className="space-y-4">
+              {PROJECT_EXECUTION_PROCESS.map((item) => (
+                <motion.div
+                  key={item.step}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: item.step * 0.1 }}
+                  className="flex gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/5 to-transparent border border-primary/10 hover:border-primary/30 transition-all"
+                >
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary text-black flex items-center justify-center font-black text-sm">
+                    {item.step}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-base font-black text-foreground uppercase mb-2">{item.title}</h4>
+                    <p className="text-sm text-foreground/70 leading-relaxed">{item.description}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Additional Info */}
+          <div className="grid md:grid-cols-3 gap-4 pt-6 border-t border-border">
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-muted">
+              <Clock className="w-5 h-5 text-primary" />
+              <div>
+                <p className="text-xs text-foreground/40 uppercase tracking-wider">Duration</p>
+                <p className="text-sm font-black text-foreground">{service.duration}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-muted">
+              <Users className="w-5 h-5 text-primary" />
+              <div>
+                <p className="text-xs text-foreground/40 uppercase tracking-wider">Reviews</p>
+                <p className="text-sm font-black text-foreground">{service.reviews}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-muted">
+              <Star className="w-5 h-5 text-primary" />
+              <div>
+                <p className="text-xs text-foreground/40 uppercase tracking-wider">Rating</p>
+                <p className="text-sm font-black text-foreground">{service.rating}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
 
 const getCategoryIcon = (cat: string) => {
   switch (cat) {
@@ -25,6 +267,69 @@ const getCategoryIcon = (cat: string) => {
   }
 };
 
+// 📸 Service slideshow images - using actual Cloudinary assets that exist
+const serviceImages: Record<string, string[]> = {
+  "POS Systems": [
+    getMediaUrl('innovate_bhutan/pos_engineering', false, true),
+    getMediaUrl('innovate_bhutan/hospitality_tech', false, true),
+  ],
+  "Networking": [
+    getMediaUrl('innovate_bhutan/network_flow', false, true),
+    getMediaUrl('innovate_bhutan/power_resilience', false, true),
+  ],
+  "Security": [
+    getMediaUrl('innovate_bhutan/security_ai_node', false, true),
+    getMediaUrl('innovate_bhutan/surveillance_ai', false, true),
+    getMediaUrl('innovate_bhutan/biometric_id', false, true),
+  ],
+  "Maintenance": [
+    getMediaUrl('innovate_bhutan/power_resilience', false, true),
+  ],
+  "Web/SaaS": [
+    getMediaUrl('innovate_bhutan/software_dev', false, true),
+    getMediaUrl('innovate_bhutan/surveillance_ai', false, true),
+  ],
+};
+
+// 📋 Project Execution Process
+const PROJECT_EXECUTION_PROCESS = [
+  {
+    step: 1,
+    title: "Project Confirmation",
+    description: "The client signs the quotation and confirms the project by making a 60% advance payment."
+  },
+  {
+    step: 2,
+    title: "Hardware Verification",
+    description: "The project is handed over to the Hardware Team to ensure all required hardware is available, installed, and functioning properly."
+  },
+  {
+    step: 3,
+    title: "Training Team Handover",
+    description: "Once hardware is confirmed, the project is transferred to the Training Team."
+  },
+  {
+    step: 4,
+    title: "Implementation, Product Master Setup & Training",
+    description: "The Training Team executes the setup as per standard procedures. This includes creating the Product Master, which may take 1–30 days depending on the client's readiness and data availability. Then 3 days training will be provided."
+  },
+  {
+    step: 5,
+    title: "License Request",
+    description: "After confirming the Product Master is accurate, the request is forwarded to the Accounts Team to order the license key from Rancelab."
+  },
+  {
+    step: 6,
+    title: "Software Activation",
+    description: "Upon receiving the license key, the software is activated and made fully operational."
+  },
+  {
+    step: 7,
+    title: "Final Payment Collection",
+    description: "The implementation team requests the remaining 40% payment from the client. If payment is not received, the case is escalated to the Accounts Team for follow-up and collection."
+  }
+];
+
 
 const categories = [
   { name: "POS Systems", icon: LayoutGrid },
@@ -35,11 +340,26 @@ const categories = [
 ];
 
 export function ServiceBrowser() {
-  const [activeTab, setActiveTab] = useState("POS Systems");
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams.get('category');
+
+  const [activeTab, setActiveTab] = useState(categoryParam || "POS Systems");
   const [cart, setCart] = useState<Record<string, { item: any; qty: number }>>({});
   const [serviceData, setServiceData] = useState<any[]>([]);
+  const [selectedService, setSelectedService] = useState<any | null>(null);
   const router = useRouter();
   const checkoutRef = useRef<HTMLDivElement>(null);
+
+  // Update active tab when category param changes
+  useEffect(() => {
+    if (categoryParam && categories.some(cat => cat.name === categoryParam)) {
+      setActiveTab(categoryParam);
+      // Scroll to the category section after a short delay
+      setTimeout(() => {
+        scrollToCategory(categoryParam);
+      }, 100);
+    }
+  }, [categoryParam]);
 
   // 📡 Live Data Fetch from Supabase
   useEffect(() => {
@@ -187,64 +507,23 @@ export function ServiceBrowser() {
                  })}
               </div>
            </div>
-
-           <div className="mt-6 border border-border rounded-[8px] p-6 bg-primary/5 dark:bg-primary/10 transition-colors">
-              <div className="flex items-center gap-3 text-primary">
-                 <Tag className="w-4 h-4" />
-                 <span className="text-xs font-black uppercase tracking-widest">Global Deals</span>
-              </div>
-              <p className="text-[10px] font-bold text-foreground/40 mt-2 leading-relaxed">Bundle & Save: Up to 15% on Multi-Node Engineering</p>
-           </div>
         </aside>
 
         {/* 2. MAIN CONTENT (CENTER SCROLL) */}
         <main className="min-w-0">
-           
-           <div className="overflow-hidden rounded-[24px] border border-border shadow-2xl bg-card">
-              {/* Hero Carousel Concept */}
-              <section className="relative w-full aspect-[21/9] overflow-hidden bg-slate-900 group">
-                 <img src="/services/innovatedisplay.jpeg" className="w-full h-full object-cover opacity-70 group-hover:scale-110 transition-transform duration-[5s]" alt="Hero" />
-                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                 <div className="absolute bottom-10 left-10">
-                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Enterprise Calibration</h2>
-                    <p className="text-primary text-xs font-bold uppercase tracking-[0.2em] neon-text">Starting at Nu. 25,000</p>
-                 </div>
-              </section>
 
-              {/* 🛡️ TRUST PROTOCOL BANNER (UNIFIED) */}
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="w-full py-2.5 px-8 flex items-center justify-between bg-muted/20 border-t border-border/50 transition-all hover:bg-muted/40 group cursor-default"
-              >
-                <div className="flex items-center gap-4">
-                   <Shield className="w-4 h-4 text-primary group-hover:rotate-12 transition-transform dark:neon-text" />
-                   <span className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground/40 transition-colors group-hover:text-foreground">
-                     Validated By <span className="text-primary">350+</span> Enterprises
-                   </span>
-                </div>
-                <div className="flex items-center gap-6">
-                   <div className="w-[1px] h-3 bg-border/50" />
-                   <div className="flex items-center gap-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_var(--primary)]" />
-                      <span className="text-[8px] font-black uppercase tracking-widest text-foreground/20">Operational Resilience Verified</span>
-                   </div>
-                </div>
-              </motion.div>
-           </div>
-
-           <div className="space-y-12 mt-10">
+           <div className="space-y-12">
               {/* Categorized Feed */}
            {categories.map((cat) => {
               const categoryServices = serviceData.filter(s => s.category === cat.name);
               if (categoryServices.length === 0) return null;
 
               return (
-                <section 
-                  key={cat.name} 
+                <section
+                  key={cat.name}
                   id={`section-${cat.name.toLowerCase()}`}
                   data-category={cat.name}
-                  className="space-y-8 scroll-mt-24"
+                  className="space-y-8 scroll-mt-36 pt-8"
                 >
                   <div className="flex items-center justify-between border-b border-border pb-6">
                     <h2 className="text-[32px] font-black text-foreground uppercase tracking-tighter dark:neon-text">
@@ -253,26 +532,41 @@ export function ServiceBrowser() {
                   </div>
 
                   <div className="space-y-6">
-                    {categoryServices.map((service, index) => (
+                    {categoryServices.map((service, serviceIndex) => {
+                      // 📸 Assign unique images to each service card by cycling through available images
+                      const categoryImages = serviceImages[service.category] || serviceImages['POS Systems'];
+                      const uniqueImages = [
+                        categoryImages[serviceIndex % categoryImages.length],
+                        categoryImages[(serviceIndex + 1) % categoryImages.length],
+                        categoryImages[(serviceIndex + 2) % categoryImages.length],
+                      ].filter(Boolean); // Remove any undefined values
+
+                      return (
                       <div key={service.id} className="flex border border-border rounded-[24px] overflow-hidden bg-card hover:shadow-2xl hover:border-primary/40 transition-all duration-500 dark:hover:shadow-[0_0_40px_rgba(57,255,20,0.1)] group">
-                        
-                        {/* Luxury Banner Side (45%) */}
-                        <div className="bg-[#673ab7] dark:bg-primary/80 p-10 flex flex-col justify-between w-[45%] text-white dark:text-black shrink-0 transition-all duration-500 group-hover:bg-primary dark:group-hover:bg-primary">
-                            <div>
-                               <div className="flex items-center gap-2 mb-4">
-                                  <service.icon className="w-5 h-5 opacity-80" />
-                                  <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">Certified Service</span>
-                               </div>
-                               <h3 className="text-3xl font-black uppercase leading-[0.9] tracking-tight mb-4">{service.name}</h3>
-                               <p className="opacity-80 text-[14px] font-medium leading-relaxed">{service.description}</p>
-                            </div>
-                            <div className="flex flex-wrap gap-2 mt-8">
-                               {service.specs.map(tag => (
-                                 <span key={tag} className="px-4 py-1.5 bg-white/10 dark:bg-black/10 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap border border-white/5">
-                                    {tag}
-                                 </span>
-                               ))}
-                            </div>
+
+                        {/* Photo Slideshow Banner (45%) */}
+                        <div className="relative w-[45%] h-[500px] shrink-0 overflow-hidden">
+                          {/* Slideshow Background */}
+                          <ServiceSlideshow images={uniqueImages.length > 0 ? uniqueImages : serviceImages['POS Systems']} />
+
+                          {/* Content Overlay */}
+                          <div className="absolute inset-0 p-10 flex flex-col justify-between z-10">
+                             <div>
+                                <div className="flex items-center gap-2 mb-4">
+                                   <service.icon className="w-5 h-5 text-primary drop-shadow-md" />
+                                   <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary drop-shadow-md">Certified Service</span>
+                                </div>
+                                <h3 className="text-3xl font-black uppercase leading-[0.9] tracking-tight mb-4 text-white drop-shadow-xl">{service.name}</h3>
+                                <p className="text-white text-[14px] font-medium leading-relaxed drop-shadow-lg">{service.description}</p>
+                             </div>
+                             <div className="flex flex-wrap gap-2">
+                                {service.specs.map(tag => (
+                                  <span key={tag} className="px-4 py-1.5 bg-black/40 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap border border-white/20 text-white shadow-lg">
+                                     {tag}
+                                  </span>
+                                ))}
+                             </div>
+                          </div>
                         </div>
 
                         {/* Info Side (55%) */}
@@ -300,23 +594,27 @@ export function ServiceBrowser() {
                             </div>
 
                             <div className="pt-8 mt-8 border-t border-border flex items-center justify-between">
-                               <div className="flex -space-x-3">
-                                  {[1,2,3,4].map(i => (
-                                     <div key={i} className="w-10 h-10 rounded-full border-2 border-card bg-slate-100 overflow-hidden shadow-sm">
-                                        <img src={`https://i.pravatar.cc/100?u=a${i+index}`} className="w-full h-full object-cover" alt="Analyst" />
-                                     </div>
-                                  ))}
-                                  <div className="w-10 h-10 rounded-full border-2 border-card bg-primary/20 flex items-center justify-center text-[10px] font-black text-primary">
-                                     +2k
+                               <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 border border-primary/20">
+                                     <CheckCircle2 className="w-4 h-4 text-primary" />
+                                     <span className="text-[10px] font-black text-primary uppercase tracking-wider">Available Now</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted border border-border">
+                                     <Clock className="w-4 h-4 text-foreground/40" />
+                                     <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-wider">{service.duration}</span>
                                   </div>
                                </div>
-                               <button className="text-[11px] font-black text-primary uppercase tracking-widest flex items-center gap-2 hover:underline decoration-2">
-                                  <Info className="w-4 h-4" /> System Specs
-                                </button>
+                               <button
+                                 onClick={() => setSelectedService(service)}
+                                 className="text-[11px] font-black text-primary uppercase tracking-widest flex items-center gap-2 hover:underline decoration-2 decoration-primary"
+                               >
+                                  <Info className="w-4 h-4" /> View Details
+                               </button>
                             </div>
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 </section>
            );
@@ -351,19 +649,19 @@ export function ServiceBrowser() {
                         )}
                       </div>
                       <div>
-                        <h4 className="text-[13px] font-black text-foreground uppercase tracking-wider">Ops Command</h4>
+                        <h4 className="text-[13px] font-black text-foreground uppercase tracking-wider">Shopping Cart</h4>
                         <div className="flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_5px_var(--primary)]" />
-                          <span className="text-[8px] font-bold text-primary uppercase tracking-[0.2em] animate-pulse">System Live</span>
+                          <span className="text-[8px] font-bold text-primary uppercase tracking-[0.2em] animate-pulse">Ready to Checkout</span>
                         </div>
                       </div>
                     </div>
 
                     {cartEntries.length > 0 && (
-                      <button 
+                      <button
                         onClick={() => setCart({})}
                         className="p-2 hover:bg-red-500/10 text-red-500/30 hover:text-red-500 transition-all rounded-lg"
-                        title="Deactivate All Nodes"
+                        title="Clear Cart"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -376,10 +674,10 @@ export function ServiceBrowser() {
                   {cartEntries.length === 0 ? (
                     <div className="py-10 text-center space-y-4">
                       <div className="w-12 h-12 mx-auto rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center opacity-20">
-                        <Zap className="w-6 h-6" />
+                        <ShoppingCart className="w-6 h-6" />
                       </div>
                       <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-[0.2em] leading-relaxed px-4">
-                        Awaiting infrastructure<br/>node selection...
+                        Your cart is empty.<br/>Add services to get started.
                       </p>
                     </div>
                   ) : (
@@ -427,24 +725,26 @@ export function ServiceBrowser() {
 
                 {/* Footer: Action Central */}
                 {cartEntries.length > 0 && (
-                  <div className="p-6 bg-gradient-to-t from-black/5 dark:from-white/5 to-transparent border-t border-white/10 dark:border-white/5">
+                  <div className="p-6 pb-8 bg-gradient-to-t from-black/5 dark:from-white/5 to-transparent border-t border-white/10 dark:border-white/5">
                     <div className="flex justify-between items-center mb-6">
-                       <span className="text-[10px] font-black text-foreground/40 uppercase tracking-[0.2em]">Deployment Readiness</span>
-                       <span className="text-[14px] font-black text-primary neon-text tracking-widest">{totalItems} NODES</span>
+                       <span className="text-[10px] font-black text-foreground/40 uppercase tracking-[0.2em]">Order Summary</span>
+                       <span className="text-[14px] font-black text-primary neon-text tracking-widest">{totalItems} ITEMS</span>
                     </div>
 
-                    <motion.button 
+                    <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleCheckout}
-                      className="relative w-full py-5 bg-primary overflow-hidden rounded-2xl group/btn"
+                      className="relative w-full py-5 px-4 bg-primary overflow-hidden rounded-2xl group/btn"
                     >
                       {/* Sweeping Light Effect */}
                       <div className="absolute inset-0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
-                      
+
                       <div className="relative flex items-center justify-center gap-3">
-                         <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                         <span className="text-[12px] font-black text-black uppercase tracking-[0.3em]">Deploy System</span>
+                         <svg className="w-5 h-5 text-black flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                         </svg>
+                         <span className="text-[12px] font-black text-black uppercase tracking-[0.3em]">Proceed to Checkout</span>
                       </div>
                     </motion.button>
                   </div>
@@ -453,6 +753,16 @@ export function ServiceBrowser() {
            </div>
         </aside>
       </div>
+
+      {/* 📋 Service Detail Modal */}
+      <AnimatePresence>
+        {selectedService && (
+          <ServiceDetailModal
+            service={selectedService}
+            onClose={() => setSelectedService(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -60,7 +60,9 @@ function isPublicPage(pathname: string) {
     '/support',
     '/privacy',
     '/login',
-    '/client'
+    '/client',
+    '/directory',
+    '/api/directory'
   ];
   return publicPages.some(page => pathname === page || pathname.startsWith(page + '/'));
 }

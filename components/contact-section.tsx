@@ -62,7 +62,7 @@ export function ContactSection() {
               viewport={{ once: true }}
               className="text-sm font-medium text-[#16A34A] mb-2 block"
             >
-              GET IN TOUCH
+              CONTACT US
             </motion.span>
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
@@ -70,7 +70,7 @@ export function ContactSection() {
               viewport={{ once: true }}
               className="text-3xl sm:text-4xl font-semibold text-[#030712] mb-4"
             >
-              Let&apos;s discuss your project
+              Let's Transform Your Business
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -79,8 +79,8 @@ export function ContactSection() {
               transition={{ delay: 0.1 }}
               className="text-[#6B7280] mb-8"
             >
-              Whether you need a quote, technical consultation, or after-sales support, 
-              our team is ready to assist you. Reach out via WhatsApp for the fastest response.
+              Request a consultation, technical assessment, or proposal. Our enterprise solutions team
+              delivers comprehensive technology strategies tailored to your operational requirements.
             </motion.p>
 
             {/* Contact Cards */}
@@ -166,49 +166,49 @@ export function ContactSection() {
             viewport={{ once: true }}
             className="bg-white rounded-2xl p-8 border border-[#E5E7EB] shadow-lg shadow-black/5"
           >
-            <h3 className="text-xl font-semibold text-[#030712] mb-6">Quick Inquiry</h3>
-            
+            <h3 className="text-xl font-semibold text-[#030712] mb-6">Request Consultation</h3>
+
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-[#374151] mb-2">Your Name</label>
+                <label className="block text-sm font-medium text-[#374151] mb-2">Full Name</label>
                 <input
                   type="text"
                   name="name"
-                  placeholder="Enter your name"
+                  placeholder="Enter your full name"
                   className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-[#030712] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#374151] mb-2">Phone Number</label>
+                <label className="block text-sm font-medium text-[#374151] mb-2">Contact Number</label>
                 <input
                   type="tel"
                   name="phone"
-                  placeholder="+975 17 XXX XXX"
+                  placeholder="+975 17 XX XX XX"
                   className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-[#030712] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#374151] mb-2">Service Interested In</label>
+                <label className="block text-sm font-medium text-[#374151] mb-2">Solution Required</label>
                 <select name="service" className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-[#030712] focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent">
-                  <option value="">Select a service</option>
+                  <option value="">Select a solution</option>
                   <option value="pos">POS Systems</option>
                   <option value="cctv">CCTV & Surveillance</option>
-                  <option value="biometric">Biometric Access</option>
-                  <option value="hospitality">Hospitality Software</option>
-                  <option value="software">Custom Software</option>
-                  <option value="power">Power Solutions</option>
-                  <option value="other">Other</option>
+                  <option value="biometric">Biometric Access Control</option>
+                  <option value="hospitality">Hospitality Management</option>
+                  <option value="software">Custom Development</option>
+                  <option value="network">Network Infrastructure</option>
+                  <option value="other">Other Solutions</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#374151] mb-2">Message</label>
+                <label className="block text-sm font-medium text-[#374151] mb-2">Project Details</label>
                 <textarea
                   name="message"
                   rows={4}
-                  placeholder="Tell us about your requirements..."
+                  placeholder="Describe your requirements..."
                   className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-[#030712] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent resize-none"
                 />
               </div>
@@ -218,15 +218,14 @@ export function ContactSection() {
                 disabled={isSubmitting}
                 className="w-full py-3.5 bg-[#14532D] text-white font-medium rounded-xl hover:bg-[#166534] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Sending...' : 'Send Inquiry'}
+                {isSubmitting ? 'Processing...' : 'Submit Request'}
               </button>
 
               <p className="text-xs text-center text-[#9CA3AF]">
-                Or message us directly on{" "}
+                For immediate assistance, contact us via{" "}
                 <a href="https://wa.me/97517268753" className="text-[#16A34A] hover:underline">
                   WhatsApp
-                </a>{" "}
-                for instant response
+                </a>
               </p>
             </form>
           </motion.div>

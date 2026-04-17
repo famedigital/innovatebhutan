@@ -5,9 +5,9 @@ import { WhatsAppButton } from '@/components/whatsapp-button'
 import { SupportContent } from './support-content'
 
 export const metadata: Metadata = {
-  title: 'Operational Command Center | Technical Nodes & AML Protocol | INNOVATE BHUTAN',
-  description: 'Mission-critical technical support for Bhutan\'s infrastructure. AML protocols, node diagnostics, and emergency overrides across all 20 dzongkhags.',
-  keywords: 'technical command Bhutan, AML protocol, node diagnostics Thimphu, infrastructure support Bhutan, emergency tech override',
+  title: 'Support Hub | Premium Customer Support | Innovate.bt',
+  description: 'Premium customer support for Rancelab ERP, custom software, and all technology solutions. Day and night shift teams, WhatsApp support, and dedicated assistance across Bhutan.',
+  keywords: 'customer support Bhutan, Rancelab support, WhatsApp support, technical support Thimphu, Innovate.bt support',
 }
 
 export default function SupportPage() {
