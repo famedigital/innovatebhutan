@@ -579,13 +579,13 @@ export function ServiceBrowser() {
               Back to all services
             </motion.button>
           ) : null}
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-5 flex-wrap">
             <h1 className={`text-3xl text-foreground ${selectedService ? 'text-2xl' : ''}`}>
               Services
             </h1>
-            {/* Category Pills - Beside title */}
+            {/* iOS-style Segmented Control */}
             {!selectedService && (
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              <div className="flex items-center gap-1 px-1 py-1 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/80 backdrop-blur-sm border border-zinc-200/50 dark:border-zinc-700/50">
                 {categories.map((cat) => (
                   <button
                     key={cat.value}
@@ -598,15 +598,23 @@ export function ServiceBrowser() {
                       }
                     }}
                     className={`
-                      px-3 py-1.5 rounded-full text-xs whitespace-nowrap
+                      relative px-3.5 py-2 rounded-lg text-xs whitespace-nowrap
                       transition-all duration-200
                       ${activeCategory === cat.value
-                        ? "bg-primary text-black"
-                        : "bg-zinc-100 dark:bg-zinc-800 text-foreground/60 hover:text-foreground"
+                        ? "text-foreground font-medium"
+                        : "text-foreground/50 hover:text-foreground/70"
                       }
                     `}
                   >
-                    {cat.name}
+                    {/* iOS-style active indicator */}
+                    {activeCategory === cat.value && (
+                      <motion.div
+                        layoutId="activeCategory"
+                        className="absolute inset-0 bg-white dark:bg-zinc-700 rounded-lg shadow-sm"
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10">{cat.name}</span>
                   </button>
                 ))}
               </div>

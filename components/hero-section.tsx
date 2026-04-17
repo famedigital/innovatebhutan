@@ -50,7 +50,7 @@ function useTypewriter(phrases: string[], typingSpeed = 80, deletingSpeed = 40, 
   return { text, isDeleting, isPaused };
 }
 
-// Apple-style Service Card - All content within the icon box
+// iOS App Store Style Service Card
 function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
   service: any;
   onClick: () => void;
@@ -59,94 +59,117 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
   onLeave?: () => void;
 }) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isPressed, setIsPressed] = useState(false);
+  const [showSubs, setShowSubs] = useState(false);
   const Icon = service.icon;
   const hasSubs = (service as any).subs;
   const subCount = hasSubs ? (service as any).subs.length : 0;
 
-  // Extract first color from gradient for badge and border
-  const gradient = service.gradient || 'linear-gradient(135deg, #10B981, #059669)';
+  // Extract first color from gradient
+  const gradient = service.gradient || 'linear-gradient(145deg, #10B981, #059669)';
   const colorMatch = gradient.match(/#[A-F0-9]{6}/gi);
   const primaryColor = colorMatch?.[0] || '#10B981';
 
   return (
     <div
+      className="group"
       onClick={onClick}
       onMouseEnter={() => {
         setIsHovered(true);
         onHover?.(service.name);
+        if (hasSubs) setShowSubs(true);
       }}
       onMouseLeave={() => {
         setIsHovered(false);
         onLeave?.();
+        setShowSubs(false);
       }}
-      className="relative"
+      onMouseDown={() => setIsPressed(true)}
+      onMouseUp={() => setIsPressed(false)}
     >
+      {/* App Icon */}
       <div
-        className={`
-          relative rounded-2xl cursor-pointer
-          flex flex-col items-center justify-center p-4 gap-2
-          transition-all duration-300 ease-out
-        `}
-        style={{
-          width: '100%',
-          height: '110px',
-          background: gradient,
-          boxShadow: isHovered
-            ? `0 12px 40px ${primaryColor}40`
-            : `0 2px 12px ${primaryColor}20`,
-          transform: isHovered ? 'translateY(-4px) scale(1.02)' : 'translateY(0) scale(1)',
-        }}
+        className="relative mb-2 mx-auto"
+        style={{ width: '64px', height: '64px' }}
       >
-        {/* Icon */}
-        <Icon className="w-8 h-8 text-white flex-shrink-0" />
-
-        {/* Service name - white text on gradient */}
-        <span className="text-[11px] text-white text-center leading-tight line-clamp-2">
-          {service.name}
-        </span>
-
-        {/* Service count badge - white semi-transparent */}
-        {subCount > 0 && (
-          <span
-            className="text-[9px] px-2 py-0.5 rounded-full inline-block w-fit"
-            style={{
-              background: 'rgba(255,255,255,0.25)',
-              color: 'white',
-            }}
-          >
-            {subCount}
-          </span>
+        {/* Outer glow on hover */}
+        {isHovered && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 0.5, scale: 1 }}
+            className="absolute inset-0 rounded-3xl blur-xl"
+            style={{ background: gradient }}
+          />
         )}
-      </div>
 
-      {/* Sub-services reveal - appears on hover */}
-      {hasSubs && isHovered && (
-        <div
-          className="absolute z-10 left-0 right-0 top-full mt-2 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-zinc-100 dark:border-white/10 p-3"
+        {/* Main icon container */}
+        <motion.div
+          className="relative w-full h-full rounded-3xl flex items-center justify-center shadow-lg cursor-pointer"
           style={{
-            animation: 'fadeIn 0.2s ease-out',
+            background: gradient,
+            boxShadow: isHovered
+              ? `0 16px 32px -8px ${primaryColor}50`
+              : '0 4px 16px -4px rgba(0,0,0,0.15)',
+          }}
+          animate={{
+            scale: isPressed ? 0.92 : isHovered ? 1.08 : 1,
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 400,
+            damping: 25
           }}
         >
-          <div className="flex flex-col gap-1.5">
+          <Icon className="w-8 h-8 text-white" />
+
+          {/* Sub-services indicator */}
+          {hasSubs && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-1 -right-1 w-5 h-5 bg-white dark:bg-zinc-800 rounded-full flex items-center justify-center shadow-md"
+            >
+              <span className="text-[9px]" style={{ color: primaryColor }}>
+                {subCount}
+              </span>
+            </motion.div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Service name */}
+      <h3 className="text-center text-xs text-foreground mb-0.5 truncate">
+        {service.name}
+      </h3>
+
+      {/* Category */}
+      <p className="text-center text-[10px] text-foreground/40">
+        {service.category}
+      </p>
+
+      {/* Sub-services flyout menu */}
+      {hasSubs && showSubs && (
+        <motion.div
+          initial={{ opacity: 0, y: 8, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 8, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 200, damping: 25 }}
+          className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-100 dark:border-white/10 p-2 min-w-[140px]"
+        >
+          <div className="flex flex-col gap-0.5">
             {(service as any).subs.map((sub: string, i: number) => (
-              <div
+              <motion.div
                 key={sub}
-                className="flex items-center gap-2"
-                style={{
-                  animation: `slideIn 0.2s ease-out ${i * 0.05}s both`,
-                }}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="px-3 py-2 rounded-xl text-xs text-foreground/70 hover:text-primary hover:bg-primary/10 transition-all cursor-pointer text-center"
               >
-                <div
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: gradient }}
-                />
-                <span className="text-[11px] text-foreground/70">
-                  {sub}
-                </span>
-              </div>
+                {sub}
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );
@@ -905,18 +928,18 @@ const servicesVisual = [
 ];
 
 const mainServices = [
-  { name: "POS Solutions", icon: Store, gradient: "linear-gradient(135deg, #F97316, #DC2626)", category: "POS Systems", subs: ["Retail POS", "Restaurant POS"] },
-  { name: "Hotel PMS", icon: Hotel, gradient: "linear-gradient(135deg, #3B82F6, #4F46E5)", category: "POS Systems" },
-  { name: "Web Development", icon: Code, gradient: "linear-gradient(135deg, #A855F7, #EC4899)", category: "Web/SaaS" },
-  { name: "SaaS Development", icon: Database, gradient: "linear-gradient(135deg, #8B5CF6, #7C3AED)", category: "Web/SaaS" },
-  { name: "ERP Development", icon: LayoutGrid, gradient: "linear-gradient(135deg, #6366F1, #2563EB)", category: "Web/SaaS" },
-  { name: "Mobile App Development", icon: Smartphone, gradient: "linear-gradient(135deg, #14B8A6, #0891B2)", category: "Web/SaaS" },
-  { name: "Infrastructure Solutions", icon: Wrench, gradient: "linear-gradient(135deg, #64748B, #71717A)", category: "Infrastructure", subs: ["Hardware Solutions", "Network Infrastructure", "Power Solutions"] },
-  { name: "Security Systems", icon: Shield, gradient: "linear-gradient(135deg, #EF4444, #E11D48)", category: "Security", subs: ["Security Systems", "Anti Theft System"] },
-  { name: "Technical Maintenance", icon: Zap, gradient: "linear-gradient(135deg, #22C55E, #10B981)", category: "Maintenance" },
-  { name: "Payroll & HR Whitelabel", icon: Users, gradient: "linear-gradient(135deg, #F43F5E, #EC4899)", category: "Web/SaaS" },
-  { name: "GST Services", icon: FileText, gradient: "linear-gradient(135deg, #EAB308, #D97706)", category: "Business Services" },
-  { name: "IT Consulting", icon: Search, gradient: "linear-gradient(135deg, #06B6D4, #3B82F6)", category: "Consulting" },
+  { name: "POS Solutions", icon: Store, gradient: "linear-gradient(145deg, #FF6B35, #DC2626, #B91C1C)", category: "POS Systems", subs: ["Retail POS", "Restaurant POS"] },
+  { name: "Hotel PMS", icon: Hotel, gradient: "linear-gradient(145deg, #3B82F6, #4F46E5, #4338CA)", category: "POS Systems" },
+  { name: "Web Development", icon: Code, gradient: "linear-gradient(145deg, #A855F7, #EC4899, #DB2777)", category: "Web/SaaS" },
+  { name: "SaaS Development", icon: Database, gradient: "linear-gradient(145deg, #8B5CF6, #7C3AED, #6D28D9)", category: "Web/SaaS" },
+  { name: "ERP Development", icon: LayoutGrid, gradient: "linear-gradient(145deg, #6366F1, #2563EB, #1D4ED8)", category: "Web/SaaS" },
+  { name: "Mobile App Development", icon: Smartphone, gradient: "linear-gradient(145deg, #14B8A6, #0891B2, #0E7490)", category: "Web/SaaS" },
+  { name: "Infrastructure Solutions", icon: Wrench, gradient: "linear-gradient(145deg, #64748B, #71717A, #52525B)", category: "Infrastructure", subs: ["Hardware Solutions", "Network Infrastructure", "Power Solutions"] },
+  { name: "Security Systems", icon: Shield, gradient: "linear-gradient(145deg, #EF4444, #E11D48, #BE123C)", category: "Security", subs: ["Security Systems", "Anti Theft System"] },
+  { name: "Technical Maintenance", icon: Zap, gradient: "linear-gradient(145deg, #22C55E, #10B981, #059669)", category: "Maintenance" },
+  { name: "Payroll & HR Whitelabel", icon: Users, gradient: "linear-gradient(145deg, #F43F5E, #EC4899, #BE185D)", category: "Web/SaaS" },
+  { name: "GST Services", icon: FileText, gradient: "linear-gradient(145deg, #EAB308, #D97706, #B45309)", category: "Business Services" },
+  { name: "IT Consulting", icon: Search, gradient: "linear-gradient(145deg, #06B6D4, #3B82F6, #2563EB)", category: "Consulting" },
 ];
 
 const serviceToImageMap: Record<string, string> = {
@@ -1027,25 +1050,37 @@ export function HeroSection() {
       {/* Two columns - same height, aligned */}
       <div className="flex flex-col lg:flex-row gap-10 lg:gap-[50px]">
 
-      {/* 🏙️ LEFT SIDE: SERVICES */}
+      {/* 🏙️ LEFT SIDE: SERVICES - iOS App Store Grid */}
       <div className="flex-1 w-full min-h-[550px]">
-        <div className="bg-white dark:bg-[#050505] border border-[#ebebeb] dark:border-white/10 rounded-[16px] p-8 shadow-[0_10px_30px_rgba(0,0,0,0.04)] dark:shadow-none transition-all h-full">
-          <div className="mb-8">
-            <h2 className="text-[16px] lg:text-[18px] font-bold text-foreground/80">Select Your Industry Solution</h2>
+        <div className="bg-white dark:bg-[#050505] border border-[#ebebeb] dark:border-white/10 rounded-[16px] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.04)] dark:shadow-none transition-all h-full">
+          <div className="mb-6">
+            <h2 className="text-[14px] lg:text-[16px] text-foreground/50">Select Your Industry Solution</h2>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-[12px] lg:gap-[15px]">
+          {/* App Store Grid - More columns like iOS */}
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-x-4 gap-y-6 justify-items-center">
             {mainServices.map((service, i) => (
-              <MorphingBlobCard
+              <motion.div
                 key={service.name}
-                service={service}
-                index={i}
-                onClick={() => {
-                  router.push(`/services?category=${encodeURIComponent((service as any).category)}`);
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{
+                  delay: i * 0.04,
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 20
                 }}
-                onHover={(name) => setHoveredService(name)}
-                onLeave={() => setHoveredService(null)}
-              />
+              >
+                <MorphingBlobCard
+                  service={service}
+                  index={i}
+                  onClick={() => {
+                    router.push(`/services?category=${encodeURIComponent((service as any).category)}`);
+                  }}
+                  onHover={(name) => setHoveredService(name)}
+                  onLeave={() => setHoveredService(null)}
+                />
+              </motion.div>
             ))}
           </div>
         </div>
