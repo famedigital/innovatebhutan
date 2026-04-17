@@ -706,7 +706,7 @@ export function ServiceBrowser() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="max-w-5xl mx-auto px-6 py-10"
+            className="max-w-5xl mx-auto px-6 pt-24 pb-10"
           >
             <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 gap-x-6 gap-y-8">
               {filteredServices.map((service, index) => (
@@ -748,7 +748,7 @@ export function ServiceBrowser() {
               </motion.div>
 
               {/* Middle Panel - Service Details */}
-              <div className="lg:col-span-5 bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800 overflow-y-auto">
+              <div className="lg:col-span-6 bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800 overflow-y-auto">
                 <AnimatePresence mode="wait">
                   {selectedService && (
                     <ServiceDetailPanel
@@ -765,7 +765,7 @@ export function ServiceBrowser() {
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="lg:col-span-4"
+                className="lg:col-span-3"
               >
                 <CartPanel
                   cart={cart}
