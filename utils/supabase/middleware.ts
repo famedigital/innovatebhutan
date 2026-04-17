@@ -55,6 +55,7 @@ function isPublicPage(pathname: string) {
   const publicPages = [
     '/',
     '/services',
+    '/services-preview',
     '/company',
     '/brands',
     '/support',
