@@ -50,7 +50,7 @@ function useTypewriter(phrases: string[], typingSpeed = 80, deletingSpeed = 40, 
   return { text, isDeleting, isPaused };
 }
 
-// Morphing Blob Service Card Component
+// Simple Service Card Component
 function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
   service: any;
   onClick: () => void;
@@ -59,30 +59,11 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
   onLeave?: () => void;
 }) {
   const [isHovered, setIsHovered] = useState(false);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const cardRef = useRef<HTMLDivElement>(null);
   const Icon = service.icon;
   const hasSubs = (service as any).subs;
 
-  // Magnetic cursor effect
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-    setMousePosition({ x, y });
-  };
-
-  const resetPosition = () => {
-    setMousePosition({ x: 0, y: 0 });
-  };
-
   return (
-    <motion.div
-      ref={cardRef}
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: index * 0.05, type: "spring", stiffness: 200, damping: 20 }}
+    <div
       onClick={onClick}
       onMouseEnter={() => {
         setIsHovered(true);
@@ -90,90 +71,30 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
       }}
       onMouseLeave={() => {
         setIsHovered(false);
-        resetPosition();
         onLeave?.();
       }}
-      onMouseMove={handleMouseMove}
-      className="relative"
-      style={{
-        x: mousePosition.x * 0.15, // Magnetic pull
-        y: mousePosition.y * 0.15,
-      }}
+      className="relative group"
     >
-      {/* Main Card with Morphing Blob Effect */}
-      <motion.div
-        animate={{
-          borderRadius: isHovered && hasSubs
-            ? ["12px", "30px", "50px", "60px", "50px", "30px", "12px"]
-            : "12px",
-          scale: isHovered ? 1.08 : 1,
-        }}
-        transition={{
-          borderRadius: {
-            duration: 0.8,
-            repeat: isHovered ? Infinity : 0,
-            ease: "easeInOut",
-          },
-          scale: { duration: 0.3, ease: "easeOut" },
-        }}
+      <div
         className={`
-          relative overflow-hidden cursor-pointer
-          ${hasSubs ? "min-h-[120px]" : "min-h-[60px]"}
+          relative rounded-[12px] p-3 overflow-hidden cursor-pointer transition-all duration-200
+          ${hasSubs ? "min-h-[100px]" : "min-h-[55px]"}
+          ${isHovered ? "shadow-lg" : "shadow-sm"}
         `}
-        style={{
-          boxShadow: isHovered
-            ? `0 20px 60px rgba(16, 185, 129, ${hasSubs ? 0.3 : 0.15})`
-            : "0 4px 20px rgba(0,0,0,0.06)",
-        }}
       >
-        {/* Animated Gradient Background */}
-        <motion.div
-          className={`absolute inset-0 bg-gradient-to-br ${service.color}`}
-          animate={{
-            opacity: isHovered ? 1 : 0,
-          }}
-          transition={{ duration: 0.3 }}
-        />
+        {/* Gradient Background */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${service.color} transition-opacity duration-200 ${isHovered ? "opacity-100" : "opacity-0"}`} />
 
-        {/* Organic Shape Overlay */}
-        {isHovered && hasSubs && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.3 }}
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(circle at ${mousePosition.x + 50}px ${mousePosition.y + 50}px, rgba(255,255,255,0.4), transparent 60%)`,
-            }}
-          />
-        )}
+        {/* White overlay */}
+        <div className="absolute inset-0 bg-white/95 dark:bg-black/90" />
 
-        {/* White overlay for readability */}
-        <motion.div
-          className="absolute inset-0 bg-white/95 dark:bg-black/90"
-          animate={{ opacity: isHovered ? 0.95 : 1 }}
-          transition={{ duration: 0.3 }}
-        />
-
-        {/* Content Container */}
-        <div className="relative z-10 p-4">
-          {/* Main Content (shown when not hovered or no subs) */}
-          <motion.div
-            animate={{
-              opacity: isHovered && hasSubs ? 0 : 1,
-              scale: isHovered && hasSubs ? 0.8 : 1,
-            }}
-            transition={{ duration: 0.2 }}
-            className="flex items-center gap-3"
-          >
-            <motion.div
-              className={`w-10 h-10 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}
-              animate={{
-                rotate: isHovered ? [0, -5, 5, -5, 0] : 0,
-              }}
-              transition={{ duration: 0.5 }}
-            >
-              <Icon className="w-5 h-5 text-white drop-shadow-md" />
-            </motion.div>
+        {/* Content */}
+        <div className="relative z-10">
+          {/* Main Content */}
+          <div className={`flex items-center gap-2 transition-opacity duration-150 ${isHovered && hasSubs ? "opacity-0" : "opacity-100"}`}>
+            <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}>
+              <Icon className="w-4 h-4 text-white" />
+            </div>
             <div className="flex-1 min-w-0">
               <span className="text-[10px] text-foreground uppercase tracking-tight block leading-tight">
                 {service.name}
@@ -184,86 +105,28 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
                 </span>
               )}
             </div>
-          </motion.div>
+          </div>
 
-          {/* Sub-services (shown on hover if has subs) */}
+          {/* Sub-services on hover */}
           {hasSubs && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{
-                opacity: isHovered ? 1 : 0,
-                y: isHovered ? 0 : 20,
-              }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className="absolute inset-x-0 top-0 bottom-0 flex flex-col justify-center px-4"
-            >
-              <div className="space-y-2">
-                {(service as any).subs.map((sub: string, i: number) => (
-                  <motion.div
-                    key={sub}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{
-                      opacity: isHovered ? 1 : 0,
-                      x: isHovered ? 0 : -20,
-                    }}
-                    transition={{ duration: 0.3, delay: 0.15 + i * 0.08 }}
-                    className="flex items-center gap-2 group/sub"
-                  >
-                    <motion.div
-                      className={`w-6 h-6 rounded-lg bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}
-                      whileHover={{ scale: 1.15, rotate: 5 }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                    >
-                      <Icon className="w-3 h-3 text-white" />
-                    </motion.div>
-                    <span className="text-[9px] text-foreground group-hover/sub:text-primary transition-colors">
+            <div className={`absolute inset-x-0 top-0 bottom-0 flex flex-col justify-center px-3 transition-opacity duration-150 ${isHovered ? "opacity-100" : "opacity-0"}`}>
+              <div className="space-y-1.5">
+                {(service as any).subs.map((sub: string) => (
+                  <div key={sub} className="flex items-center gap-2">
+                    <div className={`w-5 h-5 rounded bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}>
+                      <Icon className="w-2.5 h-2.5 text-white" />
+                    </div>
+                    <span className="text-[8px] text-foreground">
                       {sub}
                     </span>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
-            </motion.div>
+            </div>
           )}
         </div>
-
-        {/* Floating Particles Effect */}
-        {isHovered && hasSubs && (
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            {[...Array(6)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute w-1 h-1 rounded-full bg-primary/40"
-                initial={{
-                  x: "50%",
-                  y: "50%",
-                  opacity: 0,
-                }}
-                animate={{
-                  x: `${50 + (Math.random() - 0.5) * 80}%`,
-                  y: `${50 + (Math.random() - 0.5) * 80}%`,
-                  opacity: [0, 1, 0],
-                }}
-                transition={{
-                  duration: 1.5 + Math.random(),
-                  delay: i * 0.1,
-                  ease: "easeOut",
-                }}
-              />
-            ))}
-          </div>
-        )}
-      </motion.div>
-
-      {/* Glow Effect */}
-      {isHovered && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 0.5, scale: 1.2 }}
-          className={`absolute -inset-4 -z-10 rounded-full bg-gradient-to-br ${service.color} blur-2xl`}
-          transition={{ duration: 0.4 }}
-        />
-      )}
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
