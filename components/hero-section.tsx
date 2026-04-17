@@ -862,7 +862,7 @@ export function HeroSection() {
             className="text-[32px] lg:text-[44px] font-bold text-foreground leading-[1.2] mb-8 transition-colors"
           >
             Your space, professionally managed, anywhere in{" "}
-              <span className="text-primary animate-text-color block mt-1">
+              <span className="text-primary animate-text-color">
                 BHUTAN
               </span>
             </motion.h1>
