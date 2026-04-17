@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, ChevronRight, Store, Utensils, Hotel, Code, Wrench, LayoutGrid, Shield, Zap, Wifi, Clock, Smartphone, FileText, Users, Database } from "lucide-react";
+import { Search, MapPin, ChevronRight, Store, Utensils, Hotel, Code, Wrench, LayoutGrid, Shield, Zap, Wifi, Clock, Smartphone, FileText, Users, Database, Power, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { getMediaUrl } from "@/lib/cloudinary";
@@ -772,6 +772,8 @@ const mainServices = [
   { name: "Payroll & HR Whitelabel", icon: Users, badge: null, color: "from-rose-500 to-pink-600", bgColor: "bg-rose-500", category: "Web/SaaS" },
   { name: "Mobile App Dev", icon: Smartphone, badge: null, color: "from-teal-500 to-cyan-600", bgColor: "bg-teal-500", category: "Web/SaaS" },
   { name: "Brochure & Catalogue Design", icon: FileText, badge: null, color: "from-yellow-500 to-amber-600", bgColor: "bg-yellow-500", category: "Web/SaaS" },
+  { name: "Power Solution (Inverter)", icon: Power, badge: null, color: "from-yellow-400 to-orange-500", bgColor: "bg-yellow-400", category: "Power" },
+  { name: "Anti Theft System", icon: Lock, badge: null, color: "from-red-600 to-rose-700", bgColor: "bg-red-600", category: "Security" },
 ];
 
 const serviceToImageMap: Record<string, string> = {
@@ -788,6 +790,8 @@ const serviceToImageMap: Record<string, string> = {
   "Payroll & HR Whitelabel": "/hero/software.png",
   "Mobile App Dev": "/hero/software.png",
   "Brochure & Catalogue Design": "/hero/software.png",
+  "Power Solution (Inverter)": "/hero/hardware.png",
+  "Anti Theft System": "/hero/cctv.png",
 };
 
 export function HeroSection() {
