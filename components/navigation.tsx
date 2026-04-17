@@ -4,25 +4,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Phone, MapPin, ChevronRight, Moon, Sun, LogIn } from "lucide-react";
 
-// Modern Logo Component with Intro Animation
+// Modern Logo Component with PNG Image
 function ModernLogo() {
-  const [introComplete, setIntroComplete] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIntroComplete(true), 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const text = "innovates.bt";
-  const letters = text.split("");
-
-  // Ultra luxury green and gold colors
-  const luxuryGreen = '#047857';
-  const luxuryGold = '#D4AF37';
-  const brightGold = '#F59E0B';
-  const shimmerGreen = '#10B981';
-  const shimmerGold = '#FCD34D';
-
   return (
     <motion.div
       className="relative"
@@ -30,138 +13,17 @@ function ModernLogo() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <motion.div
-        className="relative flex items-center"
-        animate={introComplete ? {
-          y: [0, -1, 0],
-        } : {}}
+      <motion.img
+        src="https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/v1776433648/innovateKNOT_rwyvk1.png"
+        alt="innovates.bt"
+        className="h-8 w-auto"
+        animate={{
+          y: [0, -2, 0],
+        }}
         transition={{
           duration: 3,
           repeat: Infinity,
           ease: "easeInOut"
-        }}
-      >
-        {letters.map((letter, index) => (
-          <motion.span
-            key={index}
-            className={`inline-block text-xl font-black tracking-tight relative`}
-            initial={{
-              opacity: 0,
-              y: 15,
-              filter: 'blur(8px)'
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              filter: introComplete ? 'blur(0px)' : 'blur(0px)',
-            }}
-            transition={{
-              duration: 0.6,
-              delay: index * 0.04,
-              ease: [0.43, 0.13, 0.23, 0.96]
-            }}
-          >
-            {/* Fluid color wave animation */}
-            <motion.span
-              className="inline-block"
-              animate={introComplete ? {
-                color: [
-                  luxuryGreen,
-                  shimmerGreen,
-                  luxuryGold,
-                  shimmerGold,
-                  luxuryGold,
-                  shimmerGreen,
-                  luxuryGreen
-                ],
-                textShadow: [
-                  `0 0 10px ${luxuryGreen}40`,
-                  `0 0 15px ${shimmerGreen}60`,
-                  `0 0 20px ${luxuryGold}80`,
-                  `0 0 25px ${shimmerGold}`,
-                  `0 0 20px ${luxuryGold}80`,
-                  `0 0 15px ${shimmerGreen}60`,
-                  `0 0 10px ${luxuryGreen}40`
-                ]
-              } : {}}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: index * 0.15, // Stagger the wave
-              }}
-              style={{
-                color: luxuryGreen,
-              }}
-            >
-              {letter}
-            </motion.span>
-
-            {/* Extra glow for vowels and 's' */}
-            {['i', 'o', 'a', 'e', 's'].includes(letter.toLowerCase()) && introComplete && (
-              <motion.span
-                className="absolute inset-0 blur-md opacity-60"
-                animate={{
-                  background: [
-                    `radial-gradient(circle, ${luxuryGold}00 0%, transparent 70%)`,
-                    `radial-gradient(circle, ${luxuryGold}40 30%, transparent 70%)`,
-                    `radial-gradient(circle, ${shimmerGold}60 50%, transparent 70%)`,
-                    `radial-gradient(circle, ${luxuryGold}40 30%, transparent 70%)`,
-                    `radial-gradient(circle, ${luxuryGold}00 0%, transparent 70%)`
-                  ]
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: index * 0.1
-                }}
-              />
-            )}
-          </motion.span>
-        ))}
-      </motion.div>
-
-      {/* Fluid gradient background wave */}
-      <motion.div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-8 rounded-full blur-2xl -z-10"
-        animate={{
-          background: [
-            `radial-gradient(circle, ${luxuryGreen}30 0%, ${luxuryGold}20 50%, transparent 70%)`,
-            `radial-gradient(circle, ${shimmerGold}40 30%, ${shimmerGreen}30 60%, transparent 80%)`,
-            `radial-gradient(circle, ${luxuryGold}30 50%, ${luxuryGreen}20 70%, transparent 90%)`,
-            `radial-gradient(circle, ${luxuryGreen}30 0%, ${luxuryGold}20 50%, transparent 70%)`
-          ],
-          scale: [1, 1.1, 1.2, 1],
-          opacity: [0.3, 0.5, 0.4, 0.3]
-        }}
-        transition={{
-          duration: 5,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      />
-
-      {/* Shimmer wave passing through */}
-      <motion.div
-        className="absolute inset-0"
-        initial={{ x: '-100%' }}
-        animate={introComplete ? {
-          x: ['-100%', '300%'],
-        } : {}}
-        transition={{
-          duration: 6,
-          repeat: Infinity,
-          ease: "linear"
-        }}
-        style={{
-          background: `linear-gradient(90deg,
-            transparent 0%,
-            ${luxuryGold}15 25%,
-            ${shimmerGold}30 50%,
-            ${luxuryGold}15 75%,
-            transparent 100%)`,
-          mixBlendMode: 'overlay'
         }}
       />
     </motion.div>
