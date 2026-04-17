@@ -1050,15 +1050,15 @@ export function HeroSection() {
       {/* Two columns - same height, aligned */}
       <div className="flex flex-col lg:flex-row gap-10 lg:gap-[50px]">
 
-      {/* 🏙️ LEFT SIDE: SERVICES - iOS App Store Grid */}
+      {/* 🏙️ LEFT SIDE: SERVICES - iOS App Store Grid - 4 Columns Only */}
       <div className="flex-1 w-full min-h-[550px]">
         <div className="bg-white dark:bg-[#050505] border border-[#ebebeb] dark:border-white/10 rounded-[16px] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.04)] dark:shadow-none transition-all h-full">
           <div className="mb-6">
             <h2 className="text-[14px] lg:text-[16px] text-foreground/50">Select Your Industry Solution</h2>
           </div>
 
-          {/* App Store Grid - More columns like iOS */}
-          <div className="grid grid-cols-4 sm:grid-cols-5 gap-x-4 gap-y-6 justify-items-center">
+          {/* App Store Grid - Fixed 4 columns */}
+          <div className="grid grid-cols-4 gap-x-5 gap-y-8 justify-items-center">
             {mainServices.map((service, i) => (
               <motion.div
                 key={service.name}
