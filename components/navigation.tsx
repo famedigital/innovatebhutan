@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Phone, MapPin, ChevronRight, Moon, Sun, LogIn } from "lucide-react";
 
-// Modern Logo Component with PNG Image
+// Modern Logo Component with PNG Image + Text
 function ModernLogo() {
   return (
     <motion.div
-      className="relative"
+      className="relative flex items-center gap-2"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -26,6 +26,19 @@ function ModernLogo() {
           ease: "easeInOut"
         }}
       />
+      <motion.span
+        className="text-lg font-bold text-foreground"
+        animate={{
+          y: [0, -2, 0],
+        }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      >
+        innovates.bt
+      </motion.span>
     </motion.div>
   );
 }

@@ -109,14 +109,14 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
 
           {/* Sub-services on hover */}
           {hasSubs && (
-            <div className={`absolute inset-x-0 top-0 bottom-0 flex flex-col justify-center px-3 transition-opacity duration-150 ${isHovered ? "opacity-100" : "opacity-0"}`}>
-              <div className="space-y-1.5">
+            <div className={`absolute inset-x-0 top-0 bottom-0 flex flex-col justify-center items-center px-2 transition-opacity duration-150 ${isHovered ? "opacity-100" : "opacity-0"}`}>
+              <div className="space-y-2 w-full">
                 {(service as any).subs.map((sub: string) => (
-                  <div key={sub} className="flex items-center gap-2">
-                    <div className={`w-5 h-5 rounded bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}>
-                      <Icon className="w-2.5 h-2.5 text-white" />
+                  <div key={sub} className="flex items-center justify-center gap-2">
+                    <div className={`w-6 h-6 rounded bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}>
+                      <Icon className="w-3 h-3 text-white" />
                     </div>
-                    <span className="text-[8px] text-foreground">
+                    <span className="text-[10px] text-foreground text-center">
                       {sub}
                     </span>
                   </div>
