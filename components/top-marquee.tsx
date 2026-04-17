@@ -40,17 +40,17 @@ export function TopMarquee() {
           setMarqueeData(parsed);
           setIsVisible(parsed.enabled ?? true);
         } catch (e) {
-          // Default fallback
+          // Default fallback - hidden by default
           setMarqueeData({
-            enabled: true,
+            enabled: false,
             text: "🚀 Innovate Bhutan - Your Trusted Technology Partner | POS Systems | Hotel PMS | Security AI | Web Development | 24/7 Support",
             icon: "zap",
           });
         }
       } else {
-        // Default settings
+        // Default settings - hidden by default
         setMarqueeData({
-          enabled: true,
+          enabled: false,
           text: "🚀 Innovate Bhutan - Your Trusted Technology Partner | POS Systems | Hotel PMS | Security AI | Web Development | 24/7 Support",
           icon: "zap",
         });

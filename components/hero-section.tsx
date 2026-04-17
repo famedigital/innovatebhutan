@@ -16,550 +16,497 @@ const heroSlides = [
   { image: "/hero/hardware.png", name: "Hardware Solutions" },
 ];
 
-// SVG Illustration Components with advanced realistic effects
+// SVG Illustration Components - Light theme with animations
 const RetailPOSIllustration = () => (
   <svg viewBox="0 0 200 200" className="w-full h-full">
     <defs>
-      {/* Advanced realistic gradients */}
-      <linearGradient id="metal-body" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#4A5568"/>
-        <stop offset="30%" stopColor="#718096"/>
-        <stop offset="70%" stopColor="#4A5568"/>
-        <stop offset="100%" stopColor="#2D3748"/>
+      <linearGradient id="bg-light" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#ECFDF5"/>
+        <stop offset="100%" stopColor="#D1FAE5"/>
       </linearGradient>
 
-      <linearGradient id="screen-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <linearGradient id="pos-body" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#10B981"/>
-        <stop offset="50%" stopColor="#059669"/>
-        <stop offset="100%" stopColor="#047857"/>
+        <stop offset="50%" stopColor="#34D399"/>
+        <stop offset="100%" stopColor="#059669"/>
       </linearGradient>
 
-      <linearGradient id="digital-display" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#10B981" stopOpacity="0.9"/>
-        <stop offset="50%" stopColor="#34D399" stopOpacity="0.95"/>
-        <stop offset="100%" stopColor="#10B981" stopOpacity="0.9"/>
+      <linearGradient id="screen-glow-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#6EE7B7"/>
+        <stop offset="100%" stopColor="#34D399"/>
       </linearGradient>
 
-      {/* Glow effects */}
-      <filter id="screen-glow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <filter id="glow-effect" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
         <feMerge>
           <feMergeNode in="coloredBlur"/>
           <feMergeNode in="SourceGraphic"/>
         </feMerge>
       </filter>
 
-      <filter id="button-glow" x="-100%" y="-100%" width="300%" height="300%">
-        <feGaussianBlur stdDeviation="2" result="blur"/>
-        <feFlood floodColor="#10B981" floodOpacity="0.5"/>
-        <feComposite in2="blur" operator="in"/>
-        <feMerge>
-          <feMergeNode/>
-          <feMergeNode in="SourceGraphic"/>
-        </feMerge>
+      <filter id="soft-glow" x="-100%" y="-100%" width="300%" height="300%">
+        <feGaussianBlur stdDeviation="6"/>
       </filter>
-
-      <radialGradient id="counter-reflection" cx="50%" cy="30%" r="60%">
-        <stop offset="0%" stopColor="#718096" stopOpacity="0.4"/>
-        <stop offset="100%" stopColor="#2D3748" stopOpacity="0"/>
-      </radialGradient>
-
-      {/* Pattern for realistic texture */}
-      <pattern id="brushed-metal" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
-        <line x1="0" y1="0" x2="4" y2="4" stroke="#718096" strokeWidth="0.3" opacity="0.3"/>
-      </pattern>
     </defs>
 
-    {/* Background shadow/grounding */}
-    <ellipse cx="100" cy="175" rx="70" ry="8" fill="#1A202C" opacity="0.4"/>
-    <ellipse cx="100" cy="173" rx="65" ry="6" fill="#0F1419" opacity="0.3"/>
-
-    {/* Counter base with realistic metal finish */}
-    <path d="M30 140 L30 160 L170 160 L170 140 L160 120 L40 120 Z" fill="url(#metal-body)"/>
-    <path d="M30 140 L30 160 L170 160 L170 140 L160 120 L40 120 Z" fill="url(#counter-reflection)"/>
-    <path d="M30 140 L30 160 L170 160 L170 140 L160 120 L40 120 Z" fill="url(#brushed-metal)" opacity="0.5"/>
-
-    {/* Counter edge highlight */}
-    <path d="M40 120 L160 120 L170 140 L30 140 Z" stroke="#718096" strokeWidth="1" opacity="0.6"/>
-
-    {/* POS Terminal - main body */}
-    <rect x="50" y="70" width="100" height="60" rx="6" fill="#1A202C"/>
-    <rect x="52" y="72" width="96" height="56" rx="4" fill="#0F1419"/>
-
-    {/* Screen with digital display */}
-    <rect x="58" y="80" width="84" height="35" rx="2" fill="url(#digital-display)" filter="url(#screen-glow)">
-      <animate attributeName="opacity" values="0.95;1;0.95" dur="2s" repeatCount="indefinite"/>
+    {/* Animated background */}
+    <rect width="200" height="200" fill="url(#bg-light)" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="4s" repeatCount="indefinite"/>
     </rect>
 
-    {/* Screen content */}
-    <text x="100" y="95" textAnchor="middle" fill="#064E3B" fontSize="8" fontWeight="bold" opacity="0.8">TOTAL</text>
-    <text x="100" y="110" textAnchor="middle" fill="#065F46" fontSize="14" fontWeight="900" filter="url(#button-glow)">Nu.1,250</text>
-
-    {/* Screen reflection */}
-    <path d="M58 80 L100 80 L90 115 L58 115 Z" fill="white" opacity="0.08"/>
-
-    {/* Button panel */}
-    <rect x="58" y="118" width="84" height="8" rx="1" fill="#2D3748"/>
-
-    {/* Individual buttons with realistic highlights */}
-    {[...Array(12)].map((_, i) => (
-      <g key={i}>
-        <rect
-          x={60 + (i % 6) * 13.5}
-          y={119 + Math.floor(i / 6) * 3}
-          width="10"
-          height="2"
-          rx="0.5"
-          fill="#4A5568"
+    {/* Floating particles */}
+    {[...Array(8)].map((_, i) => (
+      <circle
+        key={i}
+        cx={30 + Math.random() * 140}
+        cy={30 + Math.random() * 140}
+        r="2"
+        fill="#10B981"
+        opacity="0.3"
+      >
+        <animate
+          attributeName="cy"
+          values={`${30 + Math.random() * 140};${20 + Math.random() * 100};${30 + Math.random() * 140}`}
+          dur={`${3 + Math.random() * 2}s`}
+          repeatCount="indefinite"
         />
-        <rect
-          x={60 + (i % 6) * 13.5}
-          y={119}
-          width="10"
-          height="1"
-          rx="0.5"
-          fill="#718096"
-          opacity="0.5"
+        <animate
+          attributeName="opacity"
+          values="0.3;0.6;0.3"
+          dur={`${2 + Math.random()}s`}
+          repeatCount="indefinite"
         />
+      </circle>
+    ))}
+
+    {/* POS Base - modern design */}
+    <ellipse cx="100" cy="165" rx="75" ry="12" fill="#10B981" opacity="0.2">
+      <animate attributeName="rx" values="75;78;75" dur="3s" repeatCount="indefinite"/>
+    </ellipse>
+
+    {/* Main POS Unit */}
+    <g>
+      <rect x="50" y="80" width="100" height="70" rx="12" fill="url(#pos-body)" filter="url(#glow-effect)">
+        <animate attributeName="fill-opacity" values="0.9;1;0.9" dur="2s" repeatCount="indefinite"/>
+      </rect>
+
+      {/* Screen */}
+      <rect x="58" y="88" width="84" height="45" rx="6" fill="#ECFDF5">
+        <animate attributeName="fill" values="#ECFDF5;#F0FDFA;#ECFDF5" dur="3s" repeatCount="indefinite"/>
+      </rect>
+
+      {/* Animated screen content */}
+      <g>
+        <text x="100" y="108" textAnchor="middle" fill="#059669" fontSize="9" fontWeight="bold">TOTAL</text>
+        <text x="100" y="125" textAnchor="middle" fill="#10B981" fontSize="16" fontWeight="900">
+          Nu.1,250
+          <animate attributeName="font-size" values="16;17;16" dur="1s" repeatCount="indefinite"/>
+        </text>
+      </g>
+
+      {/* Animated buttons */}
+      {[...Array(9)].map((_, i) => (
         <circle
-          cx={65 + (i % 6) * 13.5}
-          cy={120 + Math.floor(i / 6) * 3}
-          r="0.8"
-          fill="#10B981"
-          opacity="0.8"
+          key={i}
+          cx={65 + (i % 3) * 25}
+          cy={138 + Math.floor(i / 3) * 8}
+          r="4"
+          fill="#34D399"
         >
           <animate
-            attributeName="opacity"
-            values="0.8;1;0.8"
-            dur={`${1 + Math.random()}s`}
+            attributeName="r"
+            values="4;5;4"
+            dur={`${0.8 + i * 0.1}s`}
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="fill"
+            values="#34D399;#6EE7B7;#34D399"
+            dur={`${1 + i * 0.15}s`}
             repeatCount="indefinite"
           />
         </circle>
-      </g>
-    ))}
+      ))}
 
-    {/* Card reader slot */}
-    <rect x="70" y="60" width="50" height="4" rx="1" fill="#0F1419"/>
-    <rect x="72" y="61" width="46" height="2" rx="0.5" fill="#2D3748"/>
-
-    {/* Receipt printer with paper */}
-    <rect x="120" y="50" width="25" height="35" rx="2" fill="#1A202C"/>
-    <path d="M122 52 L122 82 L143 82 L143 52 Z" fill="#2D3748"/>
-
-    {/* Paper coming out with animation */}
-    <g>
-      <path
-        d="M122 75 Q132.5 70 143 75 L143 85 Q132.5 80 122 85 Z"
-        fill="#F7FAFC"
-      >
-        <animate
-          attributeName="d"
-          values="M122 75 Q132.5 70 143 75 L143 85 Q132.5 80 122 85 Z;M122 70 Q132.5 65 143 70 L143 80 Q132.5 75 122 80 Z;M122 75 Q132.5 70 143 75 L143 85 Q132.5 80 122 85 Z"
-          dur="4s"
-          repeatCount="indefinite"
-        />
-      </path>
-      {/* Receipt text lines */}
-      <line x1="126" y1="77" x2="139" y2="77" stroke="#CBD5E0" strokeWidth="0.5" opacity="0.6"/>
-      <line x1="126" y1="79" x2="137" y2="79" stroke="#CBD5E0" strokeWidth="0.5" opacity="0.6"/>
-      <line x1="126" y1="81" x2="138" y2="81" stroke="#CBD5E0" strokeWidth="0.5" opacity="0.6"/>
+      {/* Status LED */}
+      <circle cx="58" cy="92" r="4" fill="#10B981" filter="url(#soft-glow)">
+        <animate attributeName="opacity" values="1;0.5;1" dur="1s" repeatCount="indefinite"/>
+      </circle>
     </g>
 
-    {/* Status indicators with realistic glow */}
-    <circle cx="60" cy="78" r="3" fill="#10B981" filter="url(#button-glow)">
-      <animate attributeName="opacity" values="1;0.7;1" dur="1.5s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="140" cy="78" r="2" fill="#10B981" opacity="0.8">
-      <animate attributeName="opacity" values="0.8;0.5;0.8" dur="2s" repeatCount="indefinite"/>
-    </circle>
+    {/* Receipt Printer */}
+    <g>
+      <rect x="115" y="55" width="35" height="30" rx="6" fill="url(#pos-body)"/>
+      {/* Animated paper */}
+      <rect x="120" y="58" width="25" height="20" rx="2" fill="white">
+        <animate
+          attributeName="height"
+          values="20;25;20"
+          dur="3s"
+          repeatCount="indefinite"
+        />
+      </rect>
+      {[...Array(4)].map((_, i) => (
+        <line
+          key={i}
+          x1="124"
+          y1={62 + i * 5}
+          x2="141"
+          y2={62 + i * 5}
+          stroke="#10B981"
+          strokeWidth="1"
+          opacity="0.5"
+        >
+          <animate attributeName="opacity" values="0.5;0.8;0.5" dur="2s" repeatCount="indefinite"/>
+        </line>
+      ))}
+    </g>
 
-    {/* Branding */}
-    <text x="100" y="145" textAnchor="middle" fill="#718096" fontSize="5" fontWeight="600" opacity="0.6">INNOVATE POS</text>
+    {/* Card reader */}
+    <rect x="55" y="70" width="50" height="8" rx="4" fill="#059669">
+      <animate attributeName="fill" values="#059669;#10B981;#059669" dur="2s" repeatCount="indefinite"/>
+    </rect>
   </svg>
 );
 
 const HotelPMSIllustration = () => (
   <svg viewBox="0 0 200 200" className="w-full h-full">
     <defs>
-      {/* Realistic material gradients */}
-      <linearGradient id="wood-floor" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#8B4513"/>
-        <stop offset="20%" stopColor="#A0522D"/>
-        <stop offset="40%" stopColor="#8B4513"/>
-        <stop offset="60%" stopColor="#A0522D"/>
-        <stop offset="80%" stopColor="#8B4513"/>
-        <stop offset="100%" stopColor="#A0522D"/>
+      <linearGradient id="hotel-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#EFF6FF"/>
+        <stop offset="100%" stopColor="#DBEAFE"/>
       </linearGradient>
 
-      <linearGradient id="desk-surface" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#4A5568"/>
-        <stop offset="30%" stopColor="#718096"/>
-        <stop offset="60%" stopColor="#4A5568"/>
-        <stop offset="100%" stopColor="#2D3748"/>
+      <linearGradient id="hotel-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#3B82F6"/>
+        <stop offset="100%" stopColor="#1D4ED8"/>
       </linearGradient>
 
-      <linearGradient id="screen-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#10B981"/>
-        <stop offset="50%" stopColor="#34D399"/>
-        <stop offset="100%" stopColor="#059669"/>
+      <linearGradient id="monitor-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#60A5FA"/>
+        <stop offset="100%" stopColor="#3B82F6"/>
       </linearGradient>
 
-      <radialGradient id="screen-reflection" cx="30%" cy="20%" r="50%">
-        <stop offset="0%" stopColor="white" stopOpacity="0.15"/>
-        <stop offset="100%" stopColor="white" stopOpacity="0"/>
-      </radialGradient>
-
-      <filter id="glow-emerald" x="-100%" y="-100%" width="300%" height="300%">
+      <filter id="blue-glow" x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-        <feFlood floodColor="#10B981" floodOpacity="0.6"/>
+        <feFlood floodColor="#3B82F6" floodOpacity="0.6"/>
         <feComposite in2="coloredBlur" operator="in"/>
         <feMerge>
           <feMergeNode/>
           <feMergeNode in="SourceGraphic"/>
         </feMerge>
       </filter>
-
-      <filter id="pillar-shadow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="3"/>
-      </filter>
     </defs>
 
-    {/* Floor shadow */}
-    <ellipse cx="100" cy="180" rx="85" ry="10" fill="#1A202C" opacity="0.4"/>
+    {/* Animated background */}
+    <rect width="200" height="200" fill="url(#hotel-bg)" opacity="0.85">
+      <animate attributeName="opacity" values="0.85;1;0.85" dur="5s" repeatCount="indefinite"/>
+    </rect>
 
-    {/* Hardwood floor */}
-    <rect x="15" y="165" width="170" height="20" fill="url(#wood-floor)" opacity="0.8"/>
-    {/* Floor grain texture */}
-    {[...Array(8)].map((_, i) => (
-      <line
+    {/* Floating bubbles */}
+    {[...Array(10)].map((_, i) => (
+      <circle
         key={i}
-        x1={15 + i * 22}
-        y1="165"
-        x2={15 + i * 22}
-        y2="185"
-        stroke="#5D3A1A"
-        strokeWidth="1"
-        opacity="0.3"
-      />
+        cx={20 + Math.random() * 160}
+        cy={20 + Math.random() * 160}
+        r={3 + Math.random() * 5}
+        fill="#3B82F6"
+        opacity="0.2"
+      >
+        <animate
+          attributeName="cy"
+          values={`${20 + Math.random() * 160};${10 + Math.random() * 120};${20 + Math.random() * 160}`}
+          dur={`${4 + Math.random() * 2}s`}
+          repeatCount="indefinite"
+        />
+        <animate
+          attributeName="r"
+          values={`${3 + Math.random() * 5};${5 + Math.random() * 3};${3 + Math.random() * 5}`}
+          dur="3s"
+          repeatCount="indefinite"
+        />
+      </circle>
     ))}
 
-    {/* Traditional Bhutanese pillar */}
-    <rect x="150" y="40" width="30" height="130" fill="#2D3748"/>
-    <rect x="152" y="42" width="26" height="126" fill="#4A5568"/>
-    {/* Carved patterns */}
-    {[...Array(8)].map((_, i) => (
-      <g key={i}>
-        <rect
-          x="154"
-          y={48 + i * 15}
-          width="22"
-          height="3"
-          rx="1"
-          fill="#1A202C"
-          opacity="0.8"
-        />
-        <rect
-          x="154"
-          y={48 + i * 15}
-          width="22"
-          height="1"
-          fill="#718096"
-          opacity="0.3"
-        />
-      </g>
-    ))}
-    {/* Capital at top */}
-    <rect x="148" y="35" width="34" height="8" rx="2" fill="#10B981" opacity="0.6" filter="url(#glow-emerald)"/>
+    {/* Floor shadow */}
+    <ellipse cx="100" cy="170" rx="80" ry="10" fill="#3B82F6" opacity="0.2">
+      <animate attributeName="rx" values="80;83;80" dur="4s" repeatCount="indefinite"/>
+    </ellipse>
 
-    {/* Reception desk */}
-    <path d="M35 130 L35 160 L165 160 L165 130 L155 100 L45 100 Z" fill="url(#desk-surface)"/>
-    <path d="M35 130 L35 160 L165 160 L165 130 L155 100 L45 100 Z" fill="url(#screen-reflection)" opacity="0.5"/>
+    {/* Reception desk - modern style */}
+    <path d="M35 135 L35 160 L165 160 L165 135 L155 105 L45 105 Z" fill="url(#hotel-accent)"/>
 
-    {/* Desk edge highlight */}
-    <path d="M45 100 L155 100 L165 130 L35 130 Z" stroke="#718096" strokeWidth="1" opacity="0.6"/>
-
-    {/* Desk brand plate */}
-    <rect x="85" y="155" width="30" height="3" rx="0.5" fill="#10B981" opacity="0.8" filter="url(#glow-emerald)"/>
+    {/* Desk counter */}
+    <ellipse cx="100" cy="135" rx="60" ry="8" fill="#60A5FA" opacity="0.4"/>
 
     {/* Monitor stand */}
-    <rect x="90" y="115" width="20" height="15" fill="#1A202C"/>
-    <ellipse cx="100" cy="130" rx="15" ry="3" fill="#0F1419"/>
+    <rect x="90" y="120" width="20" height="15" rx="3" fill="#1E40AF"/>
+    <ellipse cx="100" cy="135" rx="18" ry="4" fill="#1E3A8A"/>
 
-    {/* Monitor - sleek design */}
-    <rect x="55" y="60" width="90" height="55" rx="4" fill="#0F1419"/>
-    <rect x="57" y="62" width="86" height="51" rx="2" fill="url(#screen-emerald)" opacity="0.15"/>
+    {/* Monitor */}
+    <g>
+      <rect x="50" y="50" width="100" height="65" rx="8" fill="url(#monitor-grad)" filter="url(#blue-glow)">
+        <animate attributeName="fill-opacity" values="0.9;1;0.9" dur="2.5s" repeatCount="indefinite"/>
+      </rect>
 
-    {/* Screen display */}
-    <rect x="60" y="67" width="80" height="40" rx="2" fill="url(#screen-emerald)" filter="url(#glow-emerald)">
-      <animate attributeName="opacity" values="0.9;1;0.9" dur="3s" repeatCount="indefinite"/>
-    </rect>
-    <rect x="60" y="67" width="80" height="40" rx="2" fill="url(#screen-reflection)"/>
+      {/* Screen display */}
+      <rect x="55" y="55" width="90" height="55" rx="4" fill="#EFF6FF"/>
 
-    {/* Screen content */}
-    <text x="100" y="80" textAnchor="middle" fill="#064E3B" fontSize="7" fontWeight="bold">HOTEL PMS</text>
-    <text x="100" y="92" textAnchor="middle" fill="#065F46" fontSize="6">GUEST CHECK-IN</text>
-    <rect x="65" y="97" width="30" height="6" rx="1" fill="#047857" opacity="0.6"/>
-    <rect x="105" y="97" width="30" height="6" rx="1" fill="#047857" opacity="0.6"/>
+      {/* Animated content */}
+      <g>
+        <rect x="62" y="62" width="76" height="12" rx="3" fill="#3B82F6" opacity="0.2">
+          <animate attributeName="opacity" values="0.2;0.4;0.2" dur="2s" repeatCount="indefinite"/>
+        </rect>
+        <text x="100" y="72" textAnchor="middle" fill="#1D4ED8" fontSize="7" fontWeight="bold">HOTEL PMS</text>
 
-    {/* Monitor bezel highlight */}
-    <rect x="55" y="60" width="90" height="2" rx="1" fill="#718096" opacity="0.4"/>
+        <rect x="62" y="78" width="35" height="8" rx="2" fill="#60A5FA" opacity="0.5"/>
+        <rect x="102" y="78" width="35" height="8" rx="2" fill="#60A5FA" opacity="0.5"/>
 
-    {/* Keycard reader */}
-    <rect x="40" y="110" width="15" height="25" rx="2" fill="#1A202C"/>
-    <rect x="42" y="112" width="11" height="18" rx="1" fill="#0F1419"/>
-    <rect x="43" y="125" width="9" height="3" rx="0.5" fill="#10B981" opacity="0.8" filter="url(#glow-emerald)">
-      <animate attributeName="opacity" values="0.8;1;0.8" dur="1.5s" repeatCount="indefinite"/>
-    </rect>
+        <rect x="62" y="90" width="76" height="15" rx="3" fill="#3B82F6" opacity="0.15">
+          <animate attributeName="width" values="76;70;76" dur="3s" repeatCount="indefinite"/>
+        </rect>
+      </g>
+    </g>
 
-    {/* Khadar (scarf) draping */}
-    <path
-      d="M60 100 Q70 105 75 120 Q70 125 65 130 L60 130 Q50 120 60 100"
-      fill="#10B981"
-      opacity="0.3"
-    >
-      <animate attributeName="opacity" values="0.3;0.4;0.3" dur="3s" repeatCount="indefinite"/>
-    </path>
+    {/* Room key cards */}
+    <g transform="translate(30, 95)">
+      {[...Array(3)].map((_, i) => (
+        <g key={i}>
+          <rect
+            x={i * 18}
+            y={0}
+            width="15"
+            height="25"
+            rx="3"
+            fill="#60A5FA"
+            opacity="0.7"
+          >
+            <animate
+              attributeName="opacity"
+              values="0.7;1;0.7"
+              dur={`${1.5 + i * 0.3}s`}
+              repeatCount="indefinite"
+            />
+          </rect>
+          <circle cx={i * 18 + 7.5} cy="8" r="2" fill="#EFF6FF"/>
+        </g>
+      ))}
+    </g>
 
-    {/* Bell with realistic shine */}
-    <g transform="translate(130, 95)">
-      <ellipse cx="10" cy="15" rx="12" ry="4" fill="#1A202C" opacity="0.3"/>
-      <path d="M5 12 Q10 2 15 12 L13 15 L7 15 Z" fill="#F59E0B"/>
-      <ellipse cx="10" cy="12" rx="5" ry="2" fill="#FBBF24"/>
-      <circle cx="10" cy="6" r="2" fill="#FCD34D">
-        <animate attributeName="opacity" values="1;0.7;1" dur="2s" repeatCount="indefinite"/>
+    {/* Bell icon */}
+    <g transform="translate(145, 100)">
+      <ellipse cx="10" cy="18" rx="10" ry="3" fill="#1E40AF" opacity="0.3"/>
+      <path d="M3 12 Q10 0 17 12 L15 16 L5 16 Z" fill="#F59E0B">
+        <animate attributeName="fill" values="#F59E0B;#FBBF24;#F59E0B" dur="2s" repeatCount="indefinite"/>
+      </path>
+      <circle cx="10" cy="5" r="3" fill="#FCD34D">
+        <animate attributeName="r" values="3;4;3" dur="1s" repeatCount="indefinite"/>
       </circle>
     </g>
 
-    {/* Decorative plant */}
-    <g transform="translate(160, 120)">
-      <rect x="0" y="20" width="8" height="15" rx="2" fill="#718096"/>
-      <ellipse cx="4" cy="10" rx="12" ry="8" fill="#10B981" opacity="0.3"/>
-      {[...Array(5)].map((_, i) => (
-        <ellipse
-          key={i}
-          cx={4 + Math.cos(i * 72 * Math.PI / 180) * 6}
-          cy={10 + Math.sin(i * 72 * Math.PI / 180) * 4}
-          rx="6"
-          ry="3"
-          fill="#10B981"
-          opacity="0.7"
-          transform={`rotate(${i * 36} 4 10)`}
-        />
-      ))}
-    </g>
+    {/* Status indicators */}
+    <circle cx="55" cy="60" r="4" fill="#10B981" filter="url(#blue-glow)">
+      <animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite"/>
+    </circle>
   </svg>
 );
 
 const LaborInstallationIllustration = () => (
   <svg viewBox="0 0 200 200" className="w-full h-full">
     <defs>
-      {/* Realistic cable and equipment gradients */}
-      <linearGradient id="cable-glow" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#10B981" stopOpacity="0.2"/>
-        <stop offset="50%" stopColor="#34D399" stopOpacity="0.8"/>
-        <stop offset="100%" stopColor="#10B981" stopOpacity="0.2"/>
+      <linearGradient id="labor-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#FEF3C7"/>
+        <stop offset="100%" stopColor="#FDE68A"/>
       </linearGradient>
 
-      <linearGradient id="server-rack" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#1A202C"/>
-        <stop offset="50%" stopColor="#2D3748"/>
-        <stop offset="100%" stopColor="#1A202C"/>
-      </linearGradient>
-
-      <linearGradient id="safety-vest" x1="0%" y1="0%" x2="100%" y2="100%">
+      <linearGradient id="labor-accent" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#F59E0B"/>
-        <stop offset="30%" stopColor="#FBBF24"/>
-        <stop offset="70%" stopColor="#F59E0B"/>
         <stop offset="100%" stopColor="#D97706"/>
       </linearGradient>
 
-      <filter id="cable-glow-filter" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="2" result="blur"/>
-        <feFlood floodColor="#10B981" floodOpacity="0.5"/>
-        <feComposite in2="blur" operator="in"/>
+      <linearGradient id="cable-flow" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#10B981" stopOpacity="0.3"/>
+        <stop offset="50%" stopColor="#34D399" stopOpacity="0.8"/>
+        <stop offset="100%" stopColor="#10B981" stopOpacity="0.3"/>
+      </linearGradient>
+
+      <filter id="warm-glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+        <feFlood floodColor="#F59E0B" floodOpacity="0.5"/>
+        <feComposite in2="coloredBlur" operator="in"/>
         <feMerge>
           <feMergeNode/>
           <feMergeNode in="SourceGraphic"/>
         </feMerge>
       </filter>
-
-      <radialGradient id="wall-light" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#10B981" stopOpacity="0.1"/>
-        <stop offset="100%" stopColor="#1A202C" stopOpacity="0"/>
-      </radialGradient>
     </defs>
 
-    {/* Background wall */}
-    <rect x="15" y="15" width="170" height="140" fill="#1A202C" rx="3"/>
-    <rect x="15" y="15" width="170" height="140" fill="url(#wall-light)"/>
+    {/* Animated background */}
+    <rect width="200" height="200" fill="url(#labor-bg)" opacity="0.9">
+      <animate attributeName="opacity" values="0.9;1;0.9" dur="4s" repeatCount="indefinite"/>
+    </rect>
 
-    {/* Wall panels */}
-    {[...Array(4)].map((_, i) => (
-      <g key={i}>
-        <rect x={20 + i * 42} y="20" width="38" height="60" fill="#2D3748" opacity="0.3" rx="2"/>
-        <rect x={22 + i * 42} y="22" width="34" height="56" fill="#1A202C" opacity="0.5" rx="1"/>
-      </g>
-    ))}
-
-    {/* Network cables with realistic glow */}
-    {[...Array(6)].map((_, i) => (
+    {/* Animated data flow lines */}
+    {[...Array(8)].map((_, i) => (
       <g key={i}>
         <path
-          d="M25 55 L175 55"
-          stroke="url(#cable-glow)"
+          d="M20 40 + ${i * 15} L180 40 + ${i * 15}"
+          stroke="url(#cable-flow)"
           strokeWidth="2"
-          filter="url(#cable-glow-filter)"
-          opacity={0.4 + i * 0.1}
+          opacity="0.6"
         >
           <animate
             attributeName="opacity"
-            values={`${0.4 + i * 0.1};${0.7 + i * 0.1};${0.4 + i * 0.1}`}
-            dur={`${1.5 + i * 0.3}s`}
+            values="0.3;0.8;0.3"
+            dur={`${2 + i * 0.3}s`}
             repeatCount="indefinite"
           />
         </path>
-        {/* Data packet animation */}
-        <circle cx={25} cy="55" r="2" fill="#10B981">
+        <circle cx={20} cy={40 + i * 15} r="3" fill="#10B981">
           <animate
             attributeName="cx"
-            values="25;175;25"
-            dur={`${2 + i * 0.5}s`}
+            values="20;180;20"
+            dur={`${3 + i * 0.4}s`}
             repeatCount="indefinite"
-            begin={`${i * 0.3}s`}
           />
         </circle>
       </g>
     ))}
 
     {/* Server rack */}
-    <rect x="135" y="90" width="50" height="65" rx="3" fill="url(#server-rack)"/>
-    <rect x="137" y="92" width="46" height="61" fill="#0F1419"/>
+    <g transform="translate(130, 70)">
+      <rect x="0" y="0" width="55" height="70" rx="6" fill="#1F2937"/>
+      <rect x="3" y="3" width="49" height="64" rx="4" fill="#374151"/>
 
-    {/* Server units */}
-    {[...Array(4)].map((_, i) => (
-      <g key={i}>
-        <rect
-          x="139"
-          y={94 + i * 14.5}
-          width="42"
-          height="12"
-          rx="1"
-          fill="#2D3748"
-        />
-        <rect
-          x="139"
-          y={94 + i * 14.5}
-          width="42"
-          height="2"
-          fill="#4A5568"
-          opacity="0.5"
-        />
-        {/* LED indicators */}
-        {[...Array(5)].map((_, j) => (
-          <circle
-            key={j}
-            cx={142 + j * 8}
-            cy={98 + i * 14.5}
-            r="1.5"
-            fill="#10B981"
-            filter="url(#cable-glow-filter)"
-          >
-            <animate
-              attributeName="opacity"
-              values="1;0.3;1"
-              dur={`${0.5 + j * 0.2 + i * 0.3}s`}
-              repeatCount="indefinite"
-            />
-          </circle>
-        ))}
-      </g>
-    ))}
-
-    {/* Rack branding */}
-    <text x="160" y="148" textAnchor="middle" fill="#4A5568" fontSize="5" fontWeight="600">NETWORK</text>
-
-    {/* Ladder with realistic details */}
-    <g transform="translate(40, 80)">
-      {/* Side rails */}
-      <rect x="0" y="0" width="3" height="70" fill="#718096"/>
-      <rect x="20" y="0" width="3" height="70" fill="#718096"/>
-      {/* Rails highlight */}
-      <rect x="0" y="0" width="1" height="70" fill="#9CA3AF" opacity="0.3"/>
-      <rect x="22" y="0" width="1" height="70" fill="#9CA3AF" opacity="0.3"/>
-      {/* Rungs */}
-      {[...Array(7)].map((_, i) => (
-        <rect key={i} x="3" y={5 + i * 10} width="17" height="2" rx="0.5" fill="#6B7280"/>
+      {/* Server units with animated LEDs */}
+      {[...Array(4)].map((_, i) => (
+        <g key={i}>
+          <rect x="6" y={6 + i * 15} width="43" height="12" rx="2" fill="#4B5563"/>
+          {[...Array(6)].map((_, j) => (
+            <circle
+              key={j}
+              cx={10 + j * 7}
+              cy={12 + i * 15}
+              r="2"
+              fill="#10B981"
+            >
+              <animate
+                attributeName="fill"
+                values="#10B981;#34D399;#10B981"
+                dur={`${0.5 + j * 0.15 + i * 0.2}s`}
+                repeatCount="indefinite"
+              />
+            </circle>
+          ))}
+        </g>
       ))}
     </g>
 
-    {/* Ladder shadow */}
-    <rect x="38" y="148" width="28" height="4" rx="1" fill="#1A202C" opacity="0.3"/>
+    {/* Ladder */}
+    <g transform="translate(35, 75)">
+      {[...Array(2)].map((_, i) => (
+        <rect
+          key={i}
+          x={i * 22}
+          y="0"
+          width="4"
+          height="75"
+          rx="2"
+          fill="#6B7280"
+        >
+          <animate attributeName="fill" values="#6B7280;#9CA3AF;#6B7280" dur="4s" repeatCount="indefinite"/>
+        </rect>
+      ))}
+      {[...Array(8)].map((_, i) => (
+        <rect
+          key={i}
+          x="4"
+          y={4 + i * 9}
+          width="18"
+          height="3"
+          rx="1"
+          fill="#9CA3AF"
+        />
+      ))}
+    </g>
 
-    {/* Technician on ladder */}
-    <g transform="translate(52, 55)">
+    {/* Technician on ladder - animated */}
+    <g transform="translate(47, 50)">
       {/* Head */}
-      <circle cx="3" cy="0" r="8" fill="#FDBF6F"/>
-      <ellipse cx="3" cy="-2" rx="7" ry="5" fill="#FDBF6F"/>
-      {/* Hair */}
-      <path d="M-4 -4 Q3 -8 10 -4 Q10 0 8 2" fill="#1A202C"/>
+      <circle cx="5" cy="0" r="10" fill="#FBBF24">
+        <animate attributeName="fill" values="#FBBF24;#FCD34D;#FBBF24" dur="3s" repeatCount="indefinite"/>
+      </circle>
 
-      {/* Body - realistic shirt */}
-      <rect x="-4" y="8" width="14" height="18" rx="2" fill="#4B5563"/>
-      <rect x="-4" y="8" width="14" height="4" fill="#374151"/>
+      {/* Safety vest */}
+      <rect x="-5" y="12" width="20" height="20" rx="4" fill="url(#labor-accent)" filter="url(#warm-glow)"/>
 
-      {/* Safety vest with high-vis color */}
-      <rect x="-5" y="9" width="16" height="16" rx="2" fill="url(#safety-vest)" opacity="0.9"/>
       {/* Vest reflective strips */}
-      <rect x="-5" y="12" width="16" height="2" fill="#FEF3C7" opacity="0.9"/>
-      <rect x="-5" y="19" width="16" height="2" fill="#FEF3C7" opacity="0.9"/>
-      {/* Logo */}
-      <text x="3" y="18" textAnchor="middle" fill="#1A202C" fontSize="4" fontWeight="bold">IB</text>
+      <rect x="-5" y="16" width="20" height="3" fill="#FEF3C7">
+        <animate attributeName="opacity" values="0.8;1;0.8" dur="1s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="-5" y="25" width="20" height="3" fill="#FEF3C7">
+        <animate attributeName="opacity" values="0.8;1;0.8" dur="1s" repeatCount="indefinite" begin="0.5s"/>
+      </rect>
 
-      {/* Arms */}
-      <line x1="-4" y1="12" x2="-12" y2="8" stroke="#FDBF6F" strokeWidth="3" strokeLinecap="round"/>
-      <circle cx="-13" cy="7" r="3" fill="#FDBF6F"/>
-      <line x1="10" y1="12" x2="18" y2="5" stroke="#FDBF6F" strokeWidth="3" strokeLinecap="round"/>
-      <circle cx="19" cy="4" r="3" fill="#FDBF6F"/>
+      {/* Arms working */}
+      <g>
+        <line x1="-5" y1="18" x2="-18" y2="12" stroke="#FBBF24" strokeWidth="4" strokeLinecap="round">
+          <animate attributeName="x2" values="-18;-15;-18" dur="1s" repeatCount="indefinite"/>
+        </line>
+        <circle cx="-18" cy="12" r="4" fill="#FBBF24">
+          <animate attributeName="cx" values="-18;-15;-18" dur="1s" repeatCount="indefinite"/>
+        </circle>
+        <line x1="15" y1="18" x2="28" y2="10" stroke="#FBBF24" strokeWidth="4" strokeLinecap="round">
+          <animate attributeName="x2" values="28;25;28" dur="1s" repeatCount="indefinite"/>
+        </line>
+        <circle cx="28" cy="10" r="4" fill="#FBBF24">
+          <animate attributeName="cx" values="28;25;28" dur="1s" repeatCount="indefinite"/>
+        </circle>
+      </g>
 
-      {/* Tool belt */}
-      <rect x="-5" y="24" width="16" height="3" rx="1" fill="#1A202C"/>
-      <rect x="-2" y="25" width="4" height="3" fill="#10B981" opacity="0.8"/>
-      <rect x="5" y="25" width="4" height="3" fill="#10B981" opacity="0.8"/>
+      {/* Tool in hand */}
+      <g transform="translate(22, 6)">
+        <rect x="0" y="0" width="8" height="3" rx="1" fill="#6B7280"/>
+      </g>
     </g>
 
     {/* Ground technician */}
-    <g transform="translate(100, 140)">
-      <circle cx="0" cy="0" r="7" fill="#FDBF6F"/>
-      <ellipse cx="0" cy="-2" rx="6" ry="4" fill="#FDBF6F"/>
-      <path d="M-5 -3 Q0 -6 5 -3 Q5 0 3 2" fill="#1A202C"/>
+    <g transform="translate(90, 145)">
+      <circle cx="0" cy="0" r="9" fill="#FBBF24"/>
+      <rect x="-8" y="10" width="16" height="18" rx="4" fill="url(#labor-accent)"/>
+      <rect x="-8" y="14" width="16" height="3" fill="#FEF3C7">
+        <animate attributeName="opacity" values="0.8;1;0.8" dur="1.5s" repeatCount="indefinite"/>
+      </rect>
 
-      <rect x="-6" y="7" width="12" height="14" rx="2" fill="#4B5563"/>
-      <rect x="-7" y="8" width="14" height="12" rx="2" fill="url(#safety-vest)" opacity="0.9"/>
-      <rect x="-7" y="11" width="14" height="2" fill="#FEF3C7" opacity="0.9"/>
-
-      <line x1="-6" y1="10" x2="-14" y2="15" stroke="#FDBF6F" strokeWidth="2.5" strokeLinecap="round"/>
-      <line x1="6" y1="10" x2="14" y2="15" stroke="#FDBF6F" strokeWidth="2.5" strokeLinecap="round"/>
-
-      <text x="0" y="17" textAnchor="middle" fill="#1A202C" fontSize="3" fontWeight="bold">IB</text>
+      <line x1="-8" y1="14" x2="-20" y2="20" stroke="#FBBF24" strokeWidth="4" strokeLinecap="round"/>
+      <line x1="8" y1="14" x2="20" y2="20" stroke="#FBBF24" strokeWidth="4" strokeLinecap="round"/>
     </g>
 
-    {/* Tool on the floor */}
-    <g transform="translate(80, 155)">
-      <rect x="0" y="0" width="20" height="5" rx="1" fill="#F59E0B"/>
-      <rect x="5" y="1" width="3" height="3" fill="#1A202C"/>
-      <rect x="12" y="1" width="3" height="3" fill="#1A202C"/>
+    {/* Tool box */}
+    <g transform="translate(25, 150)">
+      <rect x="0" y="0" width="30" height="18" rx="3" fill="#6B7280"/>
+      <rect x="3" y="-3" width="24" height="3" rx="1" fill="#4B5563"/>
+      <circle cx="8" cy="9" r="2" fill="#F59E0B">
+        <animate attributeName="fill" values="#F59E0B;#FBBF24;#F59E0B" dur="1s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="15" cy="9" r="2" fill="#10B981">
+        <animate attributeName="fill" values="#10B981;#34D399;#10B981" dur="0.8s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="22" cy="9" r="2" fill="#EF4444">
+        <animate attributeName="fill" values="#EF4444;#F87171;#EF4444" dur="1.2s" repeatCount="indefinite"/>
+      </circle>
     </g>
 
     {/* Floor */}
-    <rect x="15" y="155" width="170" height="20" fill="#2D3748"/>
-    {[...Array(10)].map((_, i) => (
+    <rect x="0" y="165" width="200" height="35" fill="#D1D5DB"/>
+    {[...Array(12)].map((_, i) => (
       <line
         key={i}
-        x1={15 + i * 17}
-        y1="155"
-        x2={15 + i * 17}
-        y2="175"
-        stroke="#1A202C"
+        x1={i * 17}
+        y1="165"
+        x2={i * 17}
+        y2="200"
+        stroke="#9CA3AF"
         strokeWidth="1"
         opacity="0.3"
       />
@@ -570,210 +517,236 @@ const LaborInstallationIllustration = () => (
 const SecurityAIIllustration = () => (
   <svg viewBox="0 0 200 200" className="w-full h-full">
     <defs>
-      {/* Advanced display gradients */}
-      <linearGradient id="monitor-frame" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#1A202C"/>
-        <stop offset="50%" stopColor="#2D3748"/>
-        <stop offset="100%" stopColor="#1A202C"/>
+      <linearGradient id="security-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#FEE2E2"/>
+        <stop offset="100%" stopColor="#FECACA"/>
       </linearGradient>
 
-      <linearGradient id="screen-grid" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#10B981" stopOpacity="0.05"/>
-        <stop offset="100%" stopColor="#059669" stopOpacity="0.1"/>
+      <linearGradient id="security-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#EF4444"/>
+        <stop offset="100%" stopColor="#DC2626"/>
       </linearGradient>
 
-      <linearGradient id="ai-highlight" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#10B981" stopOpacity="0"/>
-        <stop offset="50%" stopColor="#34D399" stopOpacity="0.3"/>
-        <stop offset="100%" stopColor="#10B981" stopOpacity="0"/>
+      <linearGradient id="ai-scan" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#EF4444" stopOpacity="0"/>
+        <stop offset="50%" stopColor="#EF4444" stopOpacity="0.5"/>
+        <stop offset="100%" stopColor="#EF4444" stopOpacity="0"/>
       </linearGradient>
 
-      <filter id="ai-glow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-        <feFlood floodColor="#10B981" floodOpacity="0.8"/>
+      <filter id="red-glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+        <feFlood floodColor="#EF4444" floodOpacity="0.6"/>
         <feComposite in2="coloredBlur" operator="in"/>
         <feMerge>
           <feMergeNode/>
           <feMergeNode in="SourceGraphic"/>
         </feMerge>
       </filter>
-
-      <filter id="monitor-reflection" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="2"/>
-        <feOffset dx="2" dy="2"/>
-      </filter>
     </defs>
 
-    {/* Desk surface */}
-    <rect x="25" y="145" width="150" height="15" rx="3" fill="url(#monitor-frame)"/>
-    <path d="M25 148 L175 148 L172 152 L28 152 Z" fill="#718096" opacity="0.2"/>
+    {/* Animated background */}
+    <rect width="200" height="200" fill="url(#security-bg)" opacity="0.9">
+      <animate attributeName="opacity" values="0.9;1;0.9" dur="4s" repeatCount="indefinite"/>
+    </rect>
 
-    {/* Monitor - modern curved design */}
-    <path
-      d="M35 45 Q35 35 45 35 L155 35 Q165 35 165 45 L165 115 Q165 125 155 125 L45 125 Q35 125 35 115 Z"
-      fill="url(#monitor-frame)"
-    />
-    <path
-      d="M38 42 Q38 42 48 42 L152 42 Q162 42 162 48 L162 112 Q162 122 152 122 L48 122 Q38 122 38 112 Z"
-      fill="#0F1419"
-    />
-
-    {/* Screen - divided into 4 camera feeds */}
-    <g>
-      {/* Top left feed */}
-      <rect x="42" y="47" width="55" height="35" fill="url(#screen-grid)"/>
-      <rect x="42" y="47" width="55" height="35" fill="#0A1628" opacity="0.7"/>
-      {/* Simulated camera content */}
-      <rect x="48" y="52" width="20" height="25" fill="#1A202C" opacity="0.5"/>
-      <ellipse cx="58" cy="70" rx="8" ry="4" fill="#10B981" opacity="0.3"/>
-
-      {/* AI detection box - animated */}
-      <rect
-        x="50"
-        y="54"
-        width="16"
-        height="21"
-        fill="none"
-        stroke="#10B981"
-        strokeWidth="1.5"
-        filter="url(#ai-glow)"
-      >
-        <animate
-          attributeName="stroke-opacity"
-          values="0.6;1;0.6"
-          dur="2s"
-          repeatCount="indefinite"
-        />
-      </rect>
-
-      {/* Corner detection markers */}
-      {[...Array(4)].map((_, i) => {
-        const positions = [
-          [50, 54], [64, 54], [50, 73], [64, 73]
-        ];
-        const [x, y] = positions[i];
-        return (
-          <circle key={i} cx={x} cy={y} r="1.5" fill="#10B981" filter="url(#ai-glow)">
-            <animate
-              attributeName="opacity"
-              values="1;0.5;1"
-              dur="1s"
-              repeatCount="indefinite"
-              begin={`${i * 0.2}s`}
-            />
-          </circle>
-        );
-      })}
-
-      {/* Top right feed */}
-      <rect x="103" y="47" width="55" height="35" fill="url(#screen-grid)"/>
-      <rect x="103" y="47" width="55" height="35" fill="#0A1628" opacity="0.7"/>
-      <rect x="108" y="52" width="45" height="28" fill="#1A202C" opacity="0.5"/>
-
-      {/* Bottom left feed */}
-      <rect x="42" y="86" width="55" height="33" fill="url(#screen-grid)"/>
-      <rect x="42" y="86" width="55" height="33" fill="#0A1628" opacity="0.7"/>
-      <rect x="48" y="90" width="22" height="25" fill="#1A202C" opacity="0.5"/>
-
-      {/* Multiple detection boxes */}
-      {[...Array(2)].map((_, i) => (
-        <rect
+    {/* Radar scan effect */}
+    <g opacity="0.3">
+      {[...Array(4)].map((_, i) => (
+        <circle
           key={i}
-          x={50 + i * 12}
-          y={92}
-          width="10"
-          height="18"
+          cx="100"
+          cy="100"
+          r={30 + i * 20}
           fill="none"
-          stroke="#10B981"
+          stroke="#EF4444"
           strokeWidth="1"
-          filter="url(#ai-glow)"
-          opacity="0.7"
         >
           <animate
+            attributeName="r"
+            values="30;100;30"
+            dur="4s"
+            repeatCount="indefinite"
+            begin={`${i}s`}
+          />
+          <animate
             attributeName="opacity"
-            values="0.7;1;0.7"
+            values="0.5;0;0.5"
+            dur="4s"
+            repeatCount="indefinite"
+            begin={`${i}s`}
+          />
+        </circle>
+      ))}
+    </g>
+
+    {/* Monitor */}
+    <g transform="translate(35, 45)">
+      {/* Monitor frame */}
+      <rect x="0" y="0" width="130" height="85" rx="8" fill="#1F2937"/>
+      <rect x="4" y="4" width="122" height="77" rx="5" fill="#111827"/>
+
+      {/* Screen grid - 4 camera feeds */}
+      <g>
+        {/* Top left */}
+        <rect x="6" y="6" width="57" height="35" rx="2" fill="#374151"/>
+        <rect x="10" y="10" width="20" height="25" rx="2" fill="#4B5563" opacity="0.5"/>
+
+        {/* AI detection box - animated */}
+        <rect
+          x="8"
+          y="8"
+          width="24"
+          height="29"
+          fill="none"
+          stroke="#EF4444"
+          strokeWidth="2"
+          filter="url(#red-glow)"
+        >
+          <animate
+            attributeName="stroke-opacity"
+            values="0.5;1;0.5"
             dur="1.5s"
             repeatCount="indefinite"
-            begin={`${i * 0.5}s`}
           />
         </rect>
-      ))}
 
-      {/* Bottom right feed */}
-      <rect x="103" y="86" width="55" height="33" fill="url(#screen-grid)"/>
-      <rect x="103" y="86" width="55" height="33" fill="#0A1628" opacity="0.7"/>
+        {/* Corner markers */}
+        {[...Array(4)].map((_, i) => {
+          const corners = [[8, 8], [30, 8], [8, 35], [30, 35]];
+          const [cx, cy] = corners[i];
+          return (
+            <circle
+              key={i}
+              cx={cx}
+              cy={cy}
+              r="3"
+              fill="#EF4444"
+              filter="url(#red-glow)"
+            >
+              <animate
+                attributeName="r"
+                values="2;4;2"
+                dur="0.8s"
+                repeatCount="indefinite"
+                begin={`${i * 0.2}s`}
+              />
+            </circle>
+          );
+        })}
 
-      {/* Heat map effect */}
-      <circle cx="130" cy="103" r="12" fill="url(#ai-highlight)">
-        <animate
-          attributeName="r"
-          values="10;14;10"
-          dur="3s"
-          repeatCount="indefinite"
-        />
-      </circle>
-      <circle cx="125" cy="98" r="8" fill="#10B981" opacity="0.1"/>
-      <circle cx="138" cy="108" r="6" fill="#10B981" opacity="0.15"/>
+        {/* Top right */}
+        <rect x="67" y="6" width="57" height="35" rx="2" fill="#374151"/>
+        <rect x="71" y="10" width="45" height="28" rx="2" fill="#4B5563" opacity="0.5"/>
+
+        {/* Scanning line */}
+        <rect
+          x="67"
+          y="6"
+          width="57"
+          height="2"
+          fill="#EF4444"
+          opacity="0.5"
+        >
+          <animate
+            attributeName="y"
+            values="6;39;6"
+            dur="2s"
+            repeatCount="indefinite"
+          />
+        </rect>
+
+        {/* Bottom left */}
+        <rect x="6" y="45" width="57" height="33" rx="2" fill="#374151"/>
+        <rect x="12" y="50" width="28" height="22" rx="2" fill="#4B5563" opacity="0.5"/>
+
+        {/* Multiple detection boxes */}
+        {[...Array(2)].map((_, i) => (
+          <rect
+            key={i}
+            x={10 + i * 18}
+            y="48"
+            width="14"
+            height="24"
+            fill="none"
+            stroke="#EF4444"
+            strokeWidth="1.5"
+            filter="url(#red-glow)"
+          >
+            <animate
+              attributeName="stroke-opacity"
+              values="0.4;0.9;0.4"
+              dur="1.8s"
+              repeatCount="indefinite"
+              begin={`${i * 0.4}s`}
+            />
+          </rect>
+        ))}
+
+        {/* Bottom right - heat map */}
+        <rect x="67" y="45" width="57" height="33" rx="2" fill="#374151"/>
+        <circle cx="95" cy="62" r="15" fill="url(#ai-scan)">
+          <animate attributeName="r" values="12;18;12" dur="3s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="90" cy="56" r="8" fill="#EF4444" opacity="0.3"/>
+        <circle cx="100" cy="68" r="6" fill="#EF4444" opacity="0.25"/>
+      </g>
+
+      {/* Monitor stand */}
+      <rect x="55" y="85" width="20" height="12" fill="#1F2937"/>
+      <ellipse cx="65" cy="97" rx="20" ry="4" fill="#374151"/>
     </g>
 
-    {/* Monitor stand */}
-    <rect x="90" y="125" width="20" height="15" fill="#1A202C"/>
-    <ellipse cx="100" cy="140" rx="20" ry="3" fill="#2D3748"/>
+    {/* Status indicators */}
+    <g transform="translate(40, 145)">
+      {[...Array(5)].map((_, i) => (
+        <circle
+          key={i}
+          cx={i * 12}
+          cy="0"
+          r="4"
+          fill="#EF4444"
+          filter="url(#red-glow)"
+        >
+          <animate
+            attributeName="fill"
+            values="#EF4444;#F87171;#EF4444"
+            dur={`${0.6 + i * 0.15}s`}
+            repeatCount="indefinite"
+          />
+        </circle>
+      ))}
+    </g>
 
-    {/* Screen reflection */}
-    <path
-      d="M40 45 Q45 42 60 42 L100 42 L100 120 L40 120 Q35 120 35 115 Z"
-      fill="white"
-      opacity="0.03"
-    />
-
-    {/* Control panel on desk */}
-    <rect x="35" y="150" width="30" height="8" rx="1" fill="#1A202C"/>
-    {[...Array(5)].map((_, i) => (
-      <circle
-        key={i}
-        cx={38 + i * 6}
-        cy="154"
-        r="2"
-        fill="#10B981"
-        filter="url(#ai-glow)"
-      >
-        <animate
-          attributeName="opacity"
-          values="1;0.4;1"
-          dur={`${0.8 + i * 0.2}s`}
-          repeatCount="indefinite"
-        />
-      </circle>
-    ))}
-
-    {/* Status text */}
-    <text x="150" y="156" fill="#10B981" fontSize="5" fontWeight="bold" filter="url(#ai-glow)">
+    {/* AI status text */}
+    <text x="140" y="150" fill="#EF4444" fontSize="8" fontWeight="bold" filter="url(#red-glow)">
       AI ACTIVE
-      <animate
-        attributeName="opacity"
-        values="1;0.7;1"
-        dur="2s"
-        repeatCount="indefinite"
-      />
+      <animate attributeName="opacity" values="1;0.7;1" dur="1.5s" repeatCount="indefinite"/>
     </text>
 
-    {/* Camera icon in corner */}
-    <g transform="translate(155, 50)">
-      <rect x="0" y="0" width="12" height="8" rx="1" fill="#1A202C" opacity="0.8"/>
-      <circle cx="6" cy="4" r="2" fill="#10B981" filter="url(#ai-glow)">
-        <animate attributeName="opacity" values="1;0.5;1" dur="1s" repeatCount="indefinite"/>
-      </circle>
-      <rect x="4" y="8" width="4" height="2" fill="#1A202C"/>
-    </g>
+    {/* Floating cameras */}
+    {[...Array(3)].map((_, i) => (
+      <g key={i} transform={`translate(${30 + i * 50}, 165)`}>
+        <rect x="0" y="0" width="20" height="14" rx="3" fill="#1F2937"/>
+        <circle cx="10" cy="7" r="4" fill="#EF4444" filter="url(#red-glow)">
+          <animate
+            attributeName="fill"
+            values="#EF4444;#FCA5A5;#EF4444"
+            dur={`${1 + i * 0.3}s`}
+            repeatCount="indefinite"
+          />
+        </circle>
+        <rect x="7" y="14" width="6" height="4" fill="#374151"/>
+      </g>
+    ))}
 
-    {/* Alert indicator */}
-    <g transform="translate(40, 130)">
-      <circle cx="0" cy="0" r="6" fill="#DC2626" opacity="0.2">
-        <animate attributeName="r" values="6;8;6" dur="1s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" values="0.2;0.4;0.2" dur="1s" repeatCount="indefinite"/>
+    {/* Alert pulse */}
+    <g transform="translate(175, 35)">
+      <circle cx="0" cy="0" r="12" fill="#EF4444" opacity="0.3">
+        <animate attributeName="r" values="8;16;8" dur="1s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.4;0;0.4" dur="1s" repeatCount="indefinite"/>
       </circle>
-      <circle cx="0" cy="0" r="3" fill="#DC2626"/>
+      <circle cx="0" cy="0" r="6" fill="#EF4444"/>
+      <text x="0" y="2" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">!</text>
     </g>
   </svg>
 );
@@ -882,10 +855,10 @@ export function HeroSection() {
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-[32px] lg:text-[44px] font-bold text-foreground leading-[1.1] mb-8 transition-colors"
+            className="text-[32px] lg:text-[44px] font-bold text-foreground leading-[1.2] mb-8 transition-colors"
           >
-            Enterprise Technology Solutions Across{" "}
-              <span className="text-primary animate-text-color">
+            Your space, professionally managed, anywhere in{" "}
+              <span className="text-primary animate-text-color block mt-1">
                 BHUTAN
               </span>
             </motion.h1>
@@ -1030,7 +1003,7 @@ export function HeroSection() {
                   }}
                 >
                   {/* SVG Illustration */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800">
+                  <div className="absolute inset-0 bg-white/50 dark:bg-white/10">
                     <IconComponent />
                   </div>
                   
