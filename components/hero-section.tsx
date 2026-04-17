@@ -50,7 +50,7 @@ function useTypewriter(phrases: string[], typingSpeed = 80, deletingSpeed = 40, 
   return { text, isDeleting, isPaused };
 }
 
-// Simple Service Card Component
+// Apple-style Service Card
 function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
   service: any;
   onClick: () => void;
@@ -73,73 +73,54 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
         setIsHovered(false);
         onLeave?.();
       }}
-      className="relative group"
+      className="relative"
     >
       <div
         className={`
-          relative rounded-[12px] p-3 overflow-hidden cursor-pointer
-          ${hasSubs ? "min-h-[100px]" : "min-h-[55px]"}
+          relative rounded-xl bg-white dark:bg-zinc-900 cursor-pointer
+          flex flex-col items-center justify-center p-4 gap-3
+          transition-all duration-300 ease-out
         `}
         style={{
-          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          transform: isHovered ? 'translateY(-4px) scale(1.02)' : 'translateY(0) scale(1)',
           boxShadow: isHovered
-            ? '0 20px 40px rgba(16, 185, 129, 0.15)'
-            : '0 4px 15px rgba(0,0,0,0.06)',
+            ? '0 8px 30px rgba(0,0,0,0.12)'
+            : '0 2px 8px rgba(0,0,0,0.04)',
+          transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+          border: isHovered ? '1px solid rgba(0,0,0,0.08)' : '1px solid transparent',
         }}
       >
-        {/* Gradient Background */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${service.color} transition-opacity duration-400 ${isHovered ? "opacity-100" : "opacity-0"}`} />
-
-        {/* White overlay */}
-        <div className="absolute inset-0 bg-white/95 dark:bg-black/90" />
-
-        {/* Content */}
-        <div className="relative z-10">
-          {/* Main Content */}
-          <div className={`flex items-center gap-2 transition-opacity duration-300 ${isHovered && hasSubs ? "opacity-0" : "opacity-100"}`}>
-            <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0 transition-transform duration-300 ${isHovered ? "scale-110" : "scale-100"}`}>
-              <Icon className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-[10px] text-foreground uppercase tracking-tight block leading-tight">
-                {service.name}
-              </span>
-              {service.badge && (
-                <span className="text-[8px] text-primary uppercase">
-                  {service.badge}
-                </span>
-              )}
-            </div>
+        {/* Icon - Apple SF Symbols style */}
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center`} style={{background: `${service.color.split(' ')[0]}20`}}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center`} style={{background: `linear-gradient(135deg, ${service.color.split(' ')[1]} 0%, ${service.color.split(' ')[2]} 100%)`}}>
+            <Icon className="w-5 h-5 text-white" />
           </div>
-
-          {/* Sub-services on hover */}
-          {hasSubs && (
-            <div className={`absolute inset-x-0 top-0 bottom-0 flex flex-col justify-center items-center px-2 transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}>
-              <div className="space-y-2 w-full">
-                {(service as any).subs.map((sub: string, i: number) => (
-                  <div
-                    key={sub}
-                    className="flex items-center justify-center gap-2"
-                    style={{
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      transform: isHovered ? 'translateX(0)' : 'translateX(-10px)',
-                      opacity: isHovered ? 1 : 0,
-                      transitionDelay: `${i * 0.05}s`,
-                    }}
-                  >
-                    <div className={`w-6 h-6 rounded bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}>
-                      <Icon className="w-3 h-3 text-white" />
-                    </div>
-                    <span className="text-[10px] text-foreground text-center">
-                      {sub}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Title - Title case, not uppercase */}
+        <span className="text-[11px] font-medium text-center text-foreground/90 leading-snug">
+          {service.name}
+        </span>
+
+        {/* Badge - subtle */}
+        {service.badge && (
+          <span className="text-[9px] text-foreground/40">
+            {service.badge}
+          </span>
+        )}
+
+        {/* Sub-services - appear as clean chips below */}
+        {hasSubs && (
+          <div className={`flex flex-wrap gap-1 justify-center transition-all duration-300 ${isHovered ? 'opacity-100 mt-1' : 'opacity-60'}`}>
+            {(service as any).subs.map((sub: string) => (
+              <span
+                key={sub}
+                className="text-[8px] px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-foreground/60"
+              >
+                {sub}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
