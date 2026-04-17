@@ -175,11 +175,11 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
               <Icon className="w-5 h-5 text-white drop-shadow-md" />
             </motion.div>
             <div className="flex-1 min-w-0">
-              <span className="text-[10px] font-semibold text-foreground uppercase tracking-tight block leading-tight">
+              <span className="text-[10px] text-foreground uppercase tracking-tight block leading-tight">
                 {service.name}
               </span>
               {service.badge && (
-                <span className="text-[8px] font-medium text-primary uppercase">
+                <span className="text-[8px] text-primary uppercase">
                   {service.badge}
                 </span>
               )}
@@ -216,30 +216,12 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
                     >
                       <Icon className="w-3 h-3 text-white" />
                     </motion.div>
-                    <span className="text-[9px] font-medium text-foreground group-hover/sub:text-primary transition-colors">
+                    <span className="text-[9px] text-foreground group-hover/sub:text-primary transition-colors">
                       {sub}
                     </span>
                   </motion.div>
                 ))}
               </div>
-
-              {/* View All Link */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: isHovered ? 1 : 0 }}
-                transition={{ duration: 0.3, delay: 0.4 }}
-                className="mt-2 pt-2 border-t border-border/50"
-              >
-                <span className="text-[8px] font-semibold text-primary uppercase tracking-widest flex items-center gap-1">
-                  View All
-                  <motion.span
-                    animate={{ x: isHovered ? 5 : 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    →
-                  </motion.span>
-                </span>
-              </motion.div>
             </motion.div>
           )}
         </div>
