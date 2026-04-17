@@ -1057,8 +1057,8 @@ export function HeroSection() {
             <h2 className="text-[14px] lg:text-[16px] text-foreground/50">Select Your Industry Solution</h2>
           </div>
 
-          {/* App Store Grid - Fixed 4 columns */}
-          <div className="grid grid-cols-4 gap-x-5 gap-y-8 justify-items-center">
+          {/* App Store Grid - Responsive: 3 on mobile, up to 6 on desktop */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-x-4 gap-y-6 justify-items-center">
             {mainServices.map((service, i) => (
               <motion.div
                 key={service.name}
@@ -1105,7 +1105,7 @@ export function HeroSection() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 p-6 bg-black/40 backdrop-blur-sm border-t border-white/10">
               <h3 className="text-white text-xl font-semibold">{hoveredService}</h3>
-              <p className="text-white/60 text-sm">Innovate Bhutan</p>
+              <p className="text-white/60 text-sm">innovates.bt</p>
             </div>
           </motion.div>
         ) : (

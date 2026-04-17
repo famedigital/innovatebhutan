@@ -60,7 +60,7 @@ export function FooterSection() {
               </div>
             </Link>
             <div className="text-sm text-[#9CA3AF] mb-6 space-y-1">
-              <p className="font-bold text-white mb-2">Manish Sharma (Owner)</p>
+              <p className="font-bold text-white mb-2">Manish Sharma as Founder</p>
               <p>Thimphu, Bhutan</p>
               <p className="text-primary font-mono">+975 17268753</p>
               <p><a href="https://www.innovates.bt" className="hover:text-white transition-colors">www.innovates.bt</a></p>
