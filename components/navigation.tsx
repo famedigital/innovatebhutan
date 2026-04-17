@@ -16,6 +16,11 @@ function ModernLogo() {
   const text = "innovates.bt";
   const letters = text.split("");
 
+  // Ultra luxury green and gold colors
+  const luxuryGreen = '#047857'; // Deep emerald
+  const luxuryGold = '#D4AF37'; // Classic gold
+  const brightGold = '#F59E0B'; // Bright gold accent
+
   return (
     <motion.div
       className="relative"
@@ -37,6 +42,7 @@ function ModernLogo() {
         {letters.map((letter, index) => {
           const isS = letter === 's';
           const isDot = letter === '.';
+          const isVowel = ['i', 'o', 'a', 'e'].includes(letter.toLowerCase());
 
           return (
             <motion.span
@@ -57,34 +63,41 @@ function ModernLogo() {
                 delay: index * 0.05,
                 ease: [0.43, 0.13, 0.23, 0.96]
               }}
-              style={{
-                color: isS || isDot ? '#10B981' : undefined,
-                textShadow: isS
-                  ? introComplete
-                    ? '0 0 10px rgba(16, 185, 129, 0.8), 0 0 20px rgba(16, 185, 129, 0.6), 0 0 30px rgba(16, 185, 129, 0.4)'
-                    : 'none'
-                  : isDot
-                  ? '0 0 10px rgba(16, 185, 129, 0.5)'
-                  : introComplete
-                  ? '0 0 10px rgba(16, 185, 129, 0.2)'
-                  : 'none',
-              }}
             >
               <motion.span
-                animate={isS && introComplete ? {
-                  scale: [1, 1.1, 1],
-                  textShadow: [
-                    '0 0 10px rgba(16, 185, 129, 0.8)',
-                    '0 0 20px rgba(16, 185, 129, 1), 0 0 40px rgba(16, 185, 129, 0.8)',
-                    '0 0 10px rgba(16, 185, 129, 0.8)'
-                  ]
+                animate={introComplete ? {
+                  color: isS
+                    ? [luxuryGold, brightGold, luxuryGold]
+                    : isDot
+                    ? [luxuryGold, '#FCD34D', luxuryGold]
+                    : isVowel
+                    ? [luxuryGold, '#FBBF24', luxuryGold]
+                    : [luxuryGreen, '#059669', luxuryGreen],
                 } : {}}
                 transition={{
-                  duration: 1.5,
+                  duration: 2,
                   repeat: Infinity,
-                  ease: "easeInOut"
+                  ease: "easeInOut",
+                  delay: index * 0.1
                 }}
-                className={!isS && !isDot ? "text-[#0F172A] dark:text-white" : ""}
+                style={{
+                  color: isS ? luxuryGold : isDot ? luxuryGold : isVowel ? luxuryGold : luxuryGreen,
+                  textShadow: introComplete
+                    ? isS
+                      ? `0 0 20px ${luxuryGold}, 0 0 40px ${luxuryGold}80, 0 0 60px ${luxuryGold}40`
+                      : isDot
+                      ? `0 0 15px ${luxuryGold}, 0 0 30px ${luxuryGold}60`
+                      : isVowel
+                      ? `0 0 10px ${luxuryGold}, 0 0 20px ${luxuryGold}40`
+                      : `0 0 15px ${luxuryGreen}40, 0 0 30px ${luxuryGreen}20`
+                    : 'none',
+                  background: isS && introComplete
+                    ? `linear-gradient(135deg, ${luxuryGold} 0%, ${brightGold} 50%, ${luxuryGold} 100%)`
+                    : 'none',
+                  WebkitBackgroundClip: isS ? 'text' : 'unset',
+                  WebkitTextFillColor: isS ? 'transparent' : 'unset',
+                }}
+                className="inline-block"
               >
                 {letter}
               </motion.span>
@@ -93,34 +106,40 @@ function ModernLogo() {
         })}
       </motion.div>
 
-      {/* Electric pulse effect behind 's' */}
+      {/* Luxury glow effect behind */}
       <motion.div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-primary/20 blur-xl"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-8 rounded-full blur-2xl"
         animate={{
-          scale: [1, 1.5, 1],
-          opacity: [0.3, 0.6, 0.3],
+          opacity: [0.2, 0.4, 0.2],
+          scale: [1, 1.2, 1],
         }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      />
-
-      {/* Shimmer effect on hover */}
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-        initial={{ x: '-100%' }}
-        animate={introComplete ? {
-          x: ['100%', '-100%'],
-        } : {}}
         transition={{
           duration: 3,
           repeat: Infinity,
-          repeatDelay: 2,
+          ease: "easeInOut"
+        }}
+        style={{
+          background: `radial-gradient(circle, ${luxuryGold}40 0%, ${luxuryGreen}20 50%, transparent 70%)`
+        }}
+      />
+
+      {/* Gold shimmer effect */}
+      <motion.div
+        className="absolute inset-0"
+        initial={{ x: '-100%' }}
+        animate={introComplete ? {
+          x: ['200%', '-100%'],
+        } : {}}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          repeatDelay: 1,
           ease: "linear"
         }}
-        style={{ mixBlendMode: 'overlay' }}
+        style={{
+          background: `linear-gradient(90deg, transparent 0%, ${luxuryGold}30 50%, transparent 100%)`,
+          mixBlendMode: 'overlay'
+        }}
       />
     </motion.div>
   );
