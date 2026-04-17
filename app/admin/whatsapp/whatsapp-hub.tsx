@@ -44,11 +44,11 @@ interface Client {
 }
 
 const QUICK_REPLIES = [
-  { label: "👋 Greeting", text: "Namaste! Welcome to Innovate Bhutan. How can I help you today?" },
-  { label: "📋 Service Info", text: "You can view our services at: https://innovate.bt/services" },
+  { label: "👋 Greeting", text: "Namaste! Welcome to INNOVATES BHUTAN. How can I help you today?" },
+  { label: "📋 Service Info", text: "You can view our services at: https://innovates.bt/services" },
   { label: "📞 Call Support", text: "For immediate assistance, please call +975 17268753" },
   { label: "🕐 Business Hours", text: "Our office is open Sunday to Friday, 9 AM to 5 PM (BT)" },
-  { label: "📧 Email Us", text: "You can email us at support@innovate.bt" },
+  { label: "📧 Email Us", text: "You can email us at support@innovates.bt" },
   { label: "🔧 Technical Support", text: "I'll connect you with our technical team. Please describe your issue." },
 ];
 

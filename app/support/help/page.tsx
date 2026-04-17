@@ -141,7 +141,7 @@ function HelpCenterContent() {
             </h1>
 
             <p className="text-xl text-foreground/60 max-w-3xl mx-auto leading-relaxed mb-8">
-              At <strong className="text-primary">Innovate.bt</strong>, we understand that reliable after-sales support is the cornerstone of technology adoption.
+              At <strong className="text-primary">innovates.bt</strong>, we understand that reliable after-sales support is the cornerstone of technology adoption.
               Our dedicated support team ensures your business operations never skip a beat.
             </p>
 
@@ -297,7 +297,7 @@ function HelpCenterContent() {
             className="text-center mb-16"
           >
             <h2 className="text-4xl font-black text-foreground mb-4 dark:neon-text">Why Businesses Trust Us</h2>
-            <p className="text-lg text-foreground/60">The Innovate.bt advantage in customer support</p>
+            <p className="text-lg text-foreground/60">The innovates.bt advantage in customer support</p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -366,7 +366,7 @@ function HelpCenterContent() {
                 Ready for Exceptional Support?
               </h2>
               <p className="text-lg text-foreground/60 mb-8 max-w-2xl mx-auto">
-                Join 300+ businesses across Bhutan who trust Innovate.bt for reliable, professional, and responsive
+                Join 300+ businesses across Bhutan who trust innovates.bt for reliable, professional, and responsive
                 technical support. Experience the difference that dedicated customer service makes.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">

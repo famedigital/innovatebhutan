@@ -1,13 +1,289 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, ChevronRight, Store, Utensils, Hotel, Code, Wrench, LayoutGrid, Shield, Zap, Wifi, Clock, Smartphone, FileText, Users, Database, Power, Lock } from "lucide-react";
+import { Search, Store, Hotel, Code, Wrench, LayoutGrid, Shield, Zap, Smartphone, FileText, Users, Database } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { getMediaUrl } from "@/lib/cloudinary";
 
-const locations = ["Thimphu", "Paro", "Punakha", "Phuentsholing", "Others"];
+// Typewriter Hook
+function useTypewriter(phrases: string[], typingSpeed = 80, deletingSpeed = 40, pauseDuration = 2000) {
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [text, setText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    const currentPhrase = phrases[phraseIndex];
+
+    if (isPaused) {
+      const pauseTimer = setTimeout(() => {
+        setIsPaused(false);
+        setIsDeleting(true);
+      }, pauseDuration);
+      return () => clearTimeout(pauseTimer);
+    }
+
+    if (isDeleting) {
+      if (text.length > 0) {
+        const deleteTimer = setTimeout(() => {
+          setText(text.slice(0, -1));
+        }, deletingSpeed);
+        return () => clearTimeout(deleteTimer);
+      } else {
+        setIsDeleting(false);
+        setPhraseIndex((prev) => (prev + 1) % phrases.length);
+      }
+    } else {
+      if (text.length < currentPhrase.length) {
+        const typeTimer = setTimeout(() => {
+          setText(currentPhrase.slice(0, text.length + 1));
+        }, typingSpeed);
+        return () => clearTimeout(typeTimer);
+      } else {
+        setIsPaused(true);
+      }
+    }
+  }, [text, isDeleting, isPaused, phraseIndex, phrases, typingSpeed, deletingSpeed, pauseDuration]);
+
+  return { text, isDeleting, isPaused };
+}
+
+// Morphing Blob Service Card Component
+function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
+  service: any;
+  onClick: () => void;
+  index: number;
+  onHover?: (name: string) => void;
+  onLeave?: () => void;
+}) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const cardRef = useRef<HTMLDivElement>(null);
+  const Icon = service.icon;
+  const hasSubs = (service as any).subs;
+
+  // Magnetic cursor effect
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    setMousePosition({ x, y });
+  };
+
+  const resetPosition = () => {
+    setMousePosition({ x: 0, y: 0 });
+  };
+
+  return (
+    <motion.div
+      ref={cardRef}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: index * 0.05, type: "spring", stiffness: 200, damping: 20 }}
+      onClick={onClick}
+      onMouseEnter={() => {
+        setIsHovered(true);
+        onHover?.(service.name);
+      }}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        resetPosition();
+        onLeave?.();
+      }}
+      onMouseMove={handleMouseMove}
+      className="relative"
+      style={{
+        x: mousePosition.x * 0.15, // Magnetic pull
+        y: mousePosition.y * 0.15,
+      }}
+    >
+      {/* Main Card with Morphing Blob Effect */}
+      <motion.div
+        animate={{
+          borderRadius: isHovered && hasSubs
+            ? ["12px", "30px", "50px", "60px", "50px", "30px", "12px"]
+            : "12px",
+          scale: isHovered ? 1.08 : 1,
+        }}
+        transition={{
+          borderRadius: {
+            duration: 0.8,
+            repeat: isHovered ? Infinity : 0,
+            ease: "easeInOut",
+          },
+          scale: { duration: 0.3, ease: "easeOut" },
+        }}
+        className={`
+          relative overflow-hidden cursor-pointer
+          ${hasSubs ? "min-h-[140px]" : "min-h-[80px]"}
+        `}
+        style={{
+          boxShadow: isHovered
+            ? `0 20px 60px rgba(16, 185, 129, ${hasSubs ? 0.3 : 0.15})`
+            : "0 4px 20px rgba(0,0,0,0.06)",
+        }}
+      >
+        {/* Animated Gradient Background */}
+        <motion.div
+          className={`absolute inset-0 bg-gradient-to-br ${service.color}`}
+          animate={{
+            opacity: isHovered ? 1 : 0,
+          }}
+          transition={{ duration: 0.3 }}
+        />
+
+        {/* Organic Shape Overlay */}
+        {isHovered && hasSubs && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.3 }}
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(circle at ${mousePosition.x + 50}px ${mousePosition.y + 50}px, rgba(255,255,255,0.4), transparent 60%)`,
+            }}
+          />
+        )}
+
+        {/* White overlay for readability */}
+        <motion.div
+          className="absolute inset-0 bg-white/95 dark:bg-black/90"
+          animate={{ opacity: isHovered ? 0.95 : 1 }}
+          transition={{ duration: 0.3 }}
+        />
+
+        {/* Content Container */}
+        <div className="relative z-10 p-4">
+          {/* Main Content (shown when not hovered or no subs) */}
+          <motion.div
+            animate={{
+              opacity: isHovered && hasSubs ? 0 : 1,
+              scale: isHovered && hasSubs ? 0.8 : 1,
+            }}
+            transition={{ duration: 0.2 }}
+            className="flex items-center gap-3"
+          >
+            <motion.div
+              className={`w-12 h-12 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}
+              animate={{
+                rotate: isHovered ? [0, -5, 5, -5, 0] : 0,
+              }}
+              transition={{ duration: 0.5 }}
+            >
+              <Icon className="w-6 h-6 text-white drop-shadow-md" />
+            </motion.div>
+            <div className="flex-1 min-w-0">
+              <span className="text-[13px] font-black text-foreground uppercase tracking-tight block leading-tight">
+                {service.name}
+              </span>
+              {service.badge && (
+                <span className="text-[10px] font-bold text-primary uppercase">
+                  {service.badge}
+                </span>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Sub-services (shown on hover if has subs) */}
+          {hasSubs && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{
+                opacity: isHovered ? 1 : 0,
+                y: isHovered ? 0 : 20,
+              }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              className="absolute inset-x-0 top-0 bottom-0 flex flex-col justify-center px-4"
+            >
+              <div className="space-y-2">
+                {(service as any).subs.map((sub: string, i: number) => (
+                  <motion.div
+                    key={sub}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{
+                      opacity: isHovered ? 1 : 0,
+                      x: isHovered ? 0 : -20,
+                    }}
+                    transition={{ duration: 0.3, delay: 0.15 + i * 0.08 }}
+                    className="flex items-center gap-2 group/sub"
+                  >
+                    <motion.div
+                      className={`w-8 h-8 rounded-lg bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}
+                      whileHover={{ scale: 1.15, rotate: 5 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <Icon className="w-4 h-4 text-white" />
+                    </motion.div>
+                    <span className="text-[12px] font-bold text-foreground group-hover/sub:text-primary transition-colors">
+                      {sub}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* View All Link */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isHovered ? 1 : 0 }}
+                transition={{ duration: 0.3, delay: 0.4 }}
+                className="mt-3 pt-3 border-t border-border/50"
+              >
+                <span className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1">
+                  View All
+                  <motion.span
+                    animate={{ x: isHovered ? 5 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    →
+                  </motion.span>
+                </span>
+              </motion.div>
+            </motion.div>
+          )}
+        </div>
+
+        {/* Floating Particles Effect */}
+        {isHovered && hasSubs && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {[...Array(6)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-1 h-1 rounded-full bg-primary/40"
+                initial={{
+                  x: "50%",
+                  y: "50%",
+                  opacity: 0,
+                }}
+                animate={{
+                  x: `${50 + (Math.random() - 0.5) * 80}%`,
+                  y: `${50 + (Math.random() - 0.5) * 80}%`,
+                  opacity: [0, 1, 0],
+                }}
+                transition={{
+                  duration: 1.5 + Math.random(),
+                  delay: i * 0.1,
+                  ease: "easeOut",
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </motion.div>
+
+      {/* Glow Effect */}
+      {isHovered && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 0.5, scale: 1.2 }}
+          className={`absolute -inset-4 -z-10 rounded-full bg-gradient-to-br ${service.color} blur-2xl`}
+          transition={{ duration: 0.4 }}
+        />
+      )}
+    </motion.div>
+  );
+}
 
 const heroSlides = [
   { image: "/hero/restaurantpos.png", name: "Restaurant POS" },
@@ -759,44 +1035,36 @@ const servicesVisual = [
 ];
 
 const mainServices = [
-  { name: "Retail POS", icon: Store, badge: null, color: "from-orange-500 to-red-500", bgColor: "bg-orange-500", category: "POS Systems" },
-  { name: "Restaurant POS", icon: Utensils, badge: null, color: "from-amber-500 to-yellow-500", bgColor: "bg-amber-500", category: "POS Systems" },
+  { name: "POS Solutions", icon: Store, badge: "2 services", color: "from-orange-500 to-red-500", bgColor: "bg-orange-500", category: "POS Systems", subs: ["Retail POS", "Restaurant POS"] },
   { name: "Hotel PMS", icon: Hotel, badge: null, color: "from-blue-500 to-indigo-500", bgColor: "bg-blue-500", category: "POS Systems" },
   { name: "Web Development", icon: Code, badge: null, color: "from-purple-500 to-pink-500", bgColor: "bg-purple-500", category: "Web/SaaS" },
   { name: "SaaS Development", icon: Database, badge: null, color: "from-violet-500 to-purple-600", bgColor: "bg-violet-500", category: "Web/SaaS" },
   { name: "ERP Development", icon: LayoutGrid, badge: null, color: "from-indigo-500 to-blue-600", bgColor: "bg-indigo-500", category: "Web/SaaS" },
-  { name: "Hardware Solutions", icon: Wrench, badge: null, color: "from-slate-500 to-zinc-500", bgColor: "bg-slate-600", category: "Maintenance" },
-  { name: "Security Systems", icon: Shield, badge: null, color: "from-red-500 to-rose-600", bgColor: "bg-red-500", category: "Security" },
-  { name: "Network Infrastructure", icon: Wifi, badge: null, color: "from-cyan-500 to-teal-500", bgColor: "bg-cyan-500", category: "Networking" },
+  { name: "Mobile App Development", icon: Smartphone, badge: null, color: "from-teal-500 to-cyan-600", bgColor: "bg-teal-500", category: "Web/SaaS" },
+  { name: "Infrastructure Solutions", icon: Wrench, badge: "3 services", color: "from-slate-500 to-zinc-500", bgColor: "bg-slate-600", category: "Infrastructure", subs: ["Hardware Solutions", "Network Infrastructure", "Power Solutions"] },
+  { name: "Security Systems", icon: Shield, badge: "2 services", color: "from-red-500 to-rose-600", bgColor: "bg-red-500", category: "Security", subs: ["Security Systems", "Anti Theft System"] },
   { name: "Technical Maintenance", icon: Zap, badge: null, color: "from-green-500 to-emerald-500", bgColor: "bg-green-500", category: "Maintenance" },
   { name: "Payroll & HR Whitelabel", icon: Users, badge: null, color: "from-rose-500 to-pink-600", bgColor: "bg-rose-500", category: "Web/SaaS" },
-  { name: "Mobile App Dev", icon: Smartphone, badge: null, color: "from-teal-500 to-cyan-600", bgColor: "bg-teal-500", category: "Web/SaaS" },
-  { name: "Brochure & Catalogue Design", icon: FileText, badge: null, color: "from-yellow-500 to-amber-600", bgColor: "bg-yellow-500", category: "Web/SaaS" },
-  { name: "Power Solution (Inverter)", icon: Power, badge: null, color: "from-yellow-400 to-orange-500", bgColor: "bg-yellow-400", category: "Power" },
-  { name: "Anti Theft System", icon: Lock, badge: null, color: "from-red-600 to-rose-700", bgColor: "bg-red-600", category: "Security" },
+  { name: "GST Services", icon: FileText, badge: null, color: "from-yellow-500 to-amber-600", bgColor: "bg-yellow-500", category: "Business Services" },
+  { name: "IT Consulting", icon: Search, badge: null, color: "from-cyan-500 to-blue-600", bgColor: "bg-cyan-600", category: "Consulting" },
 ];
 
 const serviceToImageMap: Record<string, string> = {
-  "Retail POS": "/hero/resturant.png",
-  "Restaurant POS": "/hero/restaurant.png",
+  "POS Solutions": "/hero/resturant.png",
   "Hotel PMS": "/hero/hotelpms.png",
   "Web Development": "/hero/software.png",
   "SaaS Development": "/hero/software.png",
   "ERP Development": "/hero/software.png",
-  "Hardware Solutions": "/hero/hardware.png",
+  "Mobile App Development": "/hero/software.png",
+  "Infrastructure Solutions": "/hero/hardware.png",
   "Security Systems": "/hero/cctv.png",
-  "Network Infrastructure": "/hero/hardware1.png",
   "Technical Maintenance": "/hero/tech_maintaince.png",
   "Payroll & HR Whitelabel": "/hero/software.png",
-  "Mobile App Dev": "/hero/software.png",
-  "Brochure & Catalogue Design": "/hero/software.png",
-  "Power Solution (Inverter)": "/hero/hardware.png",
-  "Anti Theft System": "/hero/cctv.png",
+  "GST Services": "/hero/software.png",
+  "IT Consulting": "/hero/software.png",
 };
 
 export function HeroSection() {
-  const [location, setLocation] = useState("");
-  const [showDropdown, setShowDropdown] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(0);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [hoveredService, setHoveredService] = useState<string | null>(null);
@@ -810,6 +1078,15 @@ export function HeroSection() {
     "Daily Chew Cafe", "Lhoden Automobile", "Shoponline.Bt", "Burger Point", "Druk Pizza Thimphu"
   ]);
   const router = useRouter();
+
+  // Typewriter effect for slogan
+  const typewriterPhrases = useMemo(() => [
+    "Bhutan's tomorrow",
+    "your business growth",
+    "enterprise success",
+    "digital transformation",
+  ], []);
+  const { text: typewriterText, isDeleting, isPaused } = useTypewriter(typewriterPhrases, 80, 40, 2000);
 
   // 📡 Live fetch from Supabase
   useEffect(() => {
@@ -854,17 +1131,28 @@ export function HeroSection() {
   return (
     <div className="relative flex flex-col max-w-[1300px] mx-auto pt-6 lg:pt-10 pb-20 lg:pb-24 px-5 transition-colors rounded-[32px] overflow-visible">
 
-      {/* Title - full width */}
+      {/* Title - full width with Typewriter Effect */}
       <motion.h1
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="text-[32px] lg:text-[44px] font-bold text-foreground leading-[1.2] mb-8 transition-colors"
       >
-        Your space, professionally managed, anywhere in{" "}
-          <span className="text-primary animate-text-color">
-            BHUTAN
-          </span>
-        </motion.h1>
+        Innovating today for{" "}
+        <span className="relative text-primary">
+          {typewriterText}
+          <motion.span
+            animate={{
+              opacity: [1, 0, 1],
+            }}
+            transition={{
+              duration: 0.8,
+              repeat: Infinity,
+              ease: "steps(1)",
+            }}
+            className="absolute -right-1 top-0 h-full w-0.5 bg-primary"
+          />
+        </span>
+      </motion.h1>
 
       {/* Two columns - same height, aligned */}
       <div className="flex flex-col lg:flex-row gap-10 lg:gap-[50px]">
@@ -872,94 +1160,23 @@ export function HeroSection() {
       {/* 🏙️ LEFT SIDE: SERVICES */}
       <div className="flex-1 w-full min-h-[550px]">
         <div className="bg-white dark:bg-[#050505] border border-[#ebebeb] dark:border-white/10 rounded-[16px] p-8 shadow-[0_10px_30px_rgba(0,0,0,0.04)] dark:shadow-none transition-all h-full">
-          <div className="flex items-center justify-between mb-8">
+          <div className="mb-8">
             <h2 className="text-[16px] lg:text-[18px] font-bold text-foreground/80">Select Your Industry Solution</h2>
-            
-            <div className="relative">
-              <div 
-                onClick={() => setShowDropdown(!showDropdown)}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-white/5 rounded-full border border-slate-100 dark:border-white/10 cursor-pointer hover:border-[#10B981] dark:hover:border-primary dark:hover:shadow-[0_0_15px_rgba(57,255,20,0.3)] transition-all"
-              >
-                <MapPin className="w-4 h-4 text-[#10B981] dark:text-primary" />
-                <span className="text-xs font-bold text-foreground/60">
-                   {location || "Select Location"}
-                </span>
-                <ChevronRight className={`w-3 h-3 text-slate-300 transition-transform ${showDropdown ? "rotate-90" : ""}`} />
-              </div>
-
-              <AnimatePresence>
-                {showDropdown && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-[#111] border border-slate-100 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[60]"
-                  >
-                    {locations.map((loc) => (
-                      <div
-                        key={loc}
-                        onClick={() => { setLocation(loc); setShowDropdown(false); }}
-                        className="px-6 py-3 hover:bg-primary/10 cursor-pointer text-xs font-bold text-foreground/80 transition-colors"
-                      >
-                        {loc}
-                      </div>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
           </div>
-          
+
           <div className="grid grid-cols-3 gap-[15px]">
-            {mainServices.map((service, i) => {
-              const Icon = service.icon;
-              return (
-                <motion.div
-                  key={service.name}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.05 * i }}
-                  onClick={() => {
-                    router.push(`/services?category=${encodeURIComponent((service as any).category)}`);
-                  }}
-                  onMouseEnter={() => setHoveredService(service.name)}
-                  onMouseLeave={() => setHoveredService(null)}
-                  whileHover={{ scale: 1.05, y: -4 }}
-                  className={`
-                    relative rounded-[12px] p-3
-                    flex items-center gap-3 cursor-pointer group transition-all overflow-hidden
-                    ${(service as any).wide ? "col-span-2 px-5" : "col-span-1"}
-                  `}
-                  style={{
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-                  }}
-                >
-                  {/* Gradient background on hover */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${service.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-
-                  {/* White/light overlay for text readability */}
-                  <div className={`absolute inset-0 bg-white/90 dark:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-
-                  {/* Icon on left */}
-                  <div className="relative z-10 flex-shrink-0">
-                    <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                      <Icon className="w-5 h-5 text-white drop-shadow-md" />
-                    </div>
-                  </div>
-
-                  {/* Text on right */}
-                  <span className="relative z-10 text-[12px] font-bold text-foreground/70 group-hover:text-foreground transition-all duration-300 leading-tight">
-                    {service.name}
-                  </span>
-
-                  {service.badge && (
-                    <div className="absolute -top-2 right-2 bg-primary/10 text-primary text-[11px] font-black px-2 py-0.5 rounded-sm border border-primary/20 whitespace-nowrap z-20">
-                      {service.badge}
-                    </div>
-                  )}
-                </motion.div>
-              );
-            })}
+            {mainServices.map((service, i) => (
+              <MorphingBlobCard
+                key={service.name}
+                service={service}
+                index={i}
+                onClick={() => {
+                  router.push(`/services?category=${encodeURIComponent((service as any).category)}`);
+                }}
+                onHover={(name) => setHoveredService(name)}
+                onLeave={() => setHoveredService(null)}
+              />
+            ))}
           </div>
         </div>
       </div>

@@ -71,7 +71,7 @@ function TeamContent() {
             <h1 className="text-5xl lg:text-6xl font-black text-foreground mb-6 dark:neon-text tracking-tight">
               The{" "}
               <span className="bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
-                Innovate.bt
+                innovates.bt
               </span>{" "}
               Team
             </h1>
@@ -167,7 +167,7 @@ function TeamContent() {
             <div className="grid md:grid-cols-3 gap-6 mb-8">
               <div className="flex items-center gap-3 justify-center">
                 <Mail className="w-5 h-5 text-primary" />
-                <span className="text-sm font-bold text-foreground">info@innovate.bt</span>
+                <span className="text-sm font-bold text-foreground">info@innovates.bt</span>
               </div>
               <div className="flex items-center gap-3 justify-center">
                 <Phone className="w-5 h-5 text-primary" />

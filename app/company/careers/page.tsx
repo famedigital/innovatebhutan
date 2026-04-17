@@ -198,7 +198,7 @@ function CareersContent() {
             <h1 className="text-4xl lg:text-5xl font-black text-foreground mb-4 tracking-tight dark:neon-text">
               Careers at{" "}
               <span className="bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
-                Innovate.bt
+                innovates.bt
               </span>
             </h1>
             <p className="text-lg text-foreground/60 max-w-2xl mx-auto">

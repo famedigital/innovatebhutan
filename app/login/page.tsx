@@ -183,7 +183,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder={loginAs === "client" ? "your@company.bt" : "admin@innovate.bt"}
+                placeholder={loginAs === "client" ? "your@company.bt" : "admin@innovates.bt"}
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -234,7 +234,7 @@ export default function LoginPage() {
       </Card>
       
       <p className="absolute bottom-6 text-[10px] font-medium text-[#A3A3A3] tracking-wider">
-        Innovate Bhutan ERP © 2026
+        INNOVATES BHUTAN ERP © 2026
       </p>
     </div>
   );

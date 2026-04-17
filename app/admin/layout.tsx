@@ -107,7 +107,7 @@ export default function AdminLayout({
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
                     <span className="font-medium">{user?.email?.split('@')[0] || 'Admin'}</span>
-                    <span className="text-xs text-[#717171] font-normal">{user?.email || 'admin@innovate.bt'}</span>
+                    <span className="text-xs text-[#717171] font-normal">{user?.email || 'admin@innovates.bt'}</span>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />

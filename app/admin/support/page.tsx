@@ -310,7 +310,7 @@ export default function SupportPage() {
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-[#3ECF8E]" />
-                <span className="text-sm">support@innovate.bt</span>
+                <span className="text-sm">support@innovates.bt</span>
               </div>
             </CardContent>
           </Card>

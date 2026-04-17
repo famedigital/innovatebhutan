@@ -198,7 +198,7 @@ export default function WebsitePage() {
                 <div className="space-y-2">
                   <label className="text-xs text-[#717171]">Hero Title</label>
                   <Input 
-                    value={getContent('home', 'hero', 'title', 'Innovate Bhutan')}
+                    value={getContent('home', 'hero', 'title', 'INNOVATES BHUTAN')}
                     onChange={(e) => updateContent('home', 'hero', 'title', e.target.value)}
                     className="bg-[#F3F3F1] border-[#E5E5E1]"
                   />
@@ -449,7 +449,7 @@ export default function WebsitePage() {
                 <div className="space-y-2">
                   <label className="text-xs text-[#717171]">Email</label>
                   <Input 
-                    value={getContent('contact', 'info', 'email', 'info@innovate.bt')}
+                    value={getContent('contact', 'info', 'email', 'info@innovates.bt')}
                     onChange={(e) => updateContent('contact', 'info', 'email', e.target.value)}
                     className="bg-[#F3F3F1] border-[#E5E5E1]"
                   />

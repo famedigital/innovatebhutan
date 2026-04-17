@@ -260,7 +260,7 @@ export function SupportContent() {
             </h1>
 
             <p className="text-base text-foreground/60 mb-10 leading-relaxed max-w-xl mx-auto">
-              At <strong className="text-primary">Innovate.bt</strong>, we understand that reliable after-sales support is crucial.
+              At <strong className="text-primary">innovates.bt</strong>, we understand that reliable after-sales support is crucial.
               Our dedicated support teams provide comprehensive assistance for Rancelab ERP, custom software, and all our technology solutions.
             </p>
 

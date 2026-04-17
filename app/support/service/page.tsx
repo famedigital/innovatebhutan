@@ -131,7 +131,7 @@ function ServiceRequestContent() {
             </h1>
 
             <p className="text-xl text-foreground/60 max-w-3xl mx-auto leading-relaxed mb-8">
-              Submit service requests, report issues, or request enhancements. Our team at <strong className="text-primary">Innovate.bt</strong> is
+              Submit service requests, report issues, or request enhancements. Our team at <strong className="text-primary">innovates.bt</strong> is
               committed to rapid response and resolution.
             </p>
 

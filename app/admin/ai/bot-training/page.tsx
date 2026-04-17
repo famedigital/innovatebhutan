@@ -22,7 +22,7 @@ const DEFAULT_RESPONSES: BotResponse[] = [
   {
     intent: "SALES_LEAD",
     trigger_keywords: ["interested", "price", "pricing", "buy", "purchase", "cost", "quotation", "demo", "try", "service"],
-    response_template: "Thank you for your interest in Innovate Bhutan! Our sales team will contact you within 24 hours. In the meantime, you can view our services at: https://innovate.bt/services",
+    response_template: "Thank you for your interest in INNOVATES BHUTAN! Our sales team will contact you within 24 hours. In the meantime, you can view our services at: https://innovates.bt/services",
     active: true
   },
   {
@@ -40,13 +40,13 @@ const DEFAULT_RESPONSES: BotResponse[] = [
   {
     intent: "EXPENSE_REPORT",
     trigger_keywords: ["expense", "claim", "reimbursement", "bill", "receipt", "spending"],
-    response_template: "For expense submissions, please use our ERP Finance module or submit receipts to accounts@innovate.bt. Our team will process within 48 hours.",
+    response_template: "For expense submissions, please use our ERP Finance module or submit receipts to accounts@innovates.bt. Our team will process within 48 hours.",
     active: true
   },
   {
     intent: "GREETING",
     trigger_keywords: ["hi", "hello", "hey", "good morning", "good afternoon", "namaste"],
-    response_template: "Namaste! Welcome to Innovate Bhutan. How can I help you today? You can ask about our services, technical support, or AMC contracts.",
+    response_template: "Namaste! Welcome to INNOVATES BHUTAN. How can I help you today? You can ask about our services, technical support, or AMC contracts.",
     active: true
   }
 ];

@@ -10,7 +10,7 @@ import {
   Clock, Cpu, Settings, Box, BarChart3, ShieldCheck,
   Globe, ZapIcon, HardDrive, Layers, Workflow, Eye,
   ArrowLeft, ExternalLink, Play, ShoppingCart, Info,
-  FileText, CreditCard, Users, Wrench
+  FileText, CreditCard, Users, Wrench, Power, Lock
 } from "lucide-react";
 import { getMediaUrl } from "@/lib/cloudinary";
 import { createClient } from "@/utils/supabase/client";
@@ -262,7 +262,8 @@ const getCategoryIcon = (cat: string) => {
     case "Security": return Shield;
     case "Web/SaaS": return Code2;
     case "Maintenance": return Zap;
-    case "Networking": return Wifi;
+    case "Infrastructure": return Wrench;
+    case "Business Services": return Users;
     default: return LayoutGrid;
   }
 };
@@ -273,8 +274,9 @@ const serviceImages: Record<string, string[]> = {
     getMediaUrl('innovate_bhutan/pos_engineering', false, true),
     getMediaUrl('innovate_bhutan/hospitality_tech', false, true),
   ],
-  "Networking": [
+  "Infrastructure": [
     getMediaUrl('innovate_bhutan/network_flow', false, true),
+    getMediaUrl('innovate_bhutan/hardware', false, true),
     getMediaUrl('innovate_bhutan/power_resilience', false, true),
   ],
   "Security": [
@@ -287,7 +289,9 @@ const serviceImages: Record<string, string[]> = {
   ],
   "Web/SaaS": [
     getMediaUrl('innovate_bhutan/software_dev', false, true),
-    getMediaUrl('innovate_bhutan/surveillance_ai', false, true),
+  ],
+  "Business Services": [
+    getMediaUrl('innovate_bhutan/software_dev', false, true),
   ],
 };
 
@@ -333,10 +337,11 @@ const PROJECT_EXECUTION_PROCESS = [
 
 const categories = [
   { name: "POS Systems", icon: LayoutGrid },
-  { name: "Networking", icon: Wifi },
+  { name: "Web/SaaS", icon: Code2 },
+  { name: "Infrastructure", icon: Wrench },
   { name: "Security", icon: Shield },
   { name: "Maintenance", icon: Zap },
-  { name: "Web/SaaS", icon: Code2 },
+  { name: "Business Services", icon: Users },
 ];
 
 export function ServiceBrowser() {

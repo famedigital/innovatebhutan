@@ -112,7 +112,7 @@ function WarrantyContent() {
             </h1>
 
             <p className="text-xl text-foreground/60 max-w-3xl mx-auto leading-relaxed">
-              At <strong className="text-primary">Innovate.bt</strong>, we stand behind every product and service we deliver.
+              At <strong className="text-primary">innovates.bt</strong>, we stand behind every product and service we deliver.
               Our warranty policies ensure your investment is protected and your operations run smoothly.
             </p>
           </motion.div>

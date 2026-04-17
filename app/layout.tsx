@@ -16,13 +16,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.innovate.bt'),
+  metadataBase: new URL('https://www.innovates.bt'),
   title: {
-    default: 'Innovate Bhutan | Full-Service IT & Digital Infrastructure Enterprise',
-    template: '%s | Innovate Bhutan'
+    default: 'INNOVATES BHUTAN | Full-Service IT & Digital Infrastructure Enterprise',
+    template: '%s | INNOVATES BHUTAN'
   },
   description: "Bhutan's premier Full-Service IT Firm. We deliver end-to-end digital infrastructure, POS ecosystems, cloud architecture, and mission-critical enterprise software solutions for a high-performance economy.",
-  generator: 'Innovate Bhutan ERP',
+  generator: 'INNOVATES BHUTAN ERP',
   keywords: [
     'IT Firm Bhutan', 'digital infrastructure', 'enterprise software Bhutan', 
     'POS systems Thimphu', 'IT consulting Bhutan', 'automation services',
@@ -31,9 +31,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_BT',
-    url: 'https://innovatebhutan.com',
-    siteName: 'Innovate Bhutan',
-    title: 'Innovate Bhutan | Full-Service IT Firm',
+    url: 'https://innovatesbhutan.com',
+    siteName: 'INNOVATES BHUTAN',
+    title: 'INNOVATES BHUTAN | Full-Service IT Firm',
     description: 'Transforming Bhutanese business through elite digital infrastructure and 90% automated operations.',
     images: [{ url: '/og-image.png', width: 1200, height: 630 }],
   },

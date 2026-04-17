@@ -112,7 +112,7 @@ export default function ClientPortal() {
             </div>
             <div>
               <h1 className="font-semibold text-[#1A1A1A]">Client Portal</h1>
-              <p className="text-xs text-[#717171]">Innovate Bhutan</p>
+              <p className="text-xs text-[#717171]">INNOVATES BHUTAN</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -244,7 +244,7 @@ export default function ClientPortal() {
                 <div className="text-center py-6">
                   <FileCheck className="w-8 h-8 mx-auto text-[#E5E5E1] mb-2" />
                   <p className="text-sm text-[#717171]">No active AMC contract</p>
-                  <Button className="mt-3 bg-[#3ECF8E] text-black" onClick={() => window.location.href = 'mailto:sales@innovate.bt'}>
+                  <Button className="mt-3 bg-[#3ECF8E] text-black" onClick={() => window.location.href = 'mailto:sales@innovates.bt'}>
                     Request Quote
                   </Button>
                 </div>
@@ -257,7 +257,7 @@ export default function ClientPortal() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Your Support Tickets</CardTitle>
-            <Button className="bg-[#3ECF8E] text-black" onClick={() => window.location.href = 'mailto:support@innovate.bt'}>
+            <Button className="bg-[#3ECF8E] text-black" onClick={() => window.location.href = 'mailto:support@innovates.bt'}>
               <MessageSquare className="w-4 h-4 mr-2" />
               New Ticket
             </Button>
@@ -267,7 +267,7 @@ export default function ClientPortal() {
               <div className="text-center py-6">
                 <HelpCircle className="w-8 h-8 mx-auto text-[#E5E5E1] mb-2" />
                 <p className="text-sm text-[#717171]">No support tickets</p>
-                <Button variant="outline" className="mt-3 border-[#E5E5E1]" onClick={() => window.location.href = 'mailto:support@innovate.bt'}>
+                <Button variant="outline" className="mt-3 border-[#E5E5E1]" onClick={() => window.location.href = 'mailto:support@innovates.bt'}>
                   Contact Support
                 </Button>
               </div>
@@ -300,19 +300,19 @@ export default function ClientPortal() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <button onClick={() => window.location.href = 'mailto:support@innovate.bt'} className="p-4 bg-white rounded-xl border border-[#E5E5E1] hover:border-[#3ECF8E] transition-colors text-center">
+          <button onClick={() => window.location.href = 'mailto:support@innovates.bt'} className="p-4 bg-white rounded-xl border border-[#E5E5E1] hover:border-[#3ECF8E] transition-colors text-center">
             <MessageSquare className="w-6 h-6 mx-auto text-[#3ECF8E] mb-2" />
             <span className="text-xs font-medium">Contact Support</span>
           </button>
-          <button onClick={() => window.location.href = 'mailto:sales@innovate.bt'} className="p-4 bg-white rounded-xl border border-[#E5E5E1] hover:border-[#3ECF8E] transition-colors text-center">
+          <button onClick={() => window.location.href = 'mailto:sales@innovates.bt'} className="p-4 bg-white rounded-xl border border-[#E5E5E1] hover:border-[#3ECF8E] transition-colors text-center">
             <FileCheck className="w-6 h-6 mx-auto text-[#3ECF8E] mb-2" />
             <span className="text-xs font-medium">Renew AMC</span>
           </button>
-          <button onClick={() => window.location.href = 'https://innovate.bt/services'} className="p-4 bg-white rounded-xl border border-[#E5E5E1] hover:border-[#3ECF8E] transition-colors text-center">
+          <button onClick={() => window.location.href = 'https://innovates.bt/services'} className="p-4 bg-white rounded-xl border border-[#E5E5E1] hover:border-[#3ECF8E] transition-colors text-center">
             <CreditCard className="w-6 h-6 mx-auto text-[#3ECF8E] mb-2" />
             <span className="text-xs font-medium">View Services</span>
           </button>
-          <button onClick={() => window.location.href = 'https://innovate.bt'} className="p-4 bg-white rounded-xl border border-[#E5E5E1] hover:border-[#3ECF8E] transition-colors text-center">
+          <button onClick={() => window.location.href = 'https://innovates.bt'} className="p-4 bg-white rounded-xl border border-[#E5E5E1] hover:border-[#3ECF8E] transition-colors text-center">
             <Zap className="w-6 h-6 mx-auto text-[#3ECF8E] mb-2" />
             <span className="text-xs font-medium">Visit Website</span>
           </button>
@@ -321,7 +321,7 @@ export default function ClientPortal() {
 
       <footer className="border-t border-[#E5E5E1] mt-8">
         <div className="max-w-5xl mx-auto px-4 py-4 text-center text-xs text-[#717171]">
-          <p>© 2026 Innovate Bhutan. All rights reserved.</p>
+          <p>© 2026 INNOVATES BHUTAN. All rights reserved.</p>
         </div>
       </footer>
     </div>

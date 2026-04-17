@@ -298,7 +298,7 @@ export const businessCategories = pgTable("business_categories", {
 
 /**
  * 🏪 BUSINESS DIRECTORY
- * Premium business listings with Innovate.bt ecosystem integration
+ * Premium business listings with innovates.bt ecosystem integration
  */
 export const businesses = pgTable("businesses", {
   id: serial("id").primaryKey(),
@@ -329,7 +329,7 @@ export const businesses = pgTable("businesses", {
 
   // Business Details
   ownerId: integer("owner_id").references(() => profiles.id), // Business owner/manager
-  clientId: integer("client_id").references(() => clients.id), // If Innovate.bt client
+  clientId: integer("client_id").references(() => clients.id), // If innovates.bt client
 
   // Status & Features
   status: varchar("status", { length: 50 }).default("active"), // active, inactive, pending

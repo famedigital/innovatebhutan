@@ -53,7 +53,7 @@ export function FooterSection() {
             <Link href="/" className="flex flex-col group relative z-10 transition-transform hover:scale-105 w-fit mb-6">
               <div className="absolute -inset-2 bg-primary rounded-full blur-xl opacity-0 group-hover:opacity-20 transition-opacity" />
               <div className="text-3xl font-bold tracking-tighter text-white leading-none relative">
-                INNOVATE<span className="text-primary [text-shadow:0_0_15px_var(--primary)]">.</span>
+                INNOVATES<span className="text-primary [text-shadow:0_0_15px_var(--primary)]">.</span>
               </div>
               <div className="text-[10px] font-mono tracking-[0.4em] text-primary uppercase ml-1 opacity-80 group-hover:opacity-100 group-hover:[text-shadow:0_0_10px_var(--primary)] transition-all">
                 BHUTAN
@@ -63,7 +63,7 @@ export function FooterSection() {
               <p className="font-bold text-white mb-2">Manish Sharma (Owner)</p>
               <p>Thimphu, Bhutan</p>
               <p className="text-primary font-mono">+975 17268753</p>
-              <p><a href="https://www.innovate.bt" className="hover:text-white transition-colors">www.innovate.bt</a></p>
+              <p><a href="https://www.innovates.bt" className="hover:text-white transition-colors">www.innovates.bt</a></p>
             </div>
             <div className="flex items-center gap-3">
               {["FB", "IG", "LI"].map((social) => (
@@ -103,7 +103,7 @@ export function FooterSection() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-[#6B7280]">
-              2026 Innovate Bhutan. All rights reserved. <br className="sm:hidden" />
+              2026 INNOVATES BHUTAN. All rights reserved. <br className="sm:hidden" />
               <span className="sm:ml-2">
                 Designed & Developed by <a href="https://famedigital.netlify.app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Famedigital</a>
               </span>
