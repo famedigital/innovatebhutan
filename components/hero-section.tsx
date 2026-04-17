@@ -137,24 +137,24 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
         </motion.div>
       </div>
 
-      {/* Service name */}
-      <h3 className="text-center text-xs text-foreground mb-0.5 truncate">
+      {/* Service name - with word wrap */}
+      <h3 className="text-center text-xs text-foreground mb-0.5 leading-tight line-clamp-2">
         {service.name}
       </h3>
 
       {/* Category */}
-      <p className="text-center text-[10px] text-foreground/40">
+      <p className="text-center text-[10px] text-foreground/40 line-clamp-1">
         {service.category}
       </p>
 
-      {/* Sub-services flyout menu */}
+      {/* Sub-services flyout menu - higher z-index */}
       {hasSubs && showSubs && (
         <motion.div
           initial={{ opacity: 0, y: 8, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 8, scale: 0.95 }}
           transition={{ type: "spring", stiffness: 200, damping: 25 }}
-          className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-100 dark:border-white/10 p-2 min-w-[140px]"
+          className="absolute z-[9999] left-1/2 -translate-x-1/2 bottom-full mb-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-100 dark:border-white/10 p-2 min-w-[140px]"
         >
           <div className="flex flex-col gap-0.5">
             {(service as any).subs.map((sub: string, i: number) => (

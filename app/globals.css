@@ -860,3 +860,19 @@ html {
     transform: translateY(0);
   }
 }
+
+/* Hide footer and WhatsApp button when service detail is open on mobile */
+@media (max-width: 1023px) {
+  body.service-detail-open footer,
+  body.service-detail-open .fixed.bottom-6.right-6 {
+    display: none !important;
+  }
+}
+
+/* Also hide main navigation when service detail is open on mobile */
+@media (max-width: 1023px) {
+  body.service-detail-open header.fixed,
+  body.service-detail-open nav.fixed {
+    transform: translateY(-100%);
+  }
+}

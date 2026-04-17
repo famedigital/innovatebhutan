@@ -271,10 +271,28 @@ function ServiceDetailPanel({
   const Icon = service.icon;
   const hasSubs = service.subs;
   const [isMobile, setIsMobile] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const [scrollDirection, setScrollDirection] = useState<'up' | 'down'>('up');
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 1024);
   }, []);
+
+  // Scroll direction detection for Play Store-style header
+  useEffect(() => {
+    if (!isMobile) return;
+
+    let lastScrollY = window.scrollY;
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      setScrollDirection(currentScrollY > lastScrollY ? 'down' : 'up');
+      setScrollY(currentScrollY);
+      lastScrollY = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isMobile]);
 
   return (
     <motion.div
@@ -284,16 +302,54 @@ function ServiceDetailPanel({
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="h-full flex flex-col"
     >
-      {/* Header - Mobile tag pills or Desktop icon */}
+      {/* Header - Mobile Play Store style or Desktop icon */}
       {isMobile ? (
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <span className="px-3 py-1.5 rounded-full text-xs font-semibold text-white" style={{ background: service.gradient }}>
-            {service.shortName}
-          </span>
-          <span className="px-3 py-1.5 rounded-full text-xs bg-zinc-100 dark:bg-zinc-800 text-foreground/60">
-            {service.category}
-          </span>
-        </div>
+        // Play Store style header for mobile
+        <>
+          <div className="flex items-start gap-4 mb-6">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg"
+              style={{ background: service.gradient }}
+            >
+              <Icon className="w-8 h-8 text-white" />
+            </motion.div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-semibold text-foreground leading-tight">{service.name}</h2>
+              <p className="text-sm text-foreground/60">{service.category}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-0.5">
+                  {[1,2,3,4,5].map((star) => (
+                    <svg key={star} className="w-3.5 h-3.5 text-yellow-500 fill-current" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.78-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                  ))}
+                </div>
+                <span className="text-xs text-foreground/40">4.9</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Screenshot Gallery - Play Store style */}
+          <div className="mb-6 -mx-2">
+            <div className="flex gap-3 overflow-x-auto px-2 scrollbar-hide snap-x">
+              {[1,2,3].map((i) => (
+                <div
+                  key={i}
+                  className="flex-shrink-0 w-72 h-40 rounded-2xl snap-center"
+                  style={{
+                    background: `linear-gradient(135deg, ${
+                      service.gradient.match(/#[A-F0-9]{6}/gi)?.[i % 3] || '#10B981'
+                    }${[15,30,45][i-1]}, ${
+                      service.gradient.match(/#[A-F0-9]{6}/gi)?.[(i+1) % 3] || '#059669'
+                    })`,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </>
       ) : (
         <div className="text-center mb-8">
           <motion.div
@@ -310,14 +366,21 @@ function ServiceDetailPanel({
         </div>
       )}
 
-      {/* Description */}
-      <p className="text-sm text-foreground/70 mb-8 leading-relaxed">
-        {service.description}
-      </p>
+      {/* Description - Play Store style */}
+      <div className="mb-6">
+        <h3 className={`font-semibold text-foreground mb-2 ${isMobile ? 'text-base' : 'text-xs uppercase tracking-wider'}`}>
+          About this {isMobile ? '' : 'service'}
+        </h3>
+        <p className="text-sm text-foreground/70 leading-relaxed">
+          {service.description}
+        </p>
+      </div>
 
       {/* Features */}
-      <div className="mb-8">
-        <h3 className="text-xs uppercase tracking-wider text-foreground/50 mb-4">Features</h3>
+      <div className="mb-6">
+        <h3 className={`font-semibold text-foreground mb-3 ${isMobile ? 'text-base' : 'text-xs uppercase tracking-wider'}`}>
+          Features
+        </h3>
         <div className="flex flex-wrap gap-2">
           {service.features.map((feature, i) => (
             <span
@@ -658,6 +721,19 @@ export function ServiceBrowser() {
       setActiveCategory(categoryParam === "POS Systems" ? "POS Systems" : categoryParam);
     }
   }, [searchParams]);
+
+  // Toggle body class for hiding footer/WhatsApp when service detail is open on mobile
+  useEffect(() => {
+    const isMobile = window.innerWidth < 1024;
+    if (isMobile && selectedService) {
+      document.body.classList.add('service-detail-open');
+    } else {
+      document.body.classList.remove('service-detail-open');
+    }
+    return () => {
+      document.body.classList.remove('service-detail-open');
+    };
+  }, [selectedService]);
 
   const filteredServices = activeCategory === "all"
     ? allServices
