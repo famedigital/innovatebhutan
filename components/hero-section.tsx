@@ -50,7 +50,7 @@ function useTypewriter(phrases: string[], typingSpeed = 80, deletingSpeed = 40, 
   return { text, isDeleting, isPaused };
 }
 
-// Apple-style Service Card - Icon Left, Text Right
+// Apple-style Service Card - Icon Left, Text Right, Hover Reveal Sub-services
 function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
   service: any;
   onClick: () => void;
@@ -61,6 +61,12 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
   const [isHovered, setIsHovered] = useState(false);
   const Icon = service.icon;
   const hasSubs = (service as any).subs;
+  const subCount = hasSubs ? (service as any).subs.length : 0;
+
+  // Extract first color from gradient for badge and border
+  const gradient = service.gradient || 'linear-gradient(135deg, #10B981, #059669)';
+  const colorMatch = gradient.match(/#[A-F0-9]{6}/gi);
+  const primaryColor = colorMatch?.[0] || '#10B981';
 
   return (
     <div
@@ -77,59 +83,90 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
     >
       <div
         className={`
-          relative rounded-xl bg-white dark:bg-zinc-900 cursor-pointer
-          flex items-center p-4 gap-4 min-h-[80px]
+          relative rounded-2xl bg-white dark:bg-zinc-900 cursor-pointer
+          flex items-center p-5 gap-4 h-[100px]
           transition-all duration-300 ease-out
         `}
         style={{
           boxShadow: isHovered
-            ? '0 8px 30px rgba(0,0,0,0.12)'
-            : '0 2px 8px rgba(0,0,0,0.04)',
-          transform: isHovered ? 'translateY(-3px)' : 'translateY(0)',
-          border: isHovered ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(0,0,0,0.06)',
+            ? '0 12px 40px rgba(0,0,0,0.15)'
+            : '0 2px 12px rgba(0,0,0,0.06)',
+          transform: isHovered ? 'translateY(-4px) scale(1.02)' : 'translateY(0) scale(1)',
+          border: isHovered ? `1px solid ${primaryColor}40` : '1px solid rgba(0,0,0,0.06)',
         }}
       >
-        {/* Icon - Left side, consistent size */}
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{background: `${service.color.split(' ')[1]}15`}}>
-          <Icon className="w-6 h-6" style={{color: service.color.split(' ')[1]}} />
+        {/* Icon - Colorful gradient background */}
+        <div
+          className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg"
+          style={{ background: gradient }}
+        >
+          <Icon className="w-7 h-7 text-white" />
         </div>
 
         {/* Content - Right side */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
           {/* Main service name */}
-          <span className="text-[12px] font-semibold text-foreground block leading-tight mb-1">
+          <span className="text-[13px] text-foreground block leading-tight mb-1.5">
             {service.name}
           </span>
 
-          {/* Badge */}
-          {service.badge && (
-            <span className="text-[9px] text-primary/80 inline-block mb-1">
-              {service.badge}
+          {/* Service count badge - always visible */}
+          {subCount > 0 && (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-full inline-block w-fit"
+              style={{
+                background: `${primaryColor}20`,
+                color: primaryColor,
+              }}
+            >
+              {subCount} service{subCount > 1 ? 's' : ''}
             </span>
-          )}
-
-          {/* Sub-services - listed below */}
-          {hasSubs && (
-            <div className="flex flex-col gap-1 mt-2">
-              {(service as any).subs.map((sub: string) => (
-                <div key={sub} className="flex items-center gap-2">
-                  <div className="w-1 h-1 rounded-full" style={{background: service.color.split(' ')[1]}} />
-                  <span className="text-[10px] text-foreground/60">
-                    {sub}
-                  </span>
-                </div>
-              ))}
-            </div>
           )}
         </div>
 
-        {/* Arrow indicator */}
-        <div className="text-foreground/20">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M4 2L8 6L4 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        {/* Arrow indicator - animates on hover */}
+        <div
+          className="text-foreground/30 transition-all duration-300"
+          style={{
+            transform: isHovered ? 'translateX(4px)' : 'translateX(0)',
+            opacity: isHovered ? '1' : '0.3',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M4 2L10 7L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
       </div>
+
+      {/* Sub-services reveal - appears on hover */}
+      {hasSubs && isHovered && (
+        <div
+          className="absolute z-10 left-0 right-0 top-full mt-2 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-zinc-100 dark:border-white/10 p-3"
+          style={{
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+        >
+          <div className="flex flex-col gap-1.5">
+            {(service as any).subs.map((sub: string, i: number) => (
+              <div
+                key={sub}
+                className="flex items-center gap-2"
+                style={{
+                  animation: `slideIn 0.2s ease-out ${i * 0.05}s both`,
+                }}
+              >
+                <div
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: gradient }}
+                />
+                <span className="text-[11px] text-foreground/70">
+                  {sub}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -887,18 +924,18 @@ const servicesVisual = [
 ];
 
 const mainServices = [
-  { name: "POS Solutions", icon: Store, badge: "2 services", color: "from-orange-500 to-red-500", bgColor: "bg-orange-500", category: "POS Systems", subs: ["Retail POS", "Restaurant POS"] },
-  { name: "Hotel PMS", icon: Hotel, badge: null, color: "from-blue-500 to-indigo-500", bgColor: "bg-blue-500", category: "POS Systems" },
-  { name: "Web Development", icon: Code, badge: null, color: "from-purple-500 to-pink-500", bgColor: "bg-purple-500", category: "Web/SaaS" },
-  { name: "SaaS Development", icon: Database, badge: null, color: "from-violet-500 to-purple-600", bgColor: "bg-violet-500", category: "Web/SaaS" },
-  { name: "ERP Development", icon: LayoutGrid, badge: null, color: "from-indigo-500 to-blue-600", bgColor: "bg-indigo-500", category: "Web/SaaS" },
-  { name: "Mobile App Development", icon: Smartphone, badge: null, color: "from-teal-500 to-cyan-600", bgColor: "bg-teal-500", category: "Web/SaaS" },
-  { name: "Infrastructure Solutions", icon: Wrench, badge: "3 services", color: "from-slate-500 to-zinc-500", bgColor: "bg-slate-600", category: "Infrastructure", subs: ["Hardware Solutions", "Network Infrastructure", "Power Solutions"] },
-  { name: "Security Systems", icon: Shield, badge: "2 services", color: "from-red-500 to-rose-600", bgColor: "bg-red-500", category: "Security", subs: ["Security Systems", "Anti Theft System"] },
-  { name: "Technical Maintenance", icon: Zap, badge: null, color: "from-green-500 to-emerald-500", bgColor: "bg-green-500", category: "Maintenance" },
-  { name: "Payroll & HR Whitelabel", icon: Users, badge: null, color: "from-rose-500 to-pink-600", bgColor: "bg-rose-500", category: "Web/SaaS" },
-  { name: "GST Services", icon: FileText, badge: null, color: "from-yellow-500 to-amber-600", bgColor: "bg-yellow-500", category: "Business Services" },
-  { name: "IT Consulting", icon: Search, badge: null, color: "from-cyan-500 to-blue-600", bgColor: "bg-cyan-600", category: "Consulting" },
+  { name: "POS Solutions", icon: Store, gradient: "linear-gradient(135deg, #F97316, #DC2626)", category: "POS Systems", subs: ["Retail POS", "Restaurant POS"] },
+  { name: "Hotel PMS", icon: Hotel, gradient: "linear-gradient(135deg, #3B82F6, #4F46E5)", category: "POS Systems" },
+  { name: "Web Development", icon: Code, gradient: "linear-gradient(135deg, #A855F7, #EC4899)", category: "Web/SaaS" },
+  { name: "SaaS Development", icon: Database, gradient: "linear-gradient(135deg, #8B5CF6, #7C3AED)", category: "Web/SaaS" },
+  { name: "ERP Development", icon: LayoutGrid, gradient: "linear-gradient(135deg, #6366F1, #2563EB)", category: "Web/SaaS" },
+  { name: "Mobile App Development", icon: Smartphone, gradient: "linear-gradient(135deg, #14B8A6, #0891B2)", category: "Web/SaaS" },
+  { name: "Infrastructure Solutions", icon: Wrench, gradient: "linear-gradient(135deg, #64748B, #71717A)", category: "Infrastructure", subs: ["Hardware Solutions", "Network Infrastructure", "Power Solutions"] },
+  { name: "Security Systems", icon: Shield, gradient: "linear-gradient(135deg, #EF4444, #E11D48)", category: "Security", subs: ["Security Systems", "Anti Theft System"] },
+  { name: "Technical Maintenance", icon: Zap, gradient: "linear-gradient(135deg, #22C55E, #10B981)", category: "Maintenance" },
+  { name: "Payroll & HR Whitelabel", icon: Users, gradient: "linear-gradient(135deg, #F43F5E, #EC4899)", category: "Web/SaaS" },
+  { name: "GST Services", icon: FileText, gradient: "linear-gradient(135deg, #EAB308, #D97706)", category: "Business Services" },
+  { name: "IT Consulting", icon: Search, gradient: "linear-gradient(135deg, #06B6D4, #3B82F6)", category: "Consulting" },
 ];
 
 const serviceToImageMap: Record<string, string> = {
