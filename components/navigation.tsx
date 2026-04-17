@@ -121,8 +121,8 @@ export function Navigation() {
       <nav className="bg-white/90 dark:bg-black/80 backdrop-blur-xl border-b border-slate-100 dark:border-white/5 transition-colors">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-12">
-            {/* Modern Logo Animation */}
-            <a href="/" className="flex items-center gap-2 group relative z-10 transition-transform hover:scale-105">
+            {/* Modern Logo Animation - positioned left */}
+            <a href="/" className="flex items-center gap-2 group relative z-10 transition-transform hover:scale-105 -ml-2">
               <ModernLogo />
             </a>
 
@@ -155,7 +155,7 @@ export function Navigation() {
                               href={subLink.href}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="block px-4 py-3 text-sm text-slate-600 dark:text-white/70 hover:text-primary dark:hover:text-primary hover:bg-slate-50 dark:hover:bg-white/5 transition-all border-b border-slate-100 dark:border-white/5 last:border-0"
+                              className="block px-4 py-3 text-sm text-slate-600 dark:text-white/70 hover:text-primary dark:hover:text-primary hover:bg-primary/10 dark:hover:bg-primary/20 transition-all border-b border-slate-100 dark:border-white/5 last:border-0"
                             >
                               {subLink.name}
                             </a>
@@ -163,7 +163,7 @@ export function Navigation() {
                             <a
                               key={subLink.name}
                               href={subLink.href}
-                              className="block px-4 py-3 text-sm text-slate-600 dark:text-white/70 hover:text-primary dark:hover:text-primary hover:bg-slate-50 dark:hover:bg-white/5 transition-all border-b border-slate-100 dark:border-white/5 last:border-0"
+                              className="block px-4 py-3 text-sm text-slate-600 dark:text-white/70 hover:text-primary dark:hover:text-primary hover:bg-primary/10 dark:hover:bg-primary/20 transition-all border-b border-slate-100 dark:border-white/5 last:border-0"
                             >
                               {subLink.name}
                             </a>
@@ -275,7 +275,7 @@ export function Navigation() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={() => setIsOpen(false)}
-                                className="block px-4 py-2 text-sm text-slate-600 dark:text-white/60 hover:text-[#10B981] hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all"
+                                className="block px-4 py-2 text-sm text-slate-600 dark:text-white/60 hover:text-primary hover:bg-primary/10 dark:hover:bg-primary/20 rounded-xl transition-all"
                               >
                                 {subLink.name}
                               </a>
@@ -284,7 +284,7 @@ export function Navigation() {
                                 key={subLink.name}
                                 href={subLink.href}
                                 onClick={() => setIsOpen(false)}
-                                className="block px-4 py-2 text-sm text-slate-600 dark:text-white/60 hover:text-[#10B981] hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all"
+                                className="block px-4 py-2 text-sm text-slate-600 dark:text-white/60 hover:text-primary hover:bg-primary/10 dark:hover:bg-primary/20 rounded-xl transition-all"
                               >
                                 {subLink.name}
                               </a>

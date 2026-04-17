@@ -134,7 +134,7 @@ const categories = [
   { name: "Consulting", value: "Consulting" },
 ];
 
-// Colorful Service Card Component
+// Colorful Service Card Component - All content within gradient box
 function ColorfulServiceCard({ service, index }: { service: typeof allServices[0]; index: number }) {
   const [isHovered, setIsHovered] = useState(false);
   const Icon = service.icon;
@@ -152,58 +152,40 @@ function ColorfulServiceCard({ service, index }: { service: typeof allServices[0
     >
       <div
         className={`
-          relative rounded-2xl bg-white dark:bg-zinc-900 cursor-pointer
-          flex items-center p-5 gap-4 h-[100px]
+          relative rounded-2xl cursor-pointer
+          flex flex-col items-center justify-center p-4 gap-2
           transition-all duration-300 ease-out
         `}
         style={{
+          width: '100%',
+          height: '110px',
+          background: service.gradient,
           boxShadow: isHovered
-            ? '0 12px 40px rgba(0,0,0,0.15)'
-            : '0 2px 12px rgba(0,0,0,0.06)',
+            ? `0 12px 40px ${gradientFrom}40`
+            : `0 2px 12px ${gradientFrom}20`,
           transform: isHovered ? 'translateY(-4px) scale(1.02)' : 'translateY(0) scale(1)',
-          border: isHovered ? `1px solid ${gradientFrom}40` : '1px solid rgba(0,0,0,0.06)',
         }}
       >
-        {/* Colorful gradient icon */}
-        <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg"
-          style={{ background: service.gradient }}
-        >
-          <Icon className="w-7 h-7 text-white" />
-        </div>
+        {/* Icon */}
+        <Icon className="w-8 h-8 text-white flex-shrink-0" />
 
-        {/* Content */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <span className="text-[13px] text-foreground block leading-tight mb-1.5">
-            {service.name}
+        {/* Service name - white text on gradient */}
+        <span className="text-[11px] text-white text-center leading-tight line-clamp-2">
+          {service.name}
+        </span>
+
+        {/* Service count badge - white semi-transparent */}
+        {subCount > 0 && (
+          <span
+            className="text-[9px] px-2 py-0.5 rounded-full inline-block w-fit"
+            style={{
+              background: 'rgba(255,255,255,0.25)',
+              color: 'white',
+            }}
+          >
+            {subCount}
           </span>
-
-          {/* Service count badge */}
-          {subCount > 0 && (
-            <span
-              className="text-[10px] px-2 py-0.5 rounded-full inline-block w-fit"
-              style={{
-                background: `${gradientFrom}20`,
-                color: gradientFrom,
-              }}
-            >
-              {subCount} service{subCount > 1 ? 's' : ''}
-            </span>
-          )}
-        </div>
-
-        {/* Arrow indicator */}
-        <div
-          className="text-foreground/30 transition-all duration-300"
-          style={{
-            transform: isHovered ? 'translateX(4px)' : 'translateX(0)',
-            opacity: isHovered ? '1' : '0.3',
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M4 2L10 7L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
+        )}
       </div>
 
       {/* Sub-services reveal on hover */}
