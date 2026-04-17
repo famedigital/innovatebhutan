@@ -77,13 +77,19 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
     >
       <div
         className={`
-          relative rounded-[12px] p-3 overflow-hidden cursor-pointer transition-all duration-200
+          relative rounded-[12px] p-3 overflow-hidden cursor-pointer
           ${hasSubs ? "min-h-[100px]" : "min-h-[55px]"}
-          ${isHovered ? "shadow-lg" : "shadow-sm"}
         `}
+        style={{
+          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          transform: isHovered ? 'translateY(-4px) scale(1.02)' : 'translateY(0) scale(1)',
+          boxShadow: isHovered
+            ? '0 20px 40px rgba(16, 185, 129, 0.15)'
+            : '0 4px 15px rgba(0,0,0,0.06)',
+        }}
       >
         {/* Gradient Background */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${service.color} transition-opacity duration-200 ${isHovered ? "opacity-100" : "opacity-0"}`} />
+        <div className={`absolute inset-0 bg-gradient-to-br ${service.color} transition-opacity duration-400 ${isHovered ? "opacity-100" : "opacity-0"}`} />
 
         {/* White overlay */}
         <div className="absolute inset-0 bg-white/95 dark:bg-black/90" />
@@ -91,8 +97,8 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
         {/* Content */}
         <div className="relative z-10">
           {/* Main Content */}
-          <div className={`flex items-center gap-2 transition-opacity duration-150 ${isHovered && hasSubs ? "opacity-0" : "opacity-100"}`}>
-            <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}>
+          <div className={`flex items-center gap-2 transition-opacity duration-300 ${isHovered && hasSubs ? "opacity-0" : "opacity-100"}`}>
+            <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0 transition-transform duration-300 ${isHovered ? "scale-110" : "scale-100"}`}>
               <Icon className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
@@ -109,10 +115,19 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
 
           {/* Sub-services on hover */}
           {hasSubs && (
-            <div className={`absolute inset-x-0 top-0 bottom-0 flex flex-col justify-center items-center px-2 transition-opacity duration-150 ${isHovered ? "opacity-100" : "opacity-0"}`}>
+            <div className={`absolute inset-x-0 top-0 bottom-0 flex flex-col justify-center items-center px-2 transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}>
               <div className="space-y-2 w-full">
-                {(service as any).subs.map((sub: string) => (
-                  <div key={sub} className="flex items-center justify-center gap-2">
+                {(service as any).subs.map((sub: string, i: number) => (
+                  <div
+                    key={sub}
+                    className="flex items-center justify-center gap-2"
+                    style={{
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      transform: isHovered ? 'translateX(0)' : 'translateX(-10px)',
+                      opacity: isHovered ? 1 : 0,
+                      transitionDelay: `${i * 0.05}s`,
+                    }}
+                  >
                     <div className={`w-6 h-6 rounded bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}>
                       <Icon className="w-3 h-3 text-white" />
                     </div>
