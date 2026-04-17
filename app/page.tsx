@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { Navigation } from "@/components/navigation";
+import { TopMarquee } from "@/components/top-marquee";
 import { HeroSection } from "@/components/hero-section";
 import { ServiceDirectory } from "@/components/service-directory";
 import { StatsSection } from "@/components/stats-section";
-import { BrandsSection } from "@/components/brands-section";
 import { ContactSection } from "@/components/contact-section";
 import { FooterSection } from "@/components/footer-section";
 import { WhatsAppButton } from "@/components/whatsapp-button";
@@ -17,7 +17,8 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-background text-foreground selection:bg-[#10B981] selection:text-white dark:selection:bg-primary dark:selection:text-black transition-colors duration-500">
       <Navigation />
-      
+      <TopMarquee />
+
       {/* Hero Section */}
       <section className="pt-20 pb-12 relative bg-background transition-colors duration-500">
         <div className="absolute top-0 left-0 w-full h-full bg-grid-pattern opacity-[0.03] dark:opacity-[0.05]" />

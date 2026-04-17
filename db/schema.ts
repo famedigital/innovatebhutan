@@ -261,3 +261,168 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+/**
+ * 🗺️ LOCATIONS
+ * Bhutanese cities, thromdes, and dzongkhags for directory filtering
+ */
+export const locations = pgTable("locations", {
+  id: serial("id").primaryKey(),
+  publicId: varchar("public_id", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull(), // e.g., "Thimphu", "Paro", "Punakha"
+  district: varchar("district", { length: 100 }), // e.g., "Thimphu District"
+  dzongkhag: varchar("dzongkhag", { length: 100 }), // Administrative district
+  thromde: varchar("thromde", { length: 100 }), // Municipality
+  description: text("description"),
+  coordinates: jsonb("coordinates"), // { lat, lng }
+  isActive: boolean("is_active").default(true),
+  displayOrder: integer("display_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+/**
+ * 🏢 BUSINESS CATEGORIES
+ * Hierarchical categories for business directory (IT Services > Networking > Fiber)
+ */
+export const businessCategories = pgTable("business_categories", {
+  id: serial("id").primaryKey(),
+  publicId: varchar("public_id", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  icon: varchar("icon", { length: 50 }), // Lucide icon name
+  description: text("description"),
+  parentId: integer("parent_id").references(() => businessCategories.id), // For hierarchy
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+/**
+ * 🏪 BUSINESS DIRECTORY
+ * Premium business listings with Innovate.bt ecosystem integration
+ */
+export const businesses = pgTable("businesses", {
+  id: serial("id").primaryKey(),
+  publicId: varchar("public_id", { length: 50 }).notNull().unique(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  tagline: varchar("tagline", { length: 255 }),
+  description: text("description"),
+
+  // Category & Location
+  categoryId: integer("category_id").references(() => businessCategories.id),
+  locationId: integer("location_id").references(() => locations.id),
+
+  // Contact Information
+  phone: varchar("phone", { length: 50 }),
+  whatsapp: varchar("whatsapp", { length: 50 }),
+  email: varchar("email", { length: 100 }),
+  website: text("website"),
+
+  // Address
+  address: text("address"),
+  coordinates: jsonb("coordinates"), // { lat, lng }
+
+  // Media
+  logoUrl: text("logo_url"),
+  coverImageUrl: text("cover_image_url"),
+  galleryUrls: jsonb("gallery_urls"), // Array of image URLs
+
+  // Business Details
+  ownerId: integer("owner_id").references(() => profiles.id), // Business owner/manager
+  clientId: integer("client_id").references(() => clients.id), // If Innovate.bt client
+
+  // Status & Features
+  status: varchar("status", { length: 50 }).default("active"), // active, inactive, pending
+  type: varchar("type", { length: 50 }).default("external"), // client, external, featured
+  isVerified: boolean("is_verified").default(false), // Verified business
+  isFeatured: boolean("is_featured").default(false), // Premium placement
+
+  // Rating & Reviews
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0"), // Average rating
+  reviewCount: integer("review_count").default(0),
+
+  // SEO & Metadata
+  metaTitle: varchar("meta_title", { length: 100 }),
+  metaDescription: text("meta_description"),
+  keywords: jsonb("keywords"), // Array of keywords for search
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+/**
+ * ⭐ BUSINESS REVIEWS
+ * Verified customer reviews (linked to orders for authenticity)
+ */
+export const businessReviews = pgTable("business_reviews", {
+  id: serial("id").primaryKey(),
+  publicId: varchar("public_id", { length: 50 }).notNull().unique(),
+  businessId: integer("business_id").references(() => businesses.id).notNull(),
+
+  // Reviewer Information
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  customerEmail: varchar("customer_email", { length: 100 }),
+
+  // Verification (linked to actual order/project)
+  orderId: integer("order_id").references(() => orders.id), // If from order
+  projectId: integer("project_id").references(() => projects.id), // If from project
+  isVerified: boolean("is_verified").default(false), // Verified customer
+
+  // Review Content
+  rating: integer("rating").notNull(), // 1-5 stars
+  title: varchar("title", { length: 255 }),
+  comment: text("comment").notNull(),
+
+  // Response
+  response: text("response"), // Business owner response
+  respondedAt: timestamp("responded_at"),
+
+  // Status
+  status: varchar("status", { length: 50 }).default("published"), // published, hidden, flagged
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+/**
+ * 🕐 BUSINESS HOURS
+ * Operating hours for businesses
+ */
+export const businessHours = pgTable("business_hours", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").references(() => businesses.id).notNull(),
+
+  dayOfWeek: integer("day_of_week").notNull(), // 0 = Sunday, 6 = Saturday
+  openTime: varchar("open_time", { length: 10 }), // e.g., "09:00"
+  closeTime: varchar("close_time", { length: 10 }), // e.g., "18:00"
+  isClosed: boolean("is_closed").default(false), // If closed for this day
+
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+/**
+ * ⚙️ APP SETTINGS
+ * Key-value settings for dynamic configuration (marquee, banners, etc.)
+ */
+export const settings = pgTable("settings", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  value: jsonb("value").notNull(),
+  description: text("description"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+/**
+ * 🏷️ BUSINESS AMENITIES & FEATURES
+ * Flexible key-value pairs for filtering (price range, certifications, etc.)
+ */
+export const businessAmenities = pgTable("business_amenities", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").references(() => businesses.id).notNull(),
+
+  amenityType: varchar("amenity_type", { length: 50 }).notNull(), // e.g., "price_range", "certification", "service_area"
+  amenityValue: varchar("amenity_value", { length: 255 }).notNull(), // e.g., "$$$", "ISO 9001", "Thimphu"
+
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
