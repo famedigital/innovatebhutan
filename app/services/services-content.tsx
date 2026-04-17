@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Store, Utensils, Hotel, Code, Database, LayoutGrid,
@@ -338,5 +338,9 @@ export function ServiceBrowser() {
 }
 
 export function ServicesContent() {
-  return <ServiceBrowser />;
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <ServiceBrowser />
+    </Suspense>
+  );
 }
