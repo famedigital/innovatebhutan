@@ -31,15 +31,36 @@ function ModernLogo() {
 }
 
 const marqueeItems = [
-  "Expert POS Engineers",
-  "AI Surveillance Architects",
-  "Biometric Security Specialists",
-  "Hospitality Tech Consultants",
-  "Full-stack Talent",
-  "Network Infrastructure Experts",
-  "Certified Technicians",
-  "Strategic Talent Brokering",
-  "Nationwide Tech Support",
+  "Chimi Jamyang Pvt Ltd",
+  "Baleno",
+  "T.T Extra",
+  "YOYO Bhutan",
+  "Malaya Jewelry",
+  "Capital P.M.S",
+  "Hayate Ramen",
+  "Namsey Medical",
+  "Khuenphen Pharmacy",
+  "Yangki Enterprise",
+  "Idesire",
+  "Smilers Bistero",
+  "E-World Digital",
+  "Shoe Space",
+  "Dokar Mart",
+  "SPCG",
+  "Explore Pizza",
+  "Lilly Traders",
+  "Urban Dumra",
+  "Kuensel Corporation",
+  "DSB Book Store",
+  "Paro Canteen",
+  "Paro Momo Corner",
+  "Zeppo Sales",
+  "Shopper's Store",
+  "Daily Chew Cafe",
+  "Lhoden Automobile",
+  "Shoponline.Bt",
+  "Burger Point",
+  "Druk Pizza Thimphu",
 ];
 
 const navLinks = [
@@ -130,9 +151,9 @@ export function Navigation() {
             <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[#F1F5F9] dark:from-black to-transparent z-10" />
             <div className="flex animate-marquee whitespace-nowrap">
               {[...marqueeItems, ...marqueeItems].map((item, idx) => (
-                <span key={idx} className="inline-flex items-center gap-1 px-6 text-[9px] font-mono tracking-tighter uppercase font-bold text-slate-500 dark:text-white/40">
-                  <ChevronRight className="w-3 h-3 text-[#10B981]" />
+                <span key={idx} className="inline-flex items-center gap-1 px-4 text-[9px] tracking-tight uppercase text-slate-600 dark:text-white/50">
                   {item}
+                  <span className="text-[#10B981]">•</span>
                 </span>
               ))}
             </div>
