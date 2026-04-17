@@ -852,22 +852,26 @@ export function HeroSection() {
   };
 
   return (
-    <div className="relative flex flex-col lg:flex-row max-w-[1300px] mx-auto pt-6 lg:pt-10 pb-20 lg:pb-24 px-5 items-start gap-10 lg:gap-[50px] transition-colors rounded-[32px] overflow-visible">
+    <div className="relative flex flex-col max-w-[1300px] mx-auto pt-6 lg:pt-10 pb-20 lg:pb-24 px-5 transition-colors rounded-[32px] overflow-visible">
+
+      {/* Title - full width */}
+      <motion.h1
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-[32px] lg:text-[44px] font-bold text-foreground leading-[1.2] mb-8 transition-colors"
+      >
+        Your space, professionally managed, anywhere in{" "}
+          <span className="text-primary animate-text-color">
+            BHUTAN
+          </span>
+        </motion.h1>
+
+      {/* Two columns - same height, aligned */}
+      <div className="flex flex-col lg:flex-row gap-10 lg:gap-[50px]">
 
       {/* 🏙️ LEFT SIDE: SERVICES */}
       <div className="flex-1 w-full min-h-[550px]">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-[32px] lg:text-[44px] font-bold text-foreground leading-[1.2] mb-8 transition-colors"
-          >
-            Your space, professionally managed, anywhere in{" "}
-              <span className="text-primary animate-text-color">
-                BHUTAN
-              </span>
-            </motion.h1>
-
-        <div className="bg-white dark:bg-[#050505] border border-[#ebebeb] dark:border-white/10 rounded-[16px] p-8 shadow-[0_10px_30px_rgba(0,0,0,0.04)] dark:shadow-none transition-all">
+        <div className="bg-white dark:bg-[#050505] border border-[#ebebeb] dark:border-white/10 rounded-[16px] p-8 shadow-[0_10px_30px_rgba(0,0,0,0.04)] dark:shadow-none transition-all h-full">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-[16px] lg:text-[18px] font-bold text-foreground/80">Select Your Industry Solution</h2>
             
@@ -1024,6 +1028,9 @@ export function HeroSection() {
             })}
           </div>
         )}
+      </div>
+
+      {/* Close two-column flex container */}
       </div>
 
       {/* 🛡️ TRUST MARQUEE — LED NEON HIGHLIGHT */}
