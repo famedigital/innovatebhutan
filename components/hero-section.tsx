@@ -175,11 +175,11 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
               <Icon className="w-6 h-6 text-white drop-shadow-md" />
             </motion.div>
             <div className="flex-1 min-w-0">
-              <span className="text-[13px] font-black text-foreground uppercase tracking-tight block leading-tight">
+              <span className="text-[11px] font-black text-foreground uppercase tracking-tight block leading-tight">
                 {service.name}
               </span>
               {service.badge && (
-                <span className="text-[10px] font-bold text-primary uppercase">
+                <span className="text-[9px] font-bold text-primary uppercase">
                   {service.badge}
                 </span>
               )}
