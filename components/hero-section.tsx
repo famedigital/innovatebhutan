@@ -118,7 +118,7 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
         }}
         className={`
           relative overflow-hidden cursor-pointer
-          ${hasSubs ? "min-h-[140px]" : "min-h-[80px]"}
+          ${hasSubs ? "min-h-[120px]" : "min-h-[60px]"}
         `}
         style={{
           boxShadow: isHovered
@@ -166,20 +166,20 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
             className="flex items-center gap-3"
           >
             <motion.div
-              className={`w-12 h-12 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}
+              className={`w-10 h-10 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}
               animate={{
                 rotate: isHovered ? [0, -5, 5, -5, 0] : 0,
               }}
               transition={{ duration: 0.5 }}
             >
-              <Icon className="w-6 h-6 text-white drop-shadow-md" />
+              <Icon className="w-5 h-5 text-white drop-shadow-md" />
             </motion.div>
             <div className="flex-1 min-w-0">
-              <span className="text-[11px] font-black text-foreground uppercase tracking-tight block leading-tight">
+              <span className="text-[10px] font-semibold text-foreground uppercase tracking-tight block leading-tight">
                 {service.name}
               </span>
               {service.badge && (
-                <span className="text-[9px] font-bold text-primary uppercase">
+                <span className="text-[8px] font-medium text-primary uppercase">
                   {service.badge}
                 </span>
               )}
@@ -210,13 +210,13 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
                     className="flex items-center gap-2 group/sub"
                   >
                     <motion.div
-                      className={`w-8 h-8 rounded-lg bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}
+                      className={`w-6 h-6 rounded-lg bg-gradient-to-br ${service.color} flex items-center justify-center flex-shrink-0`}
                       whileHover={{ scale: 1.15, rotate: 5 }}
                       transition={{ type: "spring", stiffness: 300 }}
                     >
-                      <Icon className="w-4 h-4 text-white" />
+                      <Icon className="w-3 h-3 text-white" />
                     </motion.div>
-                    <span className="text-[12px] font-bold text-foreground group-hover/sub:text-primary transition-colors">
+                    <span className="text-[9px] font-medium text-foreground group-hover/sub:text-primary transition-colors">
                       {sub}
                     </span>
                   </motion.div>
@@ -228,9 +228,9 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: isHovered ? 1 : 0 }}
                 transition={{ duration: 0.3, delay: 0.4 }}
-                className="mt-3 pt-3 border-t border-border/50"
+                className="mt-2 pt-2 border-t border-border/50"
               >
-                <span className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1">
+                <span className="text-[8px] font-semibold text-primary uppercase tracking-widest flex items-center gap-1">
                   View All
                   <motion.span
                     animate={{ x: isHovered ? 5 : 0 }}
@@ -623,13 +623,15 @@ const LaborInstallationIllustration = () => (
     </rect>
 
     {/* Animated data flow lines */}
-    {[...Array(8)].map((_, i) => (
-      <g key={i}>
-        <path
-          d="M20 40 + ${i * 15} L180 40 + ${i * 15}"
-          stroke="url(#cable-flow)"
-          strokeWidth="2"
-          opacity="0.6"
+    {[...Array(8)].map((_, i) => {
+      const yPos = 40 + i * 15;
+      return (
+        <g key={i}>
+          <path
+            d={`M20 ${yPos} L180 ${yPos}`}
+            stroke="url(#cable-flow)"
+            strokeWidth="2"
+            opacity="0.6"
         >
           <animate
             attributeName="opacity"
@@ -638,7 +640,7 @@ const LaborInstallationIllustration = () => (
             repeatCount="indefinite"
           />
         </path>
-        <circle cx={20} cy={40 + i * 15} r="3" fill="#10B981">
+        <circle cx={20} cy={yPos} r="3" fill="#10B981">
           <animate
             attributeName="cx"
             values="20;180;20"
@@ -646,8 +648,9 @@ const LaborInstallationIllustration = () => (
             repeatCount="indefinite"
           />
         </circle>
-      </g>
-    ))}
+        </g>
+      );
+    })}
 
     {/* Server rack */}
     <g transform="translate(130, 70)">
@@ -1164,7 +1167,7 @@ export function HeroSection() {
             <h2 className="text-[16px] lg:text-[18px] font-bold text-foreground/80">Select Your Industry Solution</h2>
           </div>
 
-          <div className="grid grid-cols-3 gap-[15px]">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-[12px] lg:gap-[15px]">
             {mainServices.map((service, i) => (
               <MorphingBlobCard
                 key={service.name}
