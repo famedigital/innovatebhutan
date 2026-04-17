@@ -852,10 +852,10 @@ export function HeroSection() {
   };
 
   return (
-    <div className="relative flex flex-col lg:flex-row max-w-[1300px] mx-auto pt-6 lg:pt-10 pb-20 lg:pb-24 px-5 items-center gap-10 lg:gap-[50px] transition-colors rounded-[32px] overflow-visible">
-      
+    <div className="relative flex flex-col lg:flex-row max-w-[1300px] mx-auto pt-6 lg:pt-10 pb-20 lg:pb-24 px-5 items-start gap-10 lg:gap-[50px] transition-colors rounded-[32px] overflow-visible">
+
       {/* 🏙️ LEFT SIDE: SERVICES */}
-      <div className="flex-1 w-full">
+      <div className="flex-1 w-full min-h-[550px]">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -964,14 +964,14 @@ export function HeroSection() {
       </div>
 
       {/* 🖼️ RIGHT SIDE: SERVICES ILLUSTRATION GRID */}
-      <div className="flex-1 w-full">
+      <div className="flex-1 w-full min-h-[550px]">
         {hoveredService && serviceToImageMap[hoveredService] ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="relative aspect-square rounded-3xl overflow-hidden"
+            className="relative w-full h-[550px] rounded-3xl overflow-hidden"
             style={{ boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}
           >
             <img
@@ -986,7 +986,7 @@ export function HeroSection() {
             </div>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 gap-6 h-[550px]">
             {servicesVisual.map((service, idx) => {
               const IconComponent = service.icon;
               return (
@@ -1000,8 +1000,8 @@ export function HeroSection() {
                     stiffness: 100, 
                     damping: 15 
                   }}
-                  whileHover={{ scale: 1.1 }}
-                  className="relative aspect-square rounded-3xl overflow-hidden cursor-pointer group"
+                  whileHover={{ scale: 1.02 }}
+                  className="relative w-full h-full rounded-3xl overflow-hidden cursor-pointer group"
                   style={{
                     boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
                   }}
