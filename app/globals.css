@@ -876,3 +876,89 @@ html {
     transform: translateY(-100%);
   }
 }
+
+/* ========================================
+   iOS App Store Experience
+   ======================================== */
+
+/* Dynamic header positioning when service detail is open */
+@media (max-width: 1023px) {
+  body.service-detail-open .service-detail-sticky-header {
+    top: 0 !important;
+  }
+}
+
+/* iOS-style momentum scrolling */
+.service-detail-content,
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* iOS backdrop blur refinement */
+.service-detail-sticky-header {
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* iOS safe area handling for premium footer cart */
+@media (max-width: 1023px) {
+  body.service-detail-open .service-detail-content {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Premium footer cart shadow and glow effect */
+@media (max-width: 1023px) {
+  .fixed.bottom-0.z-50 {
+    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+  .dark .fixed.bottom-0.z-50 {
+    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* iOS-style selection highlight */
+@media (hover: none) {
+  .group:active {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+}
+
+/* Smooth iOS transitions */
+.service-detail-sticky-header,
+.AppStoreCard,
+.ServiceListItem {
+  transition-property: transform, opacity;
+  transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Mobile horizontal scroll snap - iOS style */
+.snap-x {
+  scroll-snap-type: x mandatory;
+}
+
+.snap-start {
+  scroll-snap-align: start;
+}
+
+.snap-center {
+  scroll-snap-align: center;
+}
+
+/* Premium horizontal scroll indicators */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+}
+
+/* Hide scrollbar while maintaining functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

@@ -221,29 +221,41 @@ const RetailPOSIllustration = () => (
     </rect>
 
     {/* Floating particles */}
-    {[...Array(8)].map((_, i) => (
-      <circle
-        key={i}
-        cx={30 + Math.random() * 140}
-        cy={30 + Math.random() * 140}
-        r="2"
-        fill="#10B981"
-        opacity="0.3"
-      >
-        <animate
-          attributeName="cy"
-          values={`${30 + Math.random() * 140};${20 + Math.random() * 100};${30 + Math.random() * 140}`}
-          dur={`${3 + Math.random() * 2}s`}
-          repeatCount="indefinite"
-        />
-        <animate
-          attributeName="opacity"
-          values="0.3;0.6;0.3"
-          dur={`${2 + Math.random()}s`}
-          repeatCount="indefinite"
-        />
-      </circle>
-    ))}
+    {[...Array(8)].map((_, i) => {
+      // Seeded random for consistent SSR
+      const seed = (i * 9301 + 49297) % 233280;
+      const rand = seed / 233280;
+      const cx = 30 + rand * 140;
+      const cy = 30 + ((seed * 2) % 233280 / 233280) * 140;
+      const dur = 3 + ((seed * 3) % 233280 / 233280) * 2;
+      const opacityDur = 2 + ((seed * 4) % 233280 / 233280);
+      const anim1 = 30 + ((seed * 5) % 233280 / 233280) * 140;
+      const anim2 = 20 + ((seed * 6) % 233280 / 233280) * 100;
+      const anim3 = 30 + ((seed * 7) % 233280 / 233280) * 140;
+      return (
+        <circle
+          key={i}
+          cx={cx}
+          cy={cy}
+          r="2"
+          fill="#10B981"
+          opacity="0.3"
+        >
+          <animate
+            attributeName="cy"
+            values={`${anim1};${anim2};${anim3}`}
+            dur={`${dur}s`}
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="opacity"
+            values="0.3;0.6;0.3"
+            dur={`${opacityDur}s`}
+            repeatCount="indefinite"
+          />
+        </circle>
+      );
+    })}
 
     {/* POS Base - modern design */}
     <ellipse cx="100" cy="165" rx="75" ry="12" fill="#10B981" opacity="0.2">
@@ -370,29 +382,44 @@ const HotelPMSIllustration = () => (
     </rect>
 
     {/* Floating bubbles */}
-    {[...Array(10)].map((_, i) => (
-      <circle
-        key={i}
-        cx={20 + Math.random() * 160}
-        cy={20 + Math.random() * 160}
-        r={3 + Math.random() * 5}
-        fill="#3B82F6"
-        opacity="0.2"
-      >
-        <animate
-          attributeName="cy"
-          values={`${20 + Math.random() * 160};${10 + Math.random() * 120};${20 + Math.random() * 160}`}
-          dur={`${4 + Math.random() * 2}s`}
-          repeatCount="indefinite"
-        />
-        <animate
-          attributeName="r"
-          values={`${3 + Math.random() * 5};${5 + Math.random() * 3};${3 + Math.random() * 5}`}
-          dur="3s"
-          repeatCount="indefinite"
-        />
-      </circle>
-    ))}
+    {[...Array(10)].map((_, i) => {
+      // Seeded random for consistent SSR
+      const seed = (i * 9301 + 49297) % 233280;
+      const rand = seed / 233280;
+      const cx = 20 + rand * 160;
+      const cy = 20 + ((seed * 2) % 233280 / 233280) * 160;
+      const r = 3 + ((seed * 3) % 233280 / 233280) * 5;
+      const dur = 4 + ((seed * 4) % 233280 / 233280) * 2;
+      const anim1 = 20 + ((seed * 5) % 233280 / 233280) * 160;
+      const anim2 = 10 + ((seed * 6) % 233280 / 233280) * 120;
+      const anim3 = 20 + ((seed * 7) % 233280 / 233280) * 160;
+      const r1 = 3 + ((seed * 8) % 233280 / 233280) * 5;
+      const r2 = 5 + ((seed * 9) % 233280 / 233280) * 3;
+      const r3 = 3 + ((seed * 10) % 233280 / 233280) * 5;
+      return (
+        <circle
+          key={i}
+          cx={cx}
+          cy={cy}
+          r={r}
+          fill="#3B82F6"
+          opacity="0.2"
+        >
+          <animate
+            attributeName="cy"
+            values={`${anim1};${anim2};${anim3}`}
+            dur={`${dur}s`}
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="r"
+            values={`${r1};${r2};${r3}`}
+            dur="3s"
+            repeatCount="indefinite"
+          />
+        </circle>
+      );
+    })}
 
     {/* Floor shadow */}
     <ellipse cx="100" cy="170" rx="80" ry="10" fill="#3B82F6" opacity="0.2">
@@ -1040,7 +1067,7 @@ export function HeroSection() {
             transition={{
               duration: 0.8,
               repeat: Infinity,
-              ease: "steps(1)",
+              ease: "stepEnd",
             }}
             className="absolute -right-1 top-0 h-full w-0.5 bg-primary"
           />
