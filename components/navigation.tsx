@@ -144,7 +144,8 @@ export function Navigation() {
                     </button>
                     {openSubmenu === link.name && (
                       <div
-                        className="absolute top-full left-0 mt-2 bg-white dark:bg-black border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl min-w-[200px] overflow-hidden z-50"
+                        className="absolute top-full left-0 mt-1 bg-white dark:bg-black border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl min-w-[200px] overflow-hidden z-50"
+                        style={{ transform: "translateX(0)" }}
                         onMouseEnter={() => handleSubmenuEnter(link.name)}
                         onMouseLeave={handleSubmenuLeave}
                       >

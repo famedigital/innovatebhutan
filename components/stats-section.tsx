@@ -44,7 +44,7 @@ function AnimatedCounter({ value, suffix }: { value: number; suffix: string }) {
 
 export function StatsSection() {
   return (
-    <div className="w-full py-16 bg-gradient-to-b from-background to-card relative overflow-hidden">
+    <div className="w-full py-6 sm:py-10 lg:py-16 bg-gradient-to-b from-background to-card relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 bg-grid-pattern opacity-5" />
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-[150px] pointer-events-none" />
@@ -56,70 +56,72 @@ export function StatsSection() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-6 sm:mb-10"
         >
-          <div className="inline-flex items-center gap-3 px-6 py-3 bg-primary/5 border border-primary/20 rounded-full mb-6">
-            <Award className="w-4 h-4 text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Trusted by 300+ Businesses</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/5 border border-primary/20 rounded-full mb-4">
+            <Award className="w-3 h-3 text-primary" />
+            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-primary">Trusted by 300+ Businesses</span>
           </div>
-          <h2 className="text-4xl lg:text-5xl font-black text-foreground mb-4 dark:neon-text tracking-tight">
+          <h2 className="text-2xl lg:text-4xl font-black text-foreground mb-3 dark:neon-text tracking-tight">
             Our Impact in{" "}
             <span className="bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">Numbers</span>
           </h2>
-          <p className="text-lg text-foreground/50 max-w-2xl mx-auto">
-            12 years of excellence, powered by cutting-edge technology and unwavering commitment to client success
+          <p className="text-sm lg:text-base text-foreground/50 max-w-xl mx-auto px-4">
+            12 years of excellence, powered by cutting-edge technology
           </p>
         </motion.div>
 
-        {/* Modern Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Modern Grid Layout - Fixed 2×2 for all screens */}
+        <div className="grid grid-cols-2 gap-4 max-w-4xl mx-auto">
           {stats.map((stat, index) => (
             <motion.div
               key={stat.label}
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -8, scale: 1.02 }}
+              whileHover={{ y: -4, scale: 1.02 }}
               className="group relative"
             >
               {/* Card with Gradient Border */}
-              <div className="relative bg-card rounded-3xl p-8 border border-border hover:border-primary/30 transition-all duration-500 overflow-hidden">
+              <div className="relative bg-card rounded-2xl p-5 border border-border hover:border-primary/30 transition-all duration-500 overflow-hidden h-full">
                 {/* Animated Gradient Background */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
 
-                {/* Floating Icon */}
-                <motion.div
-                  animate={{ y: [0, -10, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, delay: index * 0.2 }}
-                  className="relative mb-6"
-                >
-                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${stat.color} p-0.5`}>
-                    <div className="w-full h-full bg-card rounded-xl flex items-center justify-center">
-                      <stat.icon className="w-8 h-8 text-foreground" />
+                <div className="flex items-center gap-4">
+                  {/* Floating Icon */}
+                  <motion.div
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ duration: 3, repeat: Infinity, delay: index * 0.2 }}
+                    className="relative flex-shrink-0"
+                  >
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} p-0.5`}>
+                      <div className="w-full h-full bg-card rounded-lg flex items-center justify-center">
+                        <stat.icon className="w-6 h-6 text-foreground" />
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
+                  </motion.div>
 
-                {/* Main Stats */}
-                <div className="relative">
-                  <div className="text-4xl lg:text-5xl font-black text-foreground font-mono tracking-tighter mb-2 dark:neon-text">
-                    <AnimatedCounter value={stat.value} suffix={stat.suffix} />
-                  </div>
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-1">
-                    {stat.label}
-                  </div>
-                  <div className="text-xs text-foreground/40 font-medium uppercase tracking-wider">
-                    {stat.description}
+                  {/* Main Stats */}
+                  <div className="relative flex-1 min-w-0">
+                    <div className="text-2xl font-black text-foreground font-mono tracking-tighter mb-1 dark:neon-text">
+                      <AnimatedCounter value={stat.value} suffix={stat.suffix} />
+                    </div>
+                    <div className="text-[8px] font-black uppercase tracking-[0.15em] text-primary mb-0.5">
+                      {stat.label}
+                    </div>
+                    <div className="text-[10px] text-foreground/40 font-medium uppercase tracking-wide">
+                      {stat.description}
+                    </div>
                   </div>
                 </div>
 
                 {/* Decorative Corner */}
-                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-3xl" />
+                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-2xl" />
               </div>
 
               {/* Glow Effect */}
-              <div className={`absolute -inset-1 bg-gradient-to-r ${stat.color} rounded-3xl opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-500 -z-10`} />
+              <div className={`absolute -inset-1 bg-gradient-to-r ${stat.color} rounded-2xl opacity-0 group-hover:opacity-20 blur-lg transition-opacity duration-500 -z-10`} />
             </motion.div>
           ))}
         </div>
@@ -130,7 +132,7 @@ export function StatsSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.4 }}
-          className="mt-16 flex flex-wrap items-center justify-center gap-8 text-center"
+          className="mt-10 flex flex-wrap items-center justify-center gap-4 text-center px-4"
         >
           {[
             { icon: Trophy, text: "Industry Leader" },
@@ -138,9 +140,9 @@ export function StatsSection() {
             { icon: TrendingUp, text: "Growth Partner" },
             { icon: Award, text: "Quality Assured" }
           ].map((item, i) => (
-            <div key={i} className="flex items-center gap-2 text-foreground/40">
-              <item.icon className="w-4 h-4 text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-widest">{item.text}</span>
+            <div key={i} className="flex items-center gap-1.5 text-foreground/40">
+              <item.icon className="w-3 h-3 text-primary" />
+              <span className="text-[8px] font-black uppercase tracking-wider">{item.text}</span>
             </div>
           ))}
         </motion.div>

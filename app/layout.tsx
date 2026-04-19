@@ -38,8 +38,8 @@ export const metadata: Metadata = {
     images: [{ url: '/og-image.png', width: 1200, height: 630 }],
   },
   icons: {
-    icon: '/innovate-favicon.png',
-    apple: '/innovate-favicon.png', /* update apple icon to same png or fallback */
+    icon: 'https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/v1776433648/innovateKNOT_rwyvk1.png',
+    apple: 'https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/v1776433648/innovateKNOT_rwyvk1.png',
   },
 }
 

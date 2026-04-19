@@ -1,57 +1,53 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { 
-  Play, 
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Play,
   X,
-  Monitor,
+  Store,
+  Utensils,
+  Hotel,
+  Code,
   Database,
-  Cable,
-  Settings,
-  Hammer,
-  Layers,
+  LayoutGrid,
+  Wrench,
+  Shield,
   Zap,
-  Cpu
+  Smartphone,
+  FileText,
+  Users
 } from "lucide-react";
 
+// 12 Main Services from the service page
 const services = [
-  { id: "pos-1", name: "POS Engineering", category: "POS", icon: Monitor, metric: "350+ Nodes", features: ["RanceLab Sync", "Tysso Tuned"], desc: "Multi-branch checkout architecture.", video: "https://www.youtube.com/embed/65K5377k9MM", image: "/services/innovatedisplay.jpeg" },
-  { id: "data-1", name: "SaaS Transformation", category: "DATA", icon: Database, metric: "Enterprise", features: ["Next.js/Supabase", "Cloud Logic"], desc: "Custom digital infrastructure.", video: "https://www.youtube.com/embed/OK_jNwG1sEQ", image: "/services/Gemini_Generated_Image_oc1f17oc1f17oc1f.png" },
-  { id: "net-1", name: "Fiber Backbone", category: "NET", icon: Cable, metric: "99.9% Up", features: ["Fiber Splicing", "WiFi 6 Mesh"], desc: "High-speed network meshes.", video: "https://www.youtube.com/embed/2gqQ7TCzRjk", image: "/services/Gemini_Generated_Image_f8csorf8csorf8cs.png" },
-  { id: "it-1", name: "Managed IT Support", category: "IT", icon: Settings, metric: "24/7 Link", features: ["Remote Diag", "On-site Ops"], desc: "Foundational tech residency.", video: "https://www.youtube.com/embed/DRE_2-WvGgM", image: "/services/Gemini_Generated_Image_gnvqwhgnvqwhgnvq.png" },
-  { id: "labor-1", name: "Infra Deployment", category: "LABOR", icon: Hammer, metric: "Precision", features: ["Wire Casing", "Casing Fit"], desc: "Physical hardware mounting.", video: "https://www.youtube.com/embed/Gemini_Generated_Image_lz86e8lz86e8lz86.png", image: "/services/Gemini_Generated_Image_lz86e8lz86e8lz86.png" },
-  { id: "labor-2", name: "Server Racking", category: "LABOR", icon: Layers, metric: "Scale", features: ["UPS Calib", "Rack Mount"], desc: "Physical lab deployments.", video: "https://www.youtube.com/embed/65K5377k9MM", image: "/services/Gemini_Generated_Image_sv9u0esv9u0esv9u.png" },
-  { id: "labor-3", name: "Perimeter Hardware", category: "LABOR", icon: Zap, metric: "Armor", features: ["CCTV Fit", "Gate Sync"], desc: "Physical security mounting.", video: "https://www.youtube.com/embed/p3W6r0x6kYI", image: "/services/survilance guardian.jpeg" },
-  { id: "optics-1", name: "Neural Surveillance", category: "SEC", icon: Cpu, metric: "AI Viz", features: ["4K Detection", "Biometrics"], desc: "Advanced vision systems.", video: "https://www.youtube.com/embed/p3W6r0x6kYI", image: "/services/Gemini_Generated_Image_oc1f17oc1f17oc1f.png" },
+  { id: "pos", name: "POS Solutions", category: "POS", icon: Store, metric: "Smart Selling", features: ["Multi-store", "Real-time Analytics", "Cloud-Based"], desc: "Modern point-of-sale systems for retail and hospitality.", gradient: "linear-gradient(145deg, #FF6B35, #DC2626, #B91C1C)" },
+  { id: "hotel", name: "Hotel PMS", category: "POS", icon: Hotel, metric: "Complete", features: ["Booking Engine", "Housekeeping", "Front Desk"], desc: "Property management for hotels and hospitality.", gradient: "linear-gradient(145deg, #3B82F6, #4F46E5, #4338CA)" },
+  { id: "web", name: "Web Development", category: "WEB", icon: Code, metric: "Modern", features: ["React", "Next.js", "TypeScript"], desc: "Custom web applications with modern frameworks.", gradient: "linear-gradient(145deg, #A855F7, #EC4899, #DB2777)" },
+  { id: "saas", name: "SaaS Development", category: "WEB", icon: Database, metric: "Scalable", features: ["Multi-tenant", "API Design", "Cloud"], desc: "Scalable SaaS platforms with cloud deployment.", gradient: "linear-gradient(145deg, #8B5CF6, #7C3AED, #6D28D9)" },
+  { id: "erp", name: "ERP Development", category: "WEB", icon: LayoutGrid, metric: "Enterprise", features: ["Finance", "HR", "Supply Chain"], desc: "Enterprise resource planning solutions.", gradient: "linear-gradient(145deg, #6366F1, #2563EB, #1D4ED8)" },
+  { id: "mobile", name: "Mobile Apps", category: "WEB", icon: Smartphone, metric: "iOS/Android", features: ["React Native", "Cross-platform", "App Store"], desc: "Native mobile applications for all platforms.", gradient: "linear-gradient(145deg, #14B8A6, #0891B2, #0E7490)" },
+  { id: "infra", name: "Infrastructure", category: "INFRA", icon: Wrench, metric: "Robust", features: ["Servers", "Network", "Power Backup"], desc: "Complete IT infrastructure solutions.", gradient: "linear-gradient(145deg, #64748B, #71717A, #52525B)" },
+  { id: "security", name: "Security Systems", category: "SECURITY", icon: Shield, metric: "Advanced", features: ["CCTV", "Access Control", "Alarms"], desc: "Advanced security and surveillance systems.", gradient: "linear-gradient(145deg, #EF4444, #E11D48, #BE123C)" },
+  { id: "maintenance", name: "IT Maintenance", category: "SUPPORT", icon: Zap, metric: "24/7", features: ["On-site", "Remote", "Preventive"], desc: "Ongoing technical support and monitoring.", gradient: "linear-gradient(145deg, #22C55E, #10B981, #059669)" },
+  { id: "payroll", name: "Payroll & HR", category: "WEB", icon: Users, metric: "Smart HR", features: ["Payroll", "Attendance", "Compliance"], desc: "White-label HR and payroll management.", gradient: "linear-gradient(145deg, #F43F5E, #EC4899, #BE185D)" },
+  { id: "gst", name: "GST Services", category: "BUSINESS", icon: FileText, metric: "Tax Compliance", features: ["Registration", "Filing", "Consulting"], desc: "Complete GST services and tax compliance.", gradient: "linear-gradient(145deg, #EAB308, #D97706, #B45309)" },
+  { id: "consulting", name: "IT Consulting", category: "CONSULTING", icon: Users, metric: "Strategic", features: ["Planning", "Advisory", "Roadmap"], desc: "Strategic IT consulting and digital transformation.", gradient: "linear-gradient(145deg, #06B6D4, #3B82F6, #2563EB)" },
 ];
 
 function InteractiveHexagon({ service, index, setSelectedVideo }: { service: typeof services[0], index: number, setSelectedVideo: (v: string) => void }) {
   const [isActive, setIsActive] = useState(false);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], ["5deg", "-5deg"]), { stiffness: 100, damping: 30 });
-  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], ["-5deg", "5deg"]), { stiffness: 100, damping: 30 });
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    x.set((e.clientX - rect.left) / rect.width - 0.5);
-    y.set((e.clientY - rect.top) / rect.height - 0.5);
-  };
-
   const Icon = service.icon;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: index * 0.05 }}
-      style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-      onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsActive(true)}
-      onMouseLeave={() => { setIsActive(false); x.set(0); y.set(0); }}
-      className="relative group h-[420px] cursor-pointer"
+      onMouseLeave={() => setIsActive(false)}
+      onClick={() => window.location.href = '/services'}
+      className="relative group cursor-pointer"
     >
       {/* Apple Card Container */}
       <div 
@@ -60,12 +56,8 @@ function InteractiveHexagon({ service, index, setSelectedVideo }: { service: typ
         `}
       >
         {/* 1. IMAGE ON TOP */}
-        <div className="relative w-full h-[45%] overflow-hidden rounded-t-[40px]">
-          <img 
-            src={service.image} 
-            alt={service.name}
-            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-          />
+        <div className="relative w-full h-[45%] overflow-hidden rounded-t-[40px] bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center">
+          <Icon className="w-12 h-12 text-primary" />
           <div className="absolute inset-0 bg-gradient-to-t from-white/90 dark:from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
 
@@ -84,10 +76,11 @@ function InteractiveHexagon({ service, index, setSelectedVideo }: { service: typ
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-4 flex flex-wrap justify-center gap-1.5"
+                exit={{ opacity: 0, y: 10 }}
+                className="mt-4 flex flex-wrap justify-center gap-1.5 relative z-10"
               >
                 {service.features.slice(0, 2).map(f => (
-                  <span key={f} className="text-[7px] font-bold text-slate-500 dark:text-white/40 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-full uppercase">
+                  <span key={f} className="text-[7px] font-bold text-slate-500 dark:text-white/40 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-full uppercase shadow-sm">
                     {f}
                   </span>
                 ))}
@@ -96,14 +89,17 @@ function InteractiveHexagon({ service, index, setSelectedVideo }: { service: typ
           </AnimatePresence>
         </div>
 
-        {/* 3. LAST ICON CLICK */}
+        {/* 3. LEARN MORE LINK */}
         <div className="p-6 pt-0 flex justify-center mt-auto">
-          <button 
-            onClick={(e) => { e.stopPropagation(); setSelectedVideo(service.video); }}
-            className="w-16 h-16 rounded-full bg-[#10B981]/10 dark:bg-white/5 border border-[#10B981]/20 dark:border-white/10 flex items-center justify-center group/btn hover:bg-[#10B981] hover:border-[#10B981] transition-all duration-500 shadow-lg active:scale-90"
+          <a
+            href="/services"
+            className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
           >
-            <Icon className="w-6 h-6 text-[#10B981] dark:text-white group-hover/btn:text-white transition-colors" />
-          </button>
+            Learn More
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
         </div>
       </div>
     </motion.div>
@@ -115,13 +111,14 @@ export function ServiceDirectory() {
 
   return (
     <div className="w-full">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 lg:gap-8 max-w-[1400px] mx-auto">
+      {/* 4 rows × 3 columns = 12 services */}
+      <div className="grid grid-cols-3 gap-6 lg:gap-8 max-w-[1400px] mx-auto px-4">
         {services.map((service, index) => (
-          <InteractiveHexagon 
-            key={service.id} 
-            service={service} 
-            index={index} 
-            setSelectedVideo={setSelectedVideo} 
+          <InteractiveHexagon
+            key={service.id}
+            service={service}
+            index={index}
+            setSelectedVideo={setSelectedVideo}
           />
         ))}
       </div>

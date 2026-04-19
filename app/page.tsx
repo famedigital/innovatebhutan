@@ -20,17 +20,17 @@ export default function HomePage() {
       <TopMarquee />
 
       {/* Hero Section */}
-      <section className="pt-20 pb-12 relative bg-background transition-colors duration-500">
+      <section className="pt-16 sm:pt-20 pb-8 relative bg-background transition-colors duration-500">
         <div className="absolute top-0 left-0 w-full h-full bg-grid-pattern opacity-[0.03] dark:opacity-[0.05]" />
         <div className="absolute top-1/4 -left-20 w-80 h-80 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
-        
+
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-12 relative">
           <HeroSection />
         </div>
       </section>
 
       {/* Analytics Column Flow - Compact Stats Only */}
-      <section className="py-12 bg-background border-b border-border transition-colors">
+      <section className="py-6 sm:py-12 bg-background border-b border-border transition-colors">
         <div className="max-w-[1300px] mx-auto px-5">
            <StatsSection />
         </div>

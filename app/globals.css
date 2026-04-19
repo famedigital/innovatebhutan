@@ -3,102 +3,127 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ULTRA LUXURY PREMIUM DESIGN SYSTEM */
+/* ⚡ ULTRA RICH LUXURY CRYSTAL CLEAR DESIGN SYSTEM ⚡ */
 :root {
-  /* COLORFUL LIGHT MODE - Vibrant & Premium */
+  /* Pure Crystal Foundation */
   --white: #FFFFFF;
-  --off-white: #FAFBFC;
-  --pure-black: #0A0A0A;
-  --midnight: #0F172A;
-  
-  /* Vibrant Colorful Palette */
-  --background: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 50%, #FEF3C7 100%);
-  --background-solid: #F8FAFC;
-  --foreground: #1E293B;
-  
-  /* Colorful Cards */
-  --card: rgba(255, 255, 255, 0.95);
-  --card-foreground: #1E293B;
-  
-  /* Vibrant Primary - Emerald Green */
-  --primary: #10B981;
+  --pure-black: #000000;
+
+  /* Ultra Rich Backgrounds */
+  --background: #FFFFFF;
+  --background-solid: #FFFFFF;
+  --foreground: #0A0A0A; /* Deepest black for max contrast */
+
+  /* Crystal Clear Cards */
+  --card: #FFFFFF;
+  --card-foreground: #0A0A0A;
+
+  /* ⚡ ULTRA PREMIUM EMERALD GREEN SYSTEM ⚡ */
+  --primary: #0A5F4E; /* Luxury Deep Emerald */
+  --primary-vibrant: #0F766E; /* Rich Jade */
+  --primary-intense: #064E3B; /* Deep Forest */
   --primary-foreground: #FFFFFF;
   --primary-light: #D1FAE5;
-  --primary-glow: rgba(16, 185, 129, 0.3);
-  
-  /* Secondary Colors for Variety */
-  --secondary: #8B5CF6; /* Purple */
-  --secondary-light: #EDE9FE;
-  --accent: #F59E0B; /* Amber/Gold */
-  --accent-light: #FEF3C7;
-  
-  /* Info & Warm Colors */
-  --info: #3B82F6; /* Blue */
-  --info-light: #DBEAFE;
-  --warning: #F97316; /* Orange */
-  --warning-light: #FFEDD5;
-  --success: #22C55E;
-  --success-light: #DCFCE7;
-  --destructive: #EF4444;
-  --destructive-light: #FEE2E2;
-  
-  --muted: #64748B;
-  --muted-light: #F1F5F9;
-  --border: #E2E8F0;
-  --radius: 20px;
-  
-  /* Glass Effects */
-  --glass-stroke: rgba(255, 255, 255, 0.8);
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(16, 185, 129, 0.2);
-  --glass-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);
-  --prestige-blur: blur(20px);
-  
-  /* Vibrant Shadows */
-  --shadow-primary: 0 4px 20px rgba(16, 185, 129, 0.25);
-  --shadow-secondary: 0 4px 20px rgba(139, 92, 246, 0.25);
-  --shadow-accent: 0 4px 20px rgba(245, 158, 11, 0.25);
-  --luxury-shadow: 0 20px 60px -15px rgba(16, 185, 129, 0.15);
+  --primary-glow: rgba(10, 95, 78, 0.25);
+  --primary-shimmer: rgba(10, 95, 78, 0.4);
+
+  /* Luxury Green Gradients */
+  --gradient-primary: linear-gradient(135deg, #064E3B 0%, #0A5F4E 50%, #0F766E 100%);
+  --gradient-luxury: linear-gradient(145deg, #064E3B 0%, #0A5F4E 50%, #0F766E 100%);
+  --gradient-crystal: linear-gradient(180deg, rgba(10, 95, 78, 0.15) 0%, rgba(10, 95, 78, 0.05) 100%);
+
+  /* Ultra Sharp Borders */
+  --border: rgba(0, 0, 0, 0.12);
+  --border-light: rgba(0, 0, 0, 0.06);
+  --border-strong: rgba(0, 0, 0, 0.18);
+  --border-accent: rgba(10, 95, 78, 0.3);
+
+  /* Crystal Clear Shadows */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 6px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.10);
+  --shadow-xl: 0 25px 50px rgba(0, 0, 0, 0.12);
+  --shadow-2xl: 0 50px 100px rgba(0, 0, 0, 0.15);
+
+  /* Premium Green Shadows */
+  --shadow-primary: 0 8px 32px rgba(10, 95, 78, 0.3), 0 0 60px rgba(10, 95, 78, 0.15);
+  --shadow-luxury: 0 20px 60px rgba(10, 95, 78, 0.25), 0 0 100px rgba(10, 95, 78, 0.1);
+
+  /* Crystal Glass Effects */
+  --glass-stroke: rgba(255, 255, 255, 0.95);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(10, 95, 78, 0.25);
+  --glass-shadow: 0 12px 48px rgba(10, 95, 78, 0.12), 0 0 80px rgba(10, 95, 78, 0.08);
+  --prestige-blur: blur(24px);
+  --crystal-blur: blur(40px);
+
+  /* Ultra Rich Text Colors */
+  --text-primary: #0A0A0A;
+  --text-secondary: #374151;
+  --text-tertiary: #6B7280;
+
+  /* Accent Colors - Rich & Vibrant */
+  --success: #059669;
+  --warning: #D97706;
+  --destructive: #DC2626;
+  --info: #0891B2;
+
+  /* Premium Radius */
+  --radius: 16px;
+
+  /* Luxury Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-luxury: 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .dark {
-  /* NEON GLOW DARK MODE - Premium & Glowing */
-  --background: #000000;
-  --foreground: #F8FAFC;
-  --card: rgba(10, 10, 10, 0.9);
+  /* ⚡ ULTRA RICH LUXURY DARK MODE ⚡ */
+  --background: #050505; /* Ultra dark, not pure black */
+  --foreground: #FFFFFF;
+  --card: rgba(15, 15, 15, 0.95);
   --card-foreground: #FFFFFF;
-  --border: rgba(255, 255, 255, 0.08);
-  
-  /* Neon Primary */
-  --primary: #10B981;
-  --primary-foreground: #000000;
-  --primary-light: rgba(16, 185, 129, 0.15);
-  
-  /* Neon Accent */
-  --secondary: #A855F7;
-  --accent: #22D3EE; /* Cyan neon */
-  
-  --info: #3B82F6;
-  --warning: #FB923C;
-  --success: #4ADE80;
-  --destructive: #F87171;
-  
-  --muted: #94A3B8;
-  --border: rgba(255, 255, 255, 0.1);
-  --radius: 20px;
-  
-  /* Neon Glass Effects */
-  --glass-bg: rgba(20, 20, 20, 0.8);
-  --glass-border: rgba(16, 185, 129, 0.3);
-  --glass-shadow: 0 0 40px rgba(16, 185, 129, 0.2), 0 0 80px rgba(168, 85, 247, 0.1);
+  --border: rgba(255, 255, 255, 0.12);
+
+  /* ⚡ ULTRA PREMIUM EMERALD GREEN SYSTEM ⚡ */
+  --primary: #0A5F4E; /* Luxury Deep Emerald */
+  --primary-vibrant: #0F766E; /* Rich Jade */
+  --primary-intense: #064E3B; /* Deep Forest */
+  --primary-foreground: #FFFFFF;
+  --primary-light: rgba(10, 95, 78, 0.15);
+  --primary-glow: rgba(10, 95, 78, 0.5); /* Premium glow */
+  --primary-shimmer: rgba(15, 118, 110, 0.6);
+
+  /* Luxury Green Gradients - Dark Mode */
+  --gradient-primary: linear-gradient(135deg, #064E3B 0%, #0A5F4E 50%, #0F766E 100%);
+  --gradient-luxury: linear-gradient(145deg, #064E3B 0%, #0A5F4E 50%, #0F766E 100%);
+  --gradient-crystal: linear-gradient(180deg, rgba(10, 95, 78, 0.2) 0%, rgba(10, 95, 78, 0.05) 100%);
+
+  /* Crystal Clear Glass - Dark Mode */
+  --glass-stroke: rgba(255, 255, 255, 0.15);
+  --glass-bg: rgba(20, 20, 20, 0.90);
+  --glass-border: rgba(10, 95, 78, 0.4); /* Stronger border */
+  --glass-shadow: 0 12px 48px rgba(10, 95, 78, 0.2), 0 0 80px rgba(10, 95, 78, 0.15);
   --prestige-blur: blur(30px);
-  
-  /* Neon Glows */
-  --neon-shadow: 0 0 30px rgba(16, 185, 129, 0.4), 0 0 60px rgba(16, 185, 129, 0.2);
-  --shadow-primary: 0 0 30px rgba(16, 185, 129, 0.5), 0 0 60px rgba(16, 185, 129, 0.3);
-  --shadow-secondary: 0 0 30px rgba(168, 85, 247, 0.5);
-  --shadow-accent: 0 0 30px rgba(34, 211, 238, 0.5);
-  --luxury-shadow: 0 0 60px rgba(16, 185, 129, 0.3);
+  --crystal-blur: blur(50px);
+
+  /* ⚡ EXPLOSIVE NEON GLOWS ⚡ */
+  --shadow-primary: 0 0 60px rgba(10, 95, 78, 0.6), 0 0 120px rgba(10, 95, 78, 0.4), 0 0 180px rgba(10, 95, 78, 0.2);
+  --shadow-luxury: 0 25px 80px rgba(10, 95, 78, 0.5), 0 0 150px rgba(10, 95, 78, 0.3);
+  --neon-shadow: 0 0 80px rgba(10, 95, 78, 0.7), 0 0 160px rgba(15, 118, 110, 0.5);
+
+  /* Ultra Rich Text - Dark Mode */
+  --text-primary: #FFFFFF;
+  --text-secondary: #D1D5DB;
+  --text-tertiary: #9CA3AF;
+
+  /* Stronger shadows for dark mode */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 32px 64px rgba(0, 0, 0, 0.7);
+  --shadow-2xl: 0 64px 128px rgba(0, 0, 0, 0.8);
 }
 
 @layer base {
@@ -212,21 +237,44 @@
   * {
     @apply border-border;
   }
-  
+
   html {
     @apply scroll-smooth;
   }
-  
+
   html, body {
     @apply bg-background text-foreground h-full selection:bg-primary/20 selection:text-primary;
   }
-  
+
+  /* Enhanced focus-visible styles for accessibility */
+  *:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Skip link for accessibility */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--primary);
+    color: white;
+    padding: 8px;
+    z-index: 100;
+    transition: top 0.3s;
+  }
+
+  .skip-link:focus {
+    top: 0;
+  }
+
   /* Light mode gradient background */
   body {
     background: var(--background);
     background-attachment: fixed;
   }
-  
+
   /* Dark mode solid background */
   .dark body,
   body.dark {
@@ -961,4 +1009,209 @@ html {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Smooth scrolling for left panel */
+.lg\:col-span-3.overflow-y-auto {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.lg\:col-span-3.overflow-y-auto:hover {
+  scroll-behavior: smooth;
+}
+
+/* Enhanced scrollbar hiding for all browsers */
+.lg\:col-span-3.overflow-y-auto::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+.lg\:col-span-3.overflow-y-auto {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Enhanced Dark Mode Optimizations */
+@media (prefers-color-scheme: dark) {
+  /* Reduced eye strain in dark mode */
+  .dark {
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-tertiary: #64748B;
+
+    /* Optimized dark mode shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 6px 12px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 25px 50px rgba(0, 0, 0, 0.6);
+
+    /* Enhanced neon glows for dark mode */
+    --neon-glow: 0 0 20px rgba(16, 185, 129, 0.6),
+                  0 0 40px rgba(16, 185, 129, 0.4),
+                  0 0 60px rgba(16, 185, 129, 0.2);
+  }
+
+  /* Dark mode text shadows for better readability */
+  .dark .text-glow {
+    text-shadow: 0 0 10px rgba(16, 185, 129, 0.3),
+                 0 0 20px rgba(16, 185, 129, 0.2);
+  }
+
+  /* Optimized contrast for dark mode */
+  .dark .high-contrast {
+    color: #F8FAFC;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Enhanced Glassmorphism with Layered Depth */
+.glass-layered {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.dark .glass-layered {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.1) 50%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 60px rgba(16, 185, 129, 0.1);
+}
+
+/* Premium border treatments */
+.border-premium {
+  position: relative;
+  border: 1px solid transparent;
+  background: linear-gradient(var(--card), var(--card)) padding-box,
+              linear-gradient(135deg, var(--primary), var(--primary-vibrant)) border-box;
+}
+
+.dark .border-premium {
+  background: linear-gradient(var(--card), var(--card)) padding-box,
+              linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(52, 211, 153, 0.3)) border-box;
+}
+
+/* Enhanced focus states for better accessibility */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4),
+              0 0 0 6px rgba(16, 185, 129, 0.1);
+}
+
+.dark .focus-ring:focus-visible {
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.6),
+              0 0 0 6px rgba(16, 185, 129, 0.2);
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Exclude specific elements from transitions for better performance */
+button, a, input, textarea, select {
+  transition-duration: 200ms;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border: rgba(0, 0, 0, 0.3);
+    --border-strong: rgba(0, 0, 0, 0.5);
+  }
+
+  .dark {
+    --border: rgba(255, 255, 255, 0.3);
+    --border-strong: rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Custom Scrollbar Styling */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(212 212 216) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgb(212 212 216);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(168 162 170);
+}
+
+.dark .scrollbar-thin {
+  scrollbar-color: rgb(63 63 70) transparent;
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgb(63 63 70);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(82 82 91);
+}
+
+.scrollbar-thumb-zinc-300 {
+  --scrollbar-thumb: rgb(212 212 212);
+  --scrollbar-thumb-hover: rgb(168 162 170);
+}
+
+.dark .scrollbar-thumb-zinc-300 {
+  --scrollbar-thumb: rgb(63 63 70);
+  --scrollbar-thumb-hover: rgb(82 82 91);
+}
+
+.scrollbar-thumb-zinc-700 {
+  --scrollbar-thumb: rgb(63 63 70);
+  --scrollbar-thumb-hover: rgb(82 82 91);
+}
+
+.dark .scrollbar-thumb-zinc-700 {
+  --scrollbar-thumb: rgb(212 212 212);
+  --scrollbar-thumb-hover: rgb(168 162 170);
+}
+
+.scrollbar-track-transparent {
+  --scrollbar-track: transparent;
 }
