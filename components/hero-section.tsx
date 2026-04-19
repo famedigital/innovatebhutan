@@ -72,7 +72,7 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
 
   return (
     <div
-      className="group"
+      className="group flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-3 p-3 sm:p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
       onClick={onClick}
       onMouseEnter={() => {
         setIsHovered(true);
@@ -87,10 +87,10 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
       onMouseDown={() => setIsPressed(true)}
       onMouseUp={() => setIsPressed(false)}
     >
-      {/* App Icon */}
+      {/* App Icon - Top on mobile, Left on desktop */}
       <div
-        className="relative mb-2 mx-auto"
-        style={{ width: '64px', height: '64px' }}
+        className="relative flex-shrink-0"
+        style={{ width: '56px', height: '56px' }}
       >
         {/* Outer glow on hover */}
         {isHovered && (
@@ -120,7 +120,7 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
             damping: 25
           }}
         >
-          <Icon className="w-8 h-8 text-white" />
+          <Icon className="w-7 h-7 text-white" />
 
           {/* Sub-services indicator */}
           {hasSubs && (
@@ -137,40 +137,16 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
         </motion.div>
       </div>
 
-      {/* Service name - with word wrap */}
-      <h3 className="text-center text-xs text-foreground mb-0.5 leading-tight line-clamp-2">
-        {service.name}
-      </h3>
+      {/* Text - Below icon on mobile, Right side on desktop */}
+      <div className="flex-1 min-w-0 text-center sm:text-left flex flex-col justify-center">
+        <h3 className="text-xs sm:text-sm text-foreground mb-0.5 sm:mb-1 leading-snug font-semibold">
+          {service.name}
+        </h3>
+        <p className="text-[10px] sm:text-xs text-foreground/50 leading-tight">
+          {service.category}
+        </p>
+      </div>
 
-      {/* Category */}
-      <p className="text-center text-[10px] text-foreground/40 line-clamp-1">
-        {service.category}
-      </p>
-
-      {/* Sub-services flyout menu - higher z-index */}
-      {hasSubs && showSubs && (
-        <motion.div
-          initial={{ opacity: 0, y: 8, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 8, scale: 0.95 }}
-          transition={{ type: "spring", stiffness: 200, damping: 25 }}
-          className="absolute z-[9999] left-1/2 -translate-x-1/2 bottom-full mb-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-100 dark:border-white/10 p-2 min-w-[140px]"
-        >
-          <div className="flex flex-col gap-0.5">
-            {(service as any).subs.map((sub: string, i: number) => (
-              <motion.div
-                key={sub}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="px-3 py-2 rounded-xl text-xs text-foreground/70 hover:text-primary hover:bg-primary/10 transition-all cursor-pointer text-center"
-              >
-                {sub}
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 }
@@ -1049,13 +1025,13 @@ export function HeroSection() {
   };
 
   return (
-    <div className="relative flex flex-col max-w-[1300px] mx-auto pt-6 lg:pt-10 pb-20 lg:pb-24 px-5 transition-colors rounded-[32px] overflow-visible">
+    <div className="relative flex flex-col max-w-[1300px] mx-auto pt-4 sm:pt-6 lg:pt-10 pb-16 sm:pb-20 lg:pb-24 px-4 sm:px-5 transition-colors rounded-[32px] overflow-visible">
 
       {/* Title - full width with Typewriter Effect */}
       <motion.h1
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-[32px] lg:text-[44px] font-bold text-foreground leading-[1.2] mb-8 transition-colors"
+        className="text-[26px] sm:text-[32px] lg:text-[44px] font-bold text-foreground leading-[1.2] mb-6 sm:mb-8 transition-colors text-center sm:text-left"
       >
         Innovating today for{" "}
         <span className="relative text-primary">
@@ -1067,7 +1043,7 @@ export function HeroSection() {
             transition={{
               duration: 0.8,
               repeat: Infinity,
-              ease: "stepEnd",
+              ease: "linear",
             }}
             className="absolute -right-1 top-0 h-full w-0.5 bg-primary"
           />
@@ -1075,17 +1051,17 @@ export function HeroSection() {
       </motion.h1>
 
       {/* Two columns - same height, aligned */}
-      <div className="flex flex-col lg:flex-row gap-10 lg:gap-[50px]">
+      <div className="flex flex-col lg:flex-row gap-6 sm:gap-10 lg:gap-[50px]">
 
-      {/* 🏙️ LEFT SIDE: SERVICES - iOS App Store Grid - 4 Columns Only */}
-      <div className="flex-1 w-full min-h-[550px]">
-        <div className="bg-white dark:bg-[#050505] border border-[#ebebeb] dark:border-white/10 rounded-[16px] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.04)] dark:shadow-none transition-all h-full">
-          <div className="mb-6">
-            <h2 className="text-[14px] lg:text-[16px] text-foreground/50">Select Your Industry Solution</h2>
+      {/* 🏙️ LEFT SIDE: SERVICES - iOS App Store Grid - 2 columns mobile, 3 desktop */}
+      <div className="flex-1 w-full">
+        <div className="bg-white dark:bg-[#050505] border border-[#ebebeb] dark:border-white/10 rounded-[16px] p-4 sm:p-6 shadow-[0_10px_30px_rgba(0,0,0,0.04)] dark:shadow-none transition-all h-full flex flex-col">
+          <div className="mb-4 sm:mb-5">
+            <h2 className="text-[13px] sm:text-[14px] lg:text-[16px] text-foreground/50 text-center sm:text-left">Select Your Industry Solution</h2>
           </div>
 
-          {/* App Store Grid - Responsive: 3 on mobile, up to 6 on desktop */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-x-4 gap-y-6 justify-items-center">
+          {/* App Store Grid - 2 columns mobile, 3 desktop */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-3 sm:gap-x-6 sm:gap-y-6 justify-items-stretch content-start flex-grow">
             {mainServices.map((service, i) => (
               <motion.div
                 key={service.name}
@@ -1114,14 +1090,14 @@ export function HeroSection() {
       </div>
 
       {/* 🖼️ RIGHT SIDE: SERVICES ILLUSTRATION GRID */}
-      <div className="flex-1 w-full min-h-[550px]">
+      <div className="flex-1 w-full">
         {hoveredService && serviceToImageMap[hoveredService] ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full h-[550px] rounded-3xl overflow-hidden"
+            className="relative w-full aspect-square sm:aspect-auto sm:h-[550px] rounded-3xl overflow-hidden"
             style={{ boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}
           >
             <img
@@ -1130,13 +1106,13 @@ export function HeroSection() {
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-6 bg-black/40 backdrop-blur-sm border-t border-white/10">
-              <h3 className="text-white text-xl font-semibold">{hoveredService}</h3>
-              <p className="text-white/60 text-sm">innovates.bt</p>
+            <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-black/40 backdrop-blur-sm border-t border-white/10">
+              <h3 className="text-white text-base sm:text-xl font-semibold">{hoveredService}</h3>
+              <p className="text-white/60 text-xs sm:text-sm">innovates.bt</p>
             </div>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-2 gap-6 h-[550px]">
+          <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 sm:gap-6 h-auto sm:h-[550px]">
             {servicesVisual.map((service, idx) => {
               const IconComponent = service.icon;
               return (
@@ -1144,14 +1120,14 @@ export function HeroSection() {
                   key={service.name}
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  transition={{ 
-                    delay: idx * 0.1, 
-                    duration: 0.6, 
-                    stiffness: 100, 
-                    damping: 15 
+                  transition={{
+                    delay: idx * 0.1,
+                    duration: 0.6,
+                    stiffness: 100,
+                    damping: 15
                   }}
                   whileHover={{ scale: 1.02 }}
-                  className="relative w-full h-full rounded-3xl overflow-hidden cursor-pointer group"
+                  className="relative w-full aspect-square sm:aspect-auto sm:h-full rounded-3xl overflow-hidden cursor-pointer group"
                   style={{
                     boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
                   }}
@@ -1160,17 +1136,17 @@ export function HeroSection() {
                   <div className="absolute inset-0 bg-white/50 dark:bg-white/10">
                     <IconComponent />
                   </div>
-                  
+
                   {/* Hover glow effect */}
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-t from-[#00FF00]/20 via-transparent to-transparent" />
-                  
+
                   {/* Glass overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  
+
                   {/* Label */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-black/40 backdrop-blur-sm border-t border-white/10">
-                    <h3 className="text-white font-semibold text-sm">{service.name}</h3>
-                    <p className="text-white/50 text-xs">{service.desc}</p>
+                  <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-black/40 backdrop-blur-sm border-t border-white/10">
+                    <h3 className="text-white font-semibold text-xs sm:text-sm">{service.name}</h3>
+                    <p className="text-white/50 text-[10px] sm:text-xs">{service.desc}</p>
                   </div>
                 </motion.div>
               );
@@ -1182,12 +1158,15 @@ export function HeroSection() {
       {/* Close two-column flex container */}
       </div>
 
+      {/* Mobile spacer for marquee */}
+      <div className="h-12 sm:h-0 flex-shrink-0" />
+
       {/* 🛡️ TRUST MARQUEE — LED NEON HIGHLIGHT */}
       <div className="absolute bottom-0 left-0 w-full overflow-hidden">
         {/* flickering top border */}
         <div className="animate-border-flicker w-full h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent" />
 
-        <div className="relative bg-gradient-to-r from-black/95 via-slate-950/98 to-black/95 dark:from-black dark:via-[#030712] dark:to-black backdrop-blur-md py-6">
+        <div className="relative bg-gradient-to-r from-black/95 via-slate-950/98 to-black/95 dark:from-black dark:via-[#030712] dark:to-black backdrop-blur-md py-4">
           {/* ⚡ Electric pulse beam sweeping L→R */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div
@@ -1199,43 +1178,43 @@ export function HeroSection() {
             />
           </div>
 
-          <div className="max-w-[1300px] mx-auto px-5 flex items-center gap-10">
-             <div className="flex items-center gap-3 shrink-0 border-r border-primary/40 pr-10">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_var(--primary)]" />
-                <Shield className="w-5 h-5 text-primary" />
-                <div className="flex flex-col">
-                  <span className="text-[12px] font-black uppercase tracking-[0.3em] text-white/60">Trusted By</span>
-                  <span className="text-[16px] font-black uppercase tracking-[0.2em] text-primary neon-text">350+ Enterprises</span>
-                </div>
+          <div className="max-w-[1300px] mx-auto px-5">
+             {/* Header row - Trusted By */}
+             <div className="flex items-center justify-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_10px_var(--primary)]" />
+                <Shield className="w-4 h-4 text-primary" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Trusted By</span>
+                <span className="text-[12px] font-black uppercase tracking-[0.15em] text-primary neon-text">350+ Enterprises</span>
              </div>
 
-             <div className="flex-1 overflow-hidden relative">
-                <div className="flex items-center gap-16 animate-marquee whitespace-nowrap">
+             {/* Client names marquee below */}
+             <div className="overflow-hidden relative">
+                <div className="flex items-center gap-12 animate-marquee whitespace-nowrap">
                    {[...clients, ...clients].map((client, i) => {
                      const realIdx = i % clients.length;
                      const isLit = realIdx === highlightIdx;
                      return (
                        <span
                          key={i}
-                         className={`relative text-[13px] font-black uppercase tracking-[0.15em] transition-all duration-500 cursor-default ${
+                         className={`relative text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-500 cursor-default ${
                            isLit
-                             ? 'text-primary scale-110'
-                             : 'text-white/90 hover:text-white'
+                             ? 'text-primary scale-105'
+                             : 'text-white/80 hover:text-white'
                          }`}
                          style={isLit ? {
-                           textShadow: '0 0 10px var(--primary), 0 0 25px var(--primary), 0 0 50px rgba(57,255,20,0.5)',
+                           textShadow: '0 0 10px var(--primary), 0 0 20px var(--primary), 0 0 40px rgba(57,255,20,0.4)',
                          } : {}}
                        >
                          {isLit && (
-                           <span className="inline-block w-2 h-2 rounded-full bg-primary mr-2 mb-0.5 shadow-[0_0_10px_var(--primary)] animate-pulse" />
+                           <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mr-1.5 mb-0.5 shadow-[0_0_8px_var(--primary)] animate-pulse" />
                          )}
                          {client}
                        </span>
                      );
                    })}
                 </div>
-                <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-black/95 to-transparent z-10" />
-                <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-black/95 to-transparent z-10" />
+                <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-black/95 to-transparent z-10" />
+                <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-black/95 to-transparent z-10" />
              </div>
           </div>
         </div>

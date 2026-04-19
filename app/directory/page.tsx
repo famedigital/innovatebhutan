@@ -6,7 +6,7 @@ import {
   Search, X, ChevronRight, MapPin, Star, Phone, MessageSquare,
   Globe, ChevronDown, Filter, SlidersHorizontal, Heart, Share2,
   Building2, Zap, Shield, Code, Monitor, Database, Camera, Wrench,
-  Smartphone, Users, Award, CheckCircle, Grid3x3, List
+  Smartphone, Users, Award, CheckCircle, Grid3x3, List, ArrowLeft
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -257,13 +257,30 @@ export default function DirectoryPage() {
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
           {/* Top Bar */}
           <div className="flex items-center justify-between h-14">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#10B981] to-[#059669] rounded-lg flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-semibold text-lg hidden sm:block">Directory</span>
-            </Link>
+            {/* Logo with Back Button */}
+            <div className="flex items-center gap-3">
+              {/* Back Button */}
+              <Link
+                href="/"
+                className="flex items-center justify-center w-8 h-8 rounded-xl hover:bg-gray-100 dark:hover:bg-[#2c2c2e] transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </Link>
+
+              {/* Innovate Logo */}
+              <Link href="/" className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-white dark:bg-[#1c1c1e] shadow-md">
+                  <Image
+                    src="https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/v1776433648/innovateKNOT_rwyvk1.png"
+                    alt="Innovate Bhutan"
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 object-contain"
+                  />
+                </div>
+                <span className="font-semibold text-lg hidden sm:block">Directory</span>
+              </Link>
+            </div>
 
             {/* Search Bar - iOS style */}
             <div className="flex-1 max-w-xl mx-4 relative" onClick={(e) => e.stopPropagation()}>
@@ -711,14 +728,18 @@ function BusinessCard({ business, viewMode }: { business: typeof sampleBusinesse
           </div>
 
           {/* Contact Button */}
-          <a
-            href={`https://wa.me/${business.whatsapp}`}
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              window.open(`https://wa.me/${business.whatsapp}`, '_blank');
+            }}
             className="w-full py-2.5 bg-[#10B981] hover:bg-[#059669] text-white rounded-2xl text-sm font-medium flex items-center justify-center gap-2 transition"
           >
             <MessageSquare className="w-4 h-4" />
             Contact
-          </a>
+          </button>
         </div>
       ) : (
         // List View
@@ -764,14 +785,18 @@ function BusinessCard({ business, viewMode }: { business: typeof sampleBusinesse
               })}
             </div>
           </div>
-          <a
-            href={`https://wa.me/${business.whatsapp}`}
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              window.open(`https://wa.me/${business.whatsapp}`, '_blank');
+            }}
             className="self-start px-4 py-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-2xl text-sm font-medium flex items-center gap-2 transition"
           >
             <MessageSquare className="w-4 h-4" />
             Contact
-          </a>
+          </button>
         </div>
       )}
     </Link>

@@ -1636,6 +1636,26 @@ export function ServiceBrowser() {
     return services;
   }, [activeCategory, searchQuery]);
 
+  // Helper to check if a service matches the current filter
+  const isServiceInFilter = useCallback((service: typeof allServices[0]) => {
+    // Category match
+    const categoryMatch = activeCategory === "all" || service.category === activeCategory;
+    if (!categoryMatch) return false;
+
+    // Search match (if search is active)
+    if (searchQuery.trim()) {
+      const fuse = new Fuse(allServices, {
+        keys: ['name', 'shortName', 'category', 'description', 'features'],
+        threshold: 0.4,
+        ignoreLocation: true,
+      });
+      const searchResults = fuse.search(searchQuery).map(r => r.item);
+      return searchResults.includes(service);
+    }
+
+    return true;
+  }, [activeCategory, searchQuery]);
+
   const addToCart = (subService?: SubService) => {
     if (!selectedService) return;
 
@@ -2229,9 +2249,10 @@ export function ServiceBrowser() {
               >
                 {/* Grid Layout: 4 rows × 3 columns */}
                 <div className="space-y-3 sticky top-0 pt-4">
-                  {filteredServices.map((service) => {
+                  {(selectedService ? allServices : filteredServices).map((service) => {
                     const Icon = service.icon;
                     const hasSubs = service.subs && service.subs.length > 0;
+                    const matchesFilter = isServiceInFilter(service);
 
                     return (
                       <div key={service.id} className="space-y-1">
@@ -2244,7 +2265,9 @@ export function ServiceBrowser() {
                           className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
                             selectedService?.id === service.id && !selectedSubService
                               ? 'bg-primary/10 ring-2 ring-primary/30'
-                              : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                              : matchesFilter
+                              ? 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                              : 'opacity-40 hover:opacity-60'
                           }`}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
@@ -2267,8 +2290,8 @@ export function ServiceBrowser() {
                           )}
                         </motion.button>
 
-                        {/* Sub-services - Always Expanded */}
-                        {hasSubs && (
+                        {/* Sub-services - Only show for filtered services or selected service */}
+                        {hasSubs && (matchesFilter || selectedService?.id === service.id) && (
                           <div className="ml-6 space-y-1">
                             {service.subs.map((sub) => (
                               <motion.button
