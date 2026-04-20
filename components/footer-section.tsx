@@ -55,9 +55,6 @@ export function FooterSection() {
               <div className="text-3xl font-bold tracking-tighter text-white leading-none relative">
                 INNOVATES<span className="text-primary [text-shadow:0_0_15px_var(--primary)]">.</span>bt
               </div>
-              <div className="text-[10px] font-mono tracking-[0.4em] text-primary uppercase ml-1 opacity-80 group-hover:opacity-100 group-hover:[text-shadow:0_0_10px_var(--primary)] transition-all">
-                by infiniteknot
-              </div>
             </Link>
             <div className="text-sm text-[#9CA3AF] mb-6 space-y-1">
               <p className="font-bold text-white mb-2">Manish Sharma as Founder</p>
