@@ -107,6 +107,8 @@ export function FooterSection() {
               <span className="sm:ml-2">
                 by <a href="https://infiniteknot.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">infiniteknot</a>
               </span>
+              <span className="mx-2">|</span>
+              Design by <a href="https://famedigital.netlify.app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">FameDigital</a>
             </p>
             <div className="flex items-center gap-6 text-sm text-[#6B7280]">
               <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
