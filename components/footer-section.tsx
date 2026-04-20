@@ -50,13 +50,13 @@ export function FooterSection() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-4 lg:col-span-1 mb-8 lg:mb-0">
-            <Link href="/" className="flex flex-col group relative z-10 transition-transform hover:scale-105 w-fit mb-6">
+            <Link href="/" className="flex items-center gap-2 group relative z-10 transition-transform hover:scale-105 w-fit mb-6">
               <motion.img
                 src="https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/v1776705871/weblogo_os6cni.png"
                 alt="INNOVATES.bt"
                 className="h-10 w-auto"
               />
-              <div className="text-xl font-bold tracking-tighter leading-none relative mt-2">
+              <div className="text-xl font-bold tracking-tighter leading-none relative">
                 <span style={{ color: '#10B981' }}>INNOVATES</span><span style={{ color: '#3B82F6' }}>.bt</span>
               </div>
             </Link>
