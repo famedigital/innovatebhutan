@@ -6,9 +6,9 @@ import { Menu, X, Moon, Sun, LogIn } from "lucide-react";
 
 // Modern Logo Component with PNG Image + Text
 function ModernLogo() {
-  // Ultra luxury green color
-  const luxuryGreen = '#047857';
-  const shimmerGreen = '#10B981';
+  // Colors
+  const innovatesGreen = '#10B981';
+  const btBlue = '#3B82F6';
 
   return (
     <motion.div
@@ -31,11 +31,9 @@ function ModernLogo() {
         }}
       />
       <motion.span
-        className="text-lg font-bold"
-        style={{ color: luxuryGreen }}
+        className="text-lg font-bold flex items-center"
         animate={{
           y: [0, -2, 0],
-          color: [luxuryGreen, shimmerGreen, luxuryGreen],
         }}
         transition={{
           duration: 3,
@@ -43,7 +41,8 @@ function ModernLogo() {
           ease: "easeInOut"
         }}
       >
-        innovates.bt
+        <span style={{ color: innovatesGreen }}>innovates</span>
+        <span style={{ color: btBlue }}>.bt</span>
       </motion.span>
     </motion.div>
   );
