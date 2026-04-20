@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { analyzeERPIntent, type AIActionResponse } from "@/lib/gemini";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { createClient } from "@/utils/supabase/server";
+import { checkRateLimitMiddleware, rateLimitPresets } from "@/lib/rate-limit/rate-limiter";
 
 const DEFAULT_VERIFY_TOKEN = "innovate_bhutan_secret_token";
 const DEFAULT_SUPERUSER = "97517000000";
@@ -36,6 +37,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Apply rate limiting for WhatsApp webhook (30 req/min - higher due to message delivery)
+  const rateLimitResponse = checkRateLimitMiddleware(request, 30, 60000);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const { verifyToken, superuserPhone } = await getSettings();
     const body = await request.json();

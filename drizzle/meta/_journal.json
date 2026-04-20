@@ -29,6 +29,20 @@
       "when": 1776423080624,
       "tag": "0003_violet_justice",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776616437165,
+      "tag": "0004_living_captain_britain",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776698000000,
+      "tag": "0005_amc_schema_enhancement",
+      "breakpoints": true
     }
   ]
 }

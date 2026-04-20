@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { checkRateLimitMiddleware, rateLimitPresets } from "@/lib/rate-limit/rate-limiter";
 
 export async function POST(req: NextRequest) {
+  // Apply strict rate limiting for public webhook (20 req/min)
+  const rateLimitResponse = checkRateLimitMiddleware(req, rateLimitPresets.strict.maxRequests, rateLimitPresets.strict.windowMs);
+  if (rateLimitResponse) return rateLimitResponse;
   try {
     const body = await req.json();
     

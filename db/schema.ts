@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, timestamp, decimal, integer, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, timestamp, decimal, integer, jsonb, boolean, index } from "drizzle-orm/pg-core";
 
 /**
  * 🛰️ SERVICE CATALOG MASTER
@@ -79,13 +79,28 @@ export const profiles = pgTable("profiles", {
  */
 export const amcs = pgTable("amcs", {
   id: serial("id").primaryKey(),
+  publicId: varchar("public_id", { length: 50 }).unique(), // External reference (e.g., AMC-2026-ABC123)
   clientId: integer("client_id").references(() => clients.id),
+  serviceId: integer("service_id").references(() => services.id), // Link to service catalog
+  contractNumber: varchar("contract_number", { length: 100 }), // Human-readable contract ID
   startDate: timestamp("start_date").notNull(),
-  expiryDate: timestamp("expiry_date").notNull(),
+  endDate: timestamp("end_date").notNull(), // Renamed from expiryDate for clarity
+  amount: decimal("amount", { precision: 12, scale: 2 }), // Annual contract value
   hardwareDetails: jsonb("hardware_details"), // Model, Serial, Config
-  status: varchar("status", { length: 50 }).default("active"), // active, expiring, expired
+  servicesIncluded: jsonb("services_included"), // Array of service names/IDs included in contract
+  renewedFrom: integer("renewed_from"), // Track renewal lineage (previous contract) - references amcs.id
+  renewedTo: integer("renewed_to"), // Forward reference (next contract) - references amcs.id
+  status: varchar("status", { length: 50 }).default("active"), // active, expiring, expired, cancelled
+  notes: text("notes"), // Additional notes about the contract
   createdAt: timestamp("created_at").defaultNow(),
-});
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("idx_amcs_client").on(table.clientId),
+  serviceIdx: index("idx_amcs_service").on(table.serviceId),
+  statusIdx: index("idx_amcs_status").on(table.status),
+  endDateIdx: index("idx_amcs_end_date").on(table.endDate), // For expiry queries
+  publicIdx: index("idx_amcs_public").on(table.publicId),
+}));
 
 /**
  * 🎫 SUPPORT TICKETS
@@ -131,7 +146,21 @@ export const employees = pgTable("employees", {
   agreementsDocUrl: text("agreements_doc_url"),
   joiningLetterUrl: text("joining_letter_url"),
   additionalDocs: jsonb("additional_docs"), // other documents array
-});
+  // Payroll & Tax fields (added in migration 0007)
+  tin: varchar("tin", { length: 20 }), // Tax Identification Number
+  pfNumber: varchar("pf_number", { length: 30 }), // Provident Fund Number
+  bankAccountNumber: varchar("bank_account_number", { length: 30 }),
+  bankName: varchar("bank_name", { length: 100 }),
+  bankBranch: varchar("bank_branch", { length: 100 }),
+  status: varchar("status", { length: 20 }).default("active"), // active/inactive/terminated/on_leave
+  department: varchar("department", { length: 100 }),
+  phone: varchar("phone", { length: 20 }),
+  email: varchar("email", { length: 255 }),
+}, (table) => ({
+  statusIdx: index("idx_employees_status").on(table.status),
+  departmentIdx: index("idx_employees_department").on(table.department),
+  designationIdx: index("idx_employees_designation").on(table.designation),
+}));
 
 /**
  * 🕒 HR: ATTENDANCE
@@ -154,10 +183,29 @@ export const payslips = pgTable("payslips", {
   month: integer("month").notNull(),
   year: integer("year").notNull(),
   netSalary: decimal("net_salary", { precision: 12, scale: 2 }),
-  status: varchar("status", { length: 50 }).default("draft"), // draft, approved, paid
+  status: varchar("status", { length: 50 }).default("draft"), // draft, approved, paid, cancelled
   pdfUrl: text("pdf_url"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+  // Payroll breakdown fields (added in migration 0007)
+  basicSalary: decimal("basic_salary", { precision: 12, scale: 2 }),
+  grossSalary: decimal("gross_salary", { precision: 12, scale: 2 }),
+  allowances: jsonb("allowances"), // { rent, transport, entertainment, medical, other }
+  bonuses: decimal("bonuses", { precision: 12, scale: 2 }),
+  pfEmployee: decimal("pf_employee", { precision: 12, scale: 2 }), // 5% employee contribution
+  pfEmployer: decimal("pf_employer", { precision: 12, scale: 2 }), // 5% employer contribution
+  gisDeduction: decimal("gis_deduction", { precision: 12, scale: 2 }), // Flat rate
+  taxableIncome: decimal("taxable_income", { precision: 12, scale: 2 }),
+  pitDeduction: decimal("pit_deduction", { precision: 12, scale: 2 }), // Progressive slab
+  additionalDeductions: jsonb("additional_deductions"), // { advance, loan, other }
+  paymentDate: timestamp("payment_date"),
+  paymentMethod: varchar("payment_method", { length: 20 }), // bank/cash/cheque
+  generatedAt: timestamp("generated_at").defaultNow(),
+  notes: text("notes"),
+}, (table) => ({
+  employeeMonthYearIdx: index("idx_payslips_employee_month_year").on(table.employeeId, table.month, table.year),
+  statusIdx: index("idx_payslips_status").on(table.status),
+  paymentDateIdx: index("idx_payslips_payment_date").on(table.paymentDate),
+}));
 
 /**
  * 💰 FINANCE: UNIFIED TRANSACTIONS
@@ -191,13 +239,23 @@ export const expenses = pgTable("expenses", {
  */
 export const invoices = pgTable("invoices", {
   id: serial("id").primaryKey(),
-  clientId: integer("client_id").references(() => clients.id),
+  invoiceNumber: varchar("invoice_number", { length: 50 }).notNull().unique(),
+  clientId: integer("client_id").references(() => clients.id).notNull(),
   orderId: integer("order_id").references(() => orders.id),
-  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
-  dueDate: timestamp("due_date"),
-  status: varchar("status", { length: 50 }).default("unpaid"), // unpaid, paid, overdue
+  issueDate: timestamp("issue_date").notNull().defaultNow(),
+  dueDate: timestamp("due_date").notNull(),
+  total: decimal("total", { precision: 15, scale: 2 }).notNull(),
+  status: varchar("status", { length: 50 }).default("draft"), // draft, sent, paid, overdue, cancelled
+  items: jsonb("items"), // Array of line items: [{ description, quantity, rate, amount }]
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("idx_invoices_client").on(table.clientId),
+  statusIdx: index("idx_invoices_status").on(table.status),
+  invoiceNumberIdx: index("idx_invoices_number").on(table.invoiceNumber),
+  dueDateIdx: index("idx_invoices_due").on(table.dueDate),
+}));
 
 /**
  * 🏗️ PROJECTS
@@ -205,17 +263,27 @@ export const invoices = pgTable("invoices", {
  */
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
+  publicId: varchar("public_id", { length: 50 }).unique(),
   clientId: integer("client_id").references(() => clients.id).notNull(),
   serviceId: integer("service_id").references(() => services.id),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  status: varchar("status", { length: 50 }).default("planning"), // planning, active, testing, complete
-  leadId: integer("lead_id").references(() => profiles.id), // Overall responsible person
+  status: varchar("status", { length: 50 }).default("planning"), // planning, active, testing, complete, on_hold, cancelled
+  leadId: text("lead_id"), // References profiles.user_id (Supabase Auth)
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
+  budget: decimal("budget", { precision: 15, scale: 2 }), // Project budget
+  progress: integer("progress").default(0), // Cached progress 0-100
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  clientIdx: index("idx_projects_client").on(table.clientId),
+  statusIdx: index("idx_projects_status").on(table.status),
+  publicIdx: index("idx_projects_public").on(table.publicId),
+  leadIdIdx: index("idx_projects_lead_id").on(table.leadId),
+  deletedAtIdx: index("idx_projects_deleted_at").on(table.deletedAt),
+}));
 
 /**
  * 📝 PROJECT TASKS
@@ -224,13 +292,120 @@ export const projects = pgTable("projects", {
 export const projectTasks = pgTable("project_tasks", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").references(() => projects.id).notNull(),
-  assignedTo: integer("assigned_to").references(() => profiles.id),
+  assignedTo: text("assigned_to"), // References profiles.user_id (Supabase Auth)
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  status: varchar("status", { length: 50 }).default("todo"), // todo, in_progress, done
+  status: varchar("status", { length: 50 }).default("todo"), // todo, in_progress, done, blocked
   priority: varchar("priority", { length: 50 }).default("medium"),
+  dueDate: timestamp("due_date"), // Task deadline
+  estimatedHours: decimal("estimated_hours", { precision: 10, scale: 2 }), // Time estimation
+  actualHours: decimal("actual_hours", { precision: 10, scale: 2 }), // Actual time spent
+  position: integer("position").default(0), // For ordering/Kanban
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  projectIdx: index("idx_tasks_project").on(table.projectId),
+  statusIdx: index("idx_tasks_status").on(table.status),
+  dueIdx: index("idx_tasks_due").on(table.dueDate),
+  assignedToIdx: index("idx_tasks_assigned_to").on(table.assignedTo),
+  deletedAtIdx: index("idx_project_tasks_deleted_at").on(table.deletedAt),
+}));
+
+/**
+ * 👥 PROJECT MEMBERS
+ * Per-project access control and membership
+ */
+export const projectMembers = pgTable("project_members", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => projects.id).notNull(),
+  userId: text("user_id").notNull(), // References profiles.user_id (Supabase Auth)
+  role: varchar("role", { length: 50 }).notNull().default("member"), // owner, lead, member, viewer, client_viewer
+  joinedAt: timestamp("joined_at").defaultNow(),
+}, (table) => ({
+  projectUserIdx: index("idx_project_members_project_user").on(table.projectId, table.userId),
+  userIdIdx: index("idx_project_members_user").on(table.userId),
+}));
+
+/**
+ * 📊 PROJECT MILESTONES
+ * Phases/gates for project tracking
+ */
+export const projectMilestones = pgTable("project_milestones", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => projects.id).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 50 }).default("pending"), // pending, in_progress, complete, cancelled
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  position: integer("position").default(0), // For ordering
+  deletedAt: timestamp("deleted_at"), // Soft delete
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  projectIdx: index("idx_milestones_project").on(table.projectId),
+  statusIdx: index("idx_milestones_status").on(table.status),
+  dueDateIdx: index("idx_milestones_due_date").on(table.dueDate),
+  deletedAtIdx: index("idx_milestones_deleted_at").on(table.deletedAt),
+}));
+
+/**
+ * 💬 TASK COMMENTS
+ * Threaded comments on tasks
+ */
+export const taskComments = pgTable("task_comments", {
+  id: serial("id").primaryKey(),
+  taskId: integer("task_id").references(() => projectTasks.id).notNull(),
+  userId: text("user_id").notNull(), // References profiles.user_id (Supabase Auth)
+  content: text("content").notNull(),
+  parentId: integer("parent_id"), // For threaded comments (self-reference)
+  deletedAt: timestamp("deleted_at"), // Soft delete
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  taskIdx: index("idx_task_comments_task").on(table.taskId),
+  userIdIdx: index("idx_task_comments_user").on(table.userId),
+  parentIdx: index("idx_task_comments_parent").on(table.parentId),
+  deletedAtIdx: index("idx_task_comments_deleted_at").on(table.deletedAt),
+}));
+
+/**
+ * ☑️ TASK CHECKLIST ITEMS
+ * Checklists within tasks (subtasks alternative)
+ */
+export const taskChecklistItems = pgTable("task_checklist_items", {
+  id: serial("id").primaryKey(),
+  taskId: integer("task_id").references(() => projectTasks.id).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  isCompleted: boolean("is_completed").default(false),
+  position: integer("position").default(0), // For ordering
+  deletedAt: timestamp("deleted_at"), // Soft delete
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => ({
+  taskIdx: index("idx_checklist_items_task").on(table.taskId),
+  deletedAtIdx: index("idx_checklist_items_deleted_at").on(table.deletedAt),
+}));
+
+/**
+ * 📣 ACTIVITY EVENTS
+ * Activity feed for project-related events (UX-focused, separate from audit_logs)
+ */
+export const activityEvents = pgTable("activity_events", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => projects.id),
+  userId: text("user_id").notNull(), // References profiles.user_id (Supabase Auth)
+  eventType: varchar("event_type", { length: 50 }).notNull(), // task_created, task_updated, task_completed, milestone_completed, comment_added, etc.
+  entityType: varchar("entity_type", { length: 50 }), // project, task, milestone, comment
+  entityId: integer("entity_id"),
+  metadata: jsonb("metadata"), // Additional context (e.g., old_status, new_status, mentioned_users)
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  projectIdx: index("idx_activity_events_project").on(table.projectId),
+  userIdIdx: index("idx_activity_events_user").on(table.userId),
+  createdAtIdx: index("idx_activity_events_created").on(table.createdAt),
+  entityTypeIdx: index("idx_activity_events_entity_type").on(table.entityType),
+}));
 
 /**
  * 🕵️ AUDIT LOGS
@@ -256,10 +431,18 @@ export const notifications = pgTable("notifications", {
   title: varchar("title", { length: 255 }).notNull(),
   message: text("message").notNull(),
   type: varchar("type", { length: 50 }).default("info"), // info, warning, critical, success
+  category: varchar("category", { length: 50 }), // task_assigned, mentioned, due_soon, overdue, milestone_completed
+  entityType: varchar("entity_type", { length: 50 }), // project, task, milestone
+  entityId: integer("entity_id"),
   read: boolean("read").default(false),
   link: text("link"), // URL to relevant entity
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  userIdIdx: index("idx_notifications_user").on(table.userId),
+  readIdx: index("idx_notifications_read").on(table.read),
+  entityTypeIdx: index("idx_notifications_entity_type").on(table.entityType),
+  createdAtIdx: index("idx_notifications_created").on(table.createdAt),
+}));
 
 /**
  * 🗺️ LOCATIONS
