@@ -50,11 +50,12 @@ export function FooterSection() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-4 lg:col-span-1 mb-8 lg:mb-0">
-            <Link href="/" className="flex flex-col group relative z-10 transition-transform hover:scale-105 w-fit mb-6">
-              <div className="absolute -inset-2 bg-primary rounded-full blur-xl opacity-0 group-hover:opacity-20 transition-opacity" />
-              <div className="text-3xl font-bold tracking-tighter text-white leading-none relative">
-                INNOVATES<span className="text-primary [text-shadow:0_0_15px_var(--primary)]">.</span>bt
-              </div>
+            <Link href="/" className="flex items-center group relative z-10 transition-transform hover:scale-105 w-fit mb-6">
+              <motion.img
+                src="https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/v1776705871/weblogo_os6cni.png"
+                alt="INNOVATES.bt"
+                className="h-10 w-auto"
+              />
             </Link>
             <div className="text-sm text-[#9CA3AF] mb-6 space-y-1">
               <p className="font-bold text-white mb-2">Manish Sharma as Founder</p>

@@ -18,7 +18,7 @@ function ModernLogo() {
       transition={{ duration: 0.5 }}
     >
       <motion.img
-        src="https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/v1776433648/innovateKNOT_rwyvk1.png"
+        src="https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/v1776705871/weblogo_os6cni.png"
         alt="innovates.bt"
         className="h-8 w-auto"
         animate={{
