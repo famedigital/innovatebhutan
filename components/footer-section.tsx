@@ -104,7 +104,7 @@ export function FooterSection() {
             <p className="text-sm text-[#6B7280]">
               2026 INNOVATES.bt. All rights reserved. <br className="sm:hidden" />
               <span className="sm:ml-2">
-                Design by <a href="https://famedigital.netlify.app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">FameDigital</a>
+                Design by <a href="https://famedigital.netlify.app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">FameDigital</a>, Singapore
               </span>
             </p>
             <div className="flex items-center gap-6 text-sm text-[#6B7280]">
