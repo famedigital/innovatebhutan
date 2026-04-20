@@ -50,7 +50,7 @@ export function FooterSection() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-4 lg:col-span-1 mb-8 lg:mb-0">
-            <Link href="/" className="group relative z-10 transition-transform hover:scale-105 flex justify-center mb-6">
+            <Link href="/" className="group relative z-10 transition-transform hover:scale-105 mb-6">
               <motion.img
                 src="https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/v1776706698/footerinnovates6_xwzura.png"
                 alt="INNOVATES.bt"
