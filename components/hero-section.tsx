@@ -6,6 +6,7 @@ import { Search, Store, Hotel, Code, Wrench, LayoutGrid, Shield, Zap, Smartphone
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { getMediaUrl } from "@/lib/cloudinary";
+import { PremiumHeroSlider } from "@/components/premium-hero-slider";
 
 // Typewriter Hook
 function useTypewriter(phrases: string[], typingSpeed = 80, deletingSpeed = 40, pauseDuration = 2000) {
@@ -1089,70 +1090,9 @@ export function HeroSection() {
         </div>
       </div>
 
-      {/* 🖼️ RIGHT SIDE: SERVICES ILLUSTRATION GRID */}
+      {/* 🖼️ RIGHT SIDE: PREMIUM HERO SLIDER */}
       <div className="flex-1 w-full">
-        {hoveredService && serviceToImageMap[hoveredService] ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full aspect-square sm:aspect-auto sm:h-[550px] rounded-3xl overflow-hidden"
-            style={{ boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}
-          >
-            <img
-              src={serviceToImageMap[hoveredService]}
-              alt={hoveredService}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-black/40 backdrop-blur-sm border-t border-white/10">
-              <h3 className="text-white text-base sm:text-xl font-semibold">{hoveredService}</h3>
-              <p className="text-white/60 text-xs sm:text-sm">innovates.bt</p>
-            </div>
-          </motion.div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 sm:gap-6 h-auto sm:h-[550px]">
-            {servicesVisual.map((service, idx) => {
-              const IconComponent = service.icon;
-              return (
-                <motion.div
-                  key={service.name}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{
-                    delay: idx * 0.1,
-                    duration: 0.6,
-                    stiffness: 100,
-                    damping: 15
-                  }}
-                  whileHover={{ scale: 1.02 }}
-                  className="relative w-full aspect-square sm:aspect-auto sm:h-full rounded-3xl overflow-hidden cursor-pointer group"
-                  style={{
-                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-                  }}
-                >
-                  {/* SVG Illustration */}
-                  <div className="absolute inset-0 bg-white/50 dark:bg-white/10">
-                    <IconComponent />
-                  </div>
-
-                  {/* Hover glow effect */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-t from-[#00FF00]/20 via-transparent to-transparent" />
-
-                  {/* Glass overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                  {/* Label */}
-                  <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-black/40 backdrop-blur-sm border-t border-white/10">
-                    <h3 className="text-white font-semibold text-xs sm:text-sm">{service.name}</h3>
-                    <p className="text-white/50 text-[10px] sm:text-xs">{service.desc}</p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
+        <PremiumHeroSlider />
       </div>
 
       {/* Close two-column flex container */}
