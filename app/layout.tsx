@@ -51,6 +51,7 @@ export const viewport: Viewport = {
 
 import { PureThemeProvider } from "@/components/PureThemeProvider"
 import { Toaster } from "@/components/ui/sonner"
+import { NavigationDynamic } from "@/components/navigation-dynamic"
 
 export default function RootLayout({
   children,
@@ -61,6 +62,7 @@ export default function RootLayout({
     <html lang="en" className={`${oswald.variable} ${inter.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased bg-background text-foreground selection:bg-primary/30 selection:text-primary" suppressHydrationWarning>
         <PureThemeProvider>
+          <NavigationDynamic />
           {children}
         </PureThemeProvider>
         <Toaster position="bottom-right" theme="dark" closeButton />

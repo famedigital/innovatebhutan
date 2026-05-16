@@ -1047,8 +1047,30 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             className="text-[32px] sm:text-[40px] lg:text-[52px] xl:text-[60px] font-black text-white leading-[1.2] mb-8 sm:mb-10 lg:mb-12"
           >
-            <span className="block">Innovating today</span>
-            <span className="block">for{" "}
+            <span className="md:hidden block">Innovating today</span>
+            <span className="md:hidden block">for{" "}
+              <span className="relative" style={{
+                color: '#39FF14',
+                textShadow: '0 0 30px rgba(57,255,20,1), 0 0 60px rgba(57,255,20,0.6), 0 0 90px rgba(57,255,20,0.4)',
+                fontWeight: '900'
+              }}>
+                {typewriterText}
+                <motion.span
+                  animate={{
+                    opacity: [1, 0, 1],
+                  }}
+                  transition={{
+                    duration: 0.8,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                  className="absolute -right-1 top-0 h-full w-1"
+                  style={{ background: '#39FF14', boxShadow: '0 0 15px #39FF14, 0 0 30px rgba(57,255,20,0.8)' }}
+                />
+              </span>
+            </span>
+            <span className="hidden md:inline whitespace-nowrap">
+              Innovating today for{" "}
               <span className="relative" style={{
                 color: '#39FF14',
                 textShadow: '0 0 30px rgba(57,255,20,1), 0 0 60px rgba(57,255,20,0.6), 0 0 90px rgba(57,255,20,0.4)',

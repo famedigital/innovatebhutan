@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { NavigationDynamic } from "@/components/navigation-dynamic";
 import { TopMarquee } from "@/components/top-marquee";
 import { HeroSection } from "@/components/hero-section";
 import { StatsSection } from "@/components/stats-section";
@@ -16,7 +15,6 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground selection:bg-[#10B981] selection:text-white dark:selection:bg-primary dark:selection:text-black transition-colors duration-500">
-      <NavigationDynamic />
       <TopMarquee />
 
       {/* Hero Section - Fullscreen behind nav */}
