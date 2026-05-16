@@ -21,7 +21,10 @@ export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams;
 
     // Parse and validate query parameters
-    const { page, limit, ...filters } = validateQueryParams(orderQuerySchema, searchParams);
+    const queryParams = validateQueryParams(orderQuerySchema, searchParams);
+    const page = queryParams.page ?? 1;
+    const limit = queryParams.limit ?? 20;
+    const { page: _, limit: __, ...filters } = queryParams;
     const offset = (page - 1) * limit;
 
     const result = await orderService.listOrders({
@@ -73,8 +76,17 @@ export async function POST(req: NextRequest) {
     // Validate request body
     const validatedData = validateRequest(createOrderSchema, body);
 
+    // Transform items to ensure quantity is defined (has default in schema)
+    const orderData = {
+      ...validatedData,
+      items: validatedData.items.map(item => ({
+        ...item,
+        quantity: item.quantity ?? 1,
+      })),
+    };
+
     const order = await orderService.createOrder(
-      validatedData,
+      orderData,
       profile.userId
     );
 

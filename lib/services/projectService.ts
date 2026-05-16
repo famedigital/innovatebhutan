@@ -53,13 +53,59 @@ export interface UpdateTaskDTO {
 export class ProjectService {
   private repository = projectRepository;
 
+  // ==================== STATUS TRANSITIONS ====================
+
+  /**
+   * Valid task status transitions
+   * todo -> in_progress, blocked
+   * in_progress -> done, blocked, todo
+   * blocked -> todo, in_progress
+   * done -> todo (reopened), in_progress (reopened and started)
+   */
+  private readonly validTaskTransitions: Record<TaskStatus, TaskStatus[]> = {
+    todo: ["in_progress", "blocked"],
+    in_progress: ["done", "blocked", "todo"],
+    blocked: ["todo", "in_progress"],
+    done: ["todo", "in_progress"], // Allow reopening
+  };
+
+  /**
+   * Validate task status transition
+   */
+  private validateTaskStatusTransition(currentStatus: TaskStatus, newStatus: TaskStatus): boolean {
+    if (currentStatus === newStatus) return true; // No-op is allowed
+    return this.validTaskTransitions[currentStatus]?.includes(newStatus) ?? false;
+  }
+
   // ==================== PROJECT OPERATIONS ====================
 
   async createProject(data: CreateProjectDTO, userId?: string): Promise<Project> {
     // Generate public ID
     const publicId = `proj_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
 
-    const project = await this.repository.createProject({
+    // Use atomic transaction to create project with owner
+    // This ensures either both succeed or both fail - no orphaned projects
+    if (userId) {
+      return await this.repository.createProjectWithOwner(
+        {
+          publicId,
+          clientId: data.clientId,
+          serviceId: data.serviceId,
+          name: data.name,
+          description: data.description,
+          leadId: data.leadId,
+          startDate: data.startDate,
+          endDate: data.endDate,
+          budget: data.budget,
+          status: "planning",
+          progress: 0,
+        },
+        userId
+      );
+    }
+
+    // Fallback for projects created without a user (e.g., by system)
+    return await this.repository.createProject({
       publicId,
       clientId: data.clientId,
       serviceId: data.serviceId,
@@ -72,13 +118,6 @@ export class ProjectService {
       status: "planning",
       progress: 0,
     });
-
-    // Add the creator as the project owner
-    if (userId) {
-      await projectMemberService.addCreatorAsOwner(project.id, userId);
-    }
-
-    return project;
   }
 
   async getProjectById(id: number): Promise<Project | null> {
@@ -186,6 +225,25 @@ export class ProjectService {
     return await this.repository.updateProject(projectId, { status: newStatus });
   }
 
+  /**
+   * Transition task status with validation
+   */
+  async transitionTaskStatus(taskId: number, newStatus: TaskStatus): Promise<ProjectTask> {
+    const task = await this.repository.getTaskById(taskId);
+    if (!task) {
+      throw new Error("Task not found");
+    }
+
+    const currentStatus = task.status as TaskStatus;
+    if (!this.validateTaskStatusTransition(currentStatus, newStatus)) {
+      throw new Error(
+        `Cannot transition task from ${currentStatus} to ${newStatus}. Valid transitions: ${this.validTaskTransitions[currentStatus]?.join(", ") || "none"}`
+      );
+    }
+
+    return await this.repository.updateTaskWithProgressUpdate(taskId, { status: newStatus });
+  }
+
   async validateProjectCanBeCompleted(projectId: number): Promise<boolean> {
     const stats = await this.repository.getProjectStats(projectId);
     return stats.totalTasks === 0 || stats.totalTasks === stats.completedTasks;
@@ -248,6 +306,17 @@ export class ProjectService {
       throw new AuthorizationError("You do not have permission to modify this task");
     }
 
+    // Validate status transition if status is being changed
+    if (data.status && task.status !== data.status) {
+      const currentStatus = task.status as TaskStatus;
+      const newStatus = data.status;
+      if (!this.validateTaskStatusTransition(currentStatus, newStatus)) {
+        throw new Error(
+          `Cannot transition task from ${currentStatus} to ${newStatus}. Valid transitions: ${this.validTaskTransitions[currentStatus]?.join(", ") || "none"}`
+        );
+      }
+    }
+
     // Use transactional update to ensure progress is updated atomically
     const updatedTask = await this.repository.updateTaskWithProgressUpdate(id, data);
 
@@ -297,14 +366,26 @@ export class ProjectService {
     userId?: string,
     userRole?: string
   ): Promise<ProjectTask[]> {
-    const createdTasks: ProjectTask[] = [];
-
-    for (const task of tasks) {
-      const created = await this.createTask({ ...task, projectId });
-      createdTasks.push(created);
+    // Check authorization first
+    if (userId && userRole && userRole !== "ADMIN" && userRole !== "STAFF") {
+      throw new AuthorizationError("Only ADMIN and STAFF can bulk create tasks");
     }
 
-    return createdTasks;
+    // Prepare task data
+    const taskData = tasks.map(task => ({
+      projectId,
+      assignedTo: task.assignedTo,
+      title: task.title,
+      description: task.description,
+      priority: task.priority || "medium" as TaskPriority,
+      dueDate: task.dueDate,
+      estimatedHours: task.estimatedHours,
+      status: "todo" as TaskStatus,
+      position: 0, // Will be updated later if needed
+    }));
+
+    // Use atomic transaction - either all tasks succeed or none do
+    return await this.repository.bulkCreateTasks(projectId, taskData);
   }
 
   async bulkUpdateTaskStatus(taskIds: number[], newStatus: TaskStatus): Promise<ProjectTask[]> {

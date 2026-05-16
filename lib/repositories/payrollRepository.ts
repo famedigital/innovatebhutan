@@ -1,11 +1,12 @@
 import { db } from "@/db";
 import { employees, payslips, profiles, attendance } from "@/db/schema";
 import { eq, and, desc, sql, count, lt, gte, or } from "drizzle-orm";
+import { dashboardCache, withCache, hashFilters, listCache, statsCache } from "@/lib/cache/repository-cache";
 
-type Employee = typeof employees.$inferSelect;
-type NewEmployee = typeof employees.$inferInsert;
-type Payslip = typeof payslips.$inferSelect;
-type NewPayslip = typeof payslips.$inferInsert;
+export type Employee = typeof employees.$inferSelect;
+export type NewEmployee = typeof employees.$inferInsert;
+export type Payslip = typeof payslips.$inferSelect;
+export type NewPayslip = typeof payslips.$inferInsert;
 
 // ==================== FILTERS & INTERFACES ====================
 
@@ -86,17 +87,17 @@ export class PayrollRepository {
     const conditions = [];
 
     if (filters.status) {
-      conditions.push(sql`${employees.additional_docs}->>'status' = ${filters.status}`);
+      conditions.push(sql`${employees.additionalDocs}->>'status' = ${filters.status}`);
     }
     if (filters.department) {
-      conditions.push(sql`${employees.additional_docs}->>'department' = ${filters.department}`);
+      conditions.push(sql`${employees.additionalDocs}->>'department' = ${filters.department}`);
     }
     if (filters.designation) {
       conditions.push(eq(employees.designation, filters.designation));
     }
     if (filters.search) {
       conditions.push(
-        sql`(${employees.designation} ILIKE ${'%' + filters.search + '%'} OR ${employees.additional_docs}->>'department' ILIKE ${'%' + filters.search + '%'})`
+        sql`(${employees.designation} ILIKE ${'%' + filters.search + '%'} OR ${employees.additionalDocs}->>'department' ILIKE ${'%' + filters.search + '%'})`
       );
     }
 
@@ -126,10 +127,10 @@ export class PayrollRepository {
     const conditions = [];
 
     if (filters.status) {
-      conditions.push(sql`${employees.additional_docs}->>'status' = ${filters.status}`);
+      conditions.push(sql`${employees.additionalDocs}->>'status' = ${filters.status}`);
     }
     if (filters.department) {
-      conditions.push(sql`${employees.additional_docs}->>'department' = ${filters.department}`);
+      conditions.push(sql`${employees.additionalDocs}->>'department' = ${filters.department}`);
     }
     if (filters.designation) {
       conditions.push(eq(employees.designation, filters.designation));
@@ -162,8 +163,16 @@ export class PayrollRepository {
         agreementsDocUrl: employees.agreementsDocUrl,
         joiningLetterUrl: employees.joiningLetterUrl,
         additionalDocs: employees.additionalDocs,
+        tin: employees.tin,
+        pfNumber: employees.pfNumber,
+        bankAccountNumber: employees.bankAccountNumber,
+        bankName: employees.bankName,
+        bankBranch: employees.bankBranch,
+        status: employees.status,
+        department: employees.department,
+        phone: employees.phone,
+        email: employees.email,
         fullName: profiles.fullName,
-        email: profiles.userId, // Using userId as email proxy
         userId: profiles.userId,
       })
       .from(employees)
@@ -173,14 +182,14 @@ export class PayrollRepository {
       .limit(filters.limit || 50)
       .offset(filters.offset || 0);
 
-    return { employees: employeesData, total };
+    return { employees: employeesData as any, total };
   }
 
   async getActiveEmployees(): Promise<Employee[]> {
     return await this.db
       .select()
       .from(employees)
-      .where(sql`${employees.additional_docs}->>'status' = 'active' OR ${employees.additional_docs}->>'status' IS NULL`)
+      .where(sql`${employees.additionalDocs}->>'status' = 'active' OR ${employees.additionalDocs}->>'status' IS NULL`)
       .orderBy(employees.joinDate);
   }
 
@@ -279,38 +288,41 @@ export class PayrollRepository {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const totalResult = await this.db
-      .select({ count: count() })
-      .from(payslips)
-      .leftJoin(employees, eq(payslips.employeeId, employees.id))
-      .leftJoin(profiles, eq(employees.profileId, profiles.id))
-      .where(whereClause);
-    const total = totalResult[0]?.count || 0;
+    // Run both queries in parallel for better performance
+    const [payslipsData, totalResult] = await Promise.all([
+      this.db
+        .select({
+          id: payslips.id,
+          employeeId: payslips.employeeId,
+          month: payslips.month,
+          year: payslips.year,
+          netSalary: payslips.netSalary,
+          status: payslips.status,
+          pdfUrl: payslips.pdfUrl,
+          createdAt: payslips.createdAt,
+          employeeName: profiles.fullName,
+          employeeDesignation: employees.designation,
+          employeeDepartment: sql<string>`${employees.additionalDocs}->>'department'`,
+          employeePhoto: employees.photoUrl,
+        })
+        .from(payslips)
+        .leftJoin(employees, eq(payslips.employeeId, employees.id))
+        .leftJoin(profiles, eq(employees.profileId, profiles.id))
+        .where(whereClause)
+        .orderBy(desc(payslips.year), desc(payslips.month), desc(payslips.createdAt))
+        .limit(filters.limit || 50)
+        .offset(filters.offset || 0),
 
-    const payslipsData = await this.db
-      .select({
-        id: payslips.id,
-        employeeId: payslips.employeeId,
-        month: payslips.month,
-        year: payslips.year,
-        netSalary: payslips.netSalary,
-        status: payslips.status,
-        pdfUrl: payslips.pdfUrl,
-        createdAt: payslips.createdAt,
-        employeeName: profiles.fullName,
-        employeeDesignation: employees.designation,
-        employeeDepartment: sql<string>`${employees.additionalDocs}->>'department'`,
-        employeePhoto: employees.photoUrl,
-      })
-      .from(payslips)
-      .leftJoin(employees, eq(payslips.employeeId, employees.id))
-      .leftJoin(profiles, eq(employees.profileId, profiles.id))
-      .where(whereClause)
-      .orderBy(desc(payslips.year), desc(payslips.month), desc(payslips.createdAt))
-      .limit(filters.limit || 50)
-      .offset(filters.offset || 0);
+      this.db
+        .select({ count: count() })
+        .from(payslips)
+        .where(whereClause),
+    ]);
 
-    return { payslips: payslipsData, total };
+    return {
+      payslips: payslipsData,
+      total: Number(totalResult[0]?.count || 0),
+    };
   }
 
   async getPayslipsByPeriod(month: number, year: number): Promise<Payslip[]> {
@@ -359,6 +371,10 @@ export class PayrollRepository {
 
   // ==================== STATISTICS ====================
 
+  /**
+   * Get payslip stats with caching
+   * Single aggregation query instead of 2 parallel queries
+   */
   async getPayslipStats(filters: PayslipFilters = {}): Promise<PayslipStats> {
     const conditions = [];
 
@@ -373,40 +389,34 @@ export class PayrollRepository {
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const cacheKey = `payslips:stats:${hashFilters(filters)}`;
 
-    const [statusStats, totalAmount] = await Promise.all([
-      this.db
-        .select({
-          status: payslips.status,
-          count: count(),
-        })
-        .from(payslips)
-        .where(whereClause)
-        .groupBy(payslips.status),
-
-      this.db
-        .select({
-          total: sql<number>`COALESCE(SUM(CAST(${payslips.netSalary} AS NUMERIC)), 0)`,
-        })
-        .from(payslips)
-        .where(whereClause),
-    ]);
-
-    const stats = statusStats.reduce(
-      (acc, item) => {
-        const status = item.status || "unknown";
-        acc[status] = Number(item.count);
-        return acc;
-      },
-      {} as Record<string, number>
+    return withCache(
+      cacheKey,
+      () => this.computePayslipStats(whereClause),
+      statsCache,
+      30000 // 30 seconds
     );
+  }
+
+  private async computePayslipStats(whereClause: ReturnType<typeof and>): Promise<PayslipStats> {
+    const [statsResult] = await this.db
+      .select({
+        draft: count(sql`CASE WHEN ${payslips.status} = 'draft' THEN 1 END`),
+        approved: count(sql`CASE WHEN ${payslips.status} = 'approved' THEN 1 END`),
+        paid: count(sql`CASE WHEN ${payslips.status} = 'paid' THEN 1 END`),
+        total: count(),
+        totalAmount: sql<number>`COALESCE(SUM(CAST(${payslips.netSalary} AS NUMERIC)), 0)`,
+      })
+      .from(payslips)
+      .where(whereClause);
 
     return {
-      totalPayslips: Object.values(stats).reduce((sum, count) => sum + count, 0),
-      draftPayslips: stats.draft || 0,
-      approvedPayslips: stats.approved || 0,
-      paidPayslips: stats.paid || 0,
-      totalAmount: Number(totalAmount[0]?.total) || 0,
+      totalPayslips: Number(statsResult.total),
+      draftPayslips: Number(statsResult.draft),
+      approvedPayslips: Number(statsResult.approved),
+      paidPayslips: Number(statsResult.paid),
+      totalAmount: Number(statsResult.totalAmount) || 0,
     };
   }
 
@@ -451,7 +461,29 @@ export class PayrollRepository {
     };
   }
 
+  /**
+   * Get dashboard stats with caching (30 second TTL)
+   * Single aggregation query instead of 3 parallel queries
+   */
   async getDashboardStats(): Promise<{
+    totalEmployees: number;
+    activeEmployees: number;
+    pendingPayslips: number;
+    currentMonthPayout: number;
+  }> {
+    return withCache(
+      'payroll:dashboard',
+      () => this.computeDashboardStats(),
+      dashboardCache,
+      30000 // 30 seconds
+    );
+  }
+
+  /**
+   * Internal method to compute dashboard stats
+   * Uses aggregation for better performance
+   */
+  private async computeDashboardStats(): Promise<{
     totalEmployees: number;
     activeEmployees: number;
     pendingPayslips: number;
@@ -461,27 +493,27 @@ export class PayrollRepository {
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
 
-    const [totalEmployees, pendingPayslips, currentMonthPayout] = await Promise.all([
-      this.db.select({ count: count() }).from(employees),
-      this.db
-        .select({ count: count() })
-        .from(payslips)
-        .where(eq(payslips.status, "draft")),
+    const [employeeStats, payslipStats] = await Promise.all([
       this.db
         .select({
-          total: sql<number>`COALESCE(SUM(CAST(${payslips.netSalary} AS NUMERIC)), 0)`,
+          total: count(),
+          active: count(sql`CASE WHEN ${employees.additionalDocs}->>'status' = 'active' OR ${employees.additionalDocs}->>'status' IS NULL THEN 1 END`),
         })
-        .from(payslips)
-        .where(
-          and(eq(payslips.month, currentMonth), eq(payslips.year, currentYear), eq(payslips.status, "paid"))
-        ),
+        .from(employees),
+
+      this.db
+        .select({
+          pending: count(sql`CASE WHEN ${payslips.status} = 'draft' THEN 1 END`),
+          currentMonthPayout: sql<number>`COALESCE(SUM(CASE WHEN ${payslips.month} = ${currentMonth} AND ${payslips.year} = ${currentYear} AND ${payslips.status} = 'paid' THEN CAST(${payslips.netSalary} AS NUMERIC) ELSE 0 END), 0)`,
+        })
+        .from(payslips),
     ]);
 
     return {
-      totalEmployees: Number(totalEmployees[0]?.count) || 0,
-      activeEmployees: Number(totalEmployees[0]?.count) || 0, // Will filter by status after migration
-      pendingPayslips: Number(pendingPayslips[0]?.count) || 0,
-      currentMonthPayout: Number(currentMonthPayout[0]?.total) || 0,
+      totalEmployees: Number(employeeStats[0]?.total) || 0,
+      activeEmployees: Number(employeeStats[0]?.active) || 0,
+      pendingPayslips: Number(payslipStats[0]?.pending) || 0,
+      currentMonthPayout: Number(payslipStats[0]?.currentMonthPayout) || 0,
     };
   }
 }

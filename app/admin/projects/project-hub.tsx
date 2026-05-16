@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Search, RefreshCw, Plus, Eye, Edit2, Trash2, Filter, X, MoreVertical, Calendar, User, DollarSign, List, ChevronDown, LayoutGrid } from "lucide-react";
+import { Search, RefreshCw, Plus, Eye, Edit2, Trash2, Filter, X, MoreVertical, Calendar, User, DollarSign, List, ChevronDown, LayoutGrid, AlertCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectContent,
@@ -49,6 +51,47 @@ const statusColors: Record<string, string> = {
   on_hold: "bg-orange-50 text-orange-600 border-orange-200",
   cancelled: "bg-red-50 text-red-600 border-red-200",
 };
+
+// Table skeleton component for loading state
+function TableSkeleton() {
+  return (
+    <>
+      {[...Array(5)].map((_, i) => (
+        <TableRow key={i} className="border-[#E5E5E1]">
+          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+          <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+          <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+          <TableCell><Skeleton className="h-2 w-16 rounded-full" /></TableCell>
+          <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+          <TableCell><div className="flex gap-1"><Skeleton className="h-8 w-8 rounded" /><Skeleton className="h-8 w-8 rounded" /></div></TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
+// Stats skeleton component
+function StatsSkeleton() {
+  return (
+    <>
+      {[...Array(4)].map((_, i) => (
+        <Card key={i}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-10 h-10 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-7 w-16" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </>
+  );
+}
 
 export function ProjectHub() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -109,11 +152,11 @@ export function ProjectHub() {
         setProjects(result.data);
         setTotal(result.pagination?.total || 0);
       } else {
-        toast.error("Failed to fetch projects");
+        toast.error(result.error || "Failed to fetch projects");
       }
     } catch (err) {
-      console.error("Project Fetch Error:", err);
-      toast.error("Failed to fetch projects");
+      console.error("[ProjectHub] Fetch error:", err);
+      toast.error("Network error: Could not fetch projects. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -473,65 +516,69 @@ export function ProjectHub() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                <MoreVertical className="w-5 h-5 text-blue-600" />
+      {loading ? (
+        <StatsSkeleton />
+      ) : (
+        <div className="grid grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                  <MoreVertical className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold">{total}</p>
+                  <p className="text-xs text-[#717171]">Total Projects</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-semibold">{total}</p>
-                <p className="text-xs text-[#717171]">Total Projects</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                  <Eye className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold">{projects.filter(p => p.status === "active").length}</p>
+                  <p className="text-xs text-[#717171]">Active</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
-                <Eye className="w-5 h-5 text-green-600" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold">{projects.filter(p => p.status === "complete").length}</p>
+                  <p className="text-xs text-[#717171]">Completed</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-semibold">{projects.filter(p => p.status === "active").length}</p>
-                <p className="text-xs text-[#717171]">Active</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold">
+                    {projects
+                      .filter(p => p.budget)
+                      .reduce((sum, p) => sum + parseFloat(p.budget || "0"), 0)
+                      .toLocaleString("bt-BT", { style: "currency", currency: "BTN" })}
+                  </p>
+                  <p className="text-xs text-[#717171]">Total Budget</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-semibold">{projects.filter(p => p.status === "complete").length}</p>
-                <p className="text-xs text-[#717171]">Completed</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-semibold">
-                  {projects
-                    .filter(p => p.budget)
-                    .reduce((sum, p) => sum + parseFloat(p.budget || "0"), 0)
-                    .toLocaleString("bt-BT", { style: "currency", currency: "BTN" })}
-                </p>
-                <p className="text-xs text-[#717171]">Total Budget</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Projects View - Table or Calendar */}
       {viewMode === "table" ? (
@@ -551,7 +598,9 @@ export function ProjectHub() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {projects.length > 0 ? projects.map((project) => (
+              {loading ? (
+                <TableSkeleton />
+              ) : projects.length > 0 ? projects.map((project) => (
                 <TableRow
                   key={project.id}
                   className="border-[#E5E5E1] hover:bg-[#F3F3F1] cursor-pointer"
@@ -614,8 +663,19 @@ export function ProjectHub() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-[#717171]">
-                    {loading ? "Loading..." : "No projects found"}
+                  <TableCell colSpan={8} className="text-center py-8">
+                    {loading ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Spinner />
+                        <span className="text-[#717171]">Loading projects...</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-[#717171]">
+                        <AlertCircle className="w-8 h-8 text-gray-400" />
+                        <span>No projects found</span>
+                        <span className="text-xs">Try adjusting your filters or create a new project</span>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               )}

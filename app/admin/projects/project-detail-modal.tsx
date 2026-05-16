@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, Plus, Trash2, Edit2, Calendar, Clock, User, CheckCircle2, Circle, AlertCircle, Loader2 } from "lucide-react";
+import { X, Plus, Trash2, Edit2, Calendar, Clock, User, CheckCircle2, Circle, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectContent,
@@ -105,14 +107,18 @@ export function ProjectDetailModal({
           })
         );
         setTasks(enrichedTasks);
+      } else {
+        toast.error(tasksResult.error || "Failed to fetch tasks");
       }
 
       if (statsResult.success) {
         setStats(statsResult.data.stats);
+      } else {
+        toast.error(statsResult.error || "Failed to fetch progress stats");
       }
     } catch (err) {
-      console.error("Fetch error:", err);
-      toast.error("Failed to fetch project data");
+      console.error("[ProjectDetailModal] Fetch error:", err);
+      toast.error("Network error: Could not fetch project data. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -161,16 +167,16 @@ export function ProjectDetailModal({
       const result = await response.json();
 
       if (result.success) {
-        toast.success("Task created");
+        toast.success("Task created successfully");
         setShowTaskForm(false);
         setTaskForm({ title: "", description: "", priority: "medium", assignedTo: "", dueDate: "", estimatedHours: "" });
         fetchProjectData();
       } else {
-        toast.error(result.error || "Failed to create task");
+        toast.error(result.error || "Failed to create task. Please try again.");
       }
     } catch (err) {
-      console.error("Create task error:", err);
-      toast.error("Failed to create task");
+      console.error("[ProjectDetailModal] Create task error:", err);
+      toast.error("Network error: Could not create task. Please check your connection.");
     }
   };
 
@@ -192,32 +198,32 @@ export function ProjectDetailModal({
         );
         fetchProjectData();
       } else {
-        toast.error(result.error || "Failed to update task");
+        toast.error(result.error || "Failed to update task status");
       }
     } catch (err) {
-      console.error("Update task error:", err);
-      toast.error("Failed to update task");
+      console.error("[ProjectDetailModal] Update task error:", err);
+      toast.error("Network error: Could not update task. Please check your connection.");
     } finally {
       setUpdatingStatus(null);
     }
   };
 
   const handleDeleteTask = async (taskId: number) => {
-    if (!confirm("Delete this task?")) return;
+    if (!confirm("Delete this task? This action cannot be undone.")) return;
 
     try {
       const response = await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
       const result = await response.json();
 
       if (result.success) {
-        toast.success("Task deleted");
+        toast.success("Task deleted successfully");
         fetchProjectData();
       } else {
-        toast.error(result.error || "Failed to delete task");
+        toast.error(result.error || "Failed to delete task. Please try again.");
       }
     } catch (err) {
-      console.error("Delete task error:", err);
-      toast.error("Failed to delete task");
+      console.error("[ProjectDetailModal] Delete task error:", err);
+      toast.error("Network error: Could not delete task. Please check your connection.");
     }
   };
 
@@ -232,14 +238,14 @@ export function ProjectDetailModal({
       const result = await response.json();
 
       if (result.success) {
-        toast.success("Project updated");
+        toast.success("Project status updated");
         onUpdated();
       } else {
-        toast.error(result.error || "Failed to update project");
+        toast.error(result.error || "Failed to update project. Please try again.");
       }
     } catch (err) {
-      console.error("Update project error:", err);
-      toast.error("Failed to update project");
+      console.error("[ProjectDetailModal] Update project error:", err);
+      toast.error("Network error: Could not update project. Please check your connection.");
     }
   };
 
@@ -255,11 +261,24 @@ export function ProjectDetailModal({
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         <div className="absolute inset-0 bg-black/50" onClick={onClose} />
         <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-6xl mx-4 p-8 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#3ECF8E]" />
+          <Spinner className="w-8 h-8 text-[#3ECF8E]" />
+          <span className="ml-3 text-[#717171]">Loading project details...</span>
         </div>
       </div>
     );
   }
+
+  // Stats skeleton component
+  const StatsSkeleton = () => (
+    <div className="grid grid-cols-4 gap-4 mb-6">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="bg-[#F3F3F1] rounded-lg p-3">
+          <Skeleton className="h-8 w-16 mb-1" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -277,7 +296,7 @@ export function ProjectDetailModal({
             <div className="flex items-center gap-4 mt-2 text-sm text-[#717171]">
               <span>Client: {project.clientName || "-"}</span>
               <span>Lead: {project.leadName || "-"}</span>
-              <span>Progress: {stats?.progressPercentage || 0}%</span>
+              <span>Progress: {loading ? "..." : `${stats?.progressPercentage || 0}%`}</span>
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
@@ -288,7 +307,9 @@ export function ProjectDetailModal({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {/* Quick Stats */}
-          {stats && (
+          {loading ? (
+            <StatsSkeleton />
+          ) : stats && (
             <div className="grid grid-cols-4 gap-4 mb-6">
               <div className="bg-[#F3F3F1] rounded-lg p-3">
                 <div className="text-2xl font-semibold">{stats.totalTasks}</div>

@@ -1,5 +1,6 @@
 import { invoiceRepository } from "@/lib/repositories/invoiceRepository";
 import type { CreateInvoiceInput, UpdateInvoiceInput, InvoiceStatus } from "@/lib/validations/invoice";
+import { notificationService } from "@/lib/services/notificationService";
 
 export interface CreateInvoiceDTO {
   clientId: number;
@@ -84,14 +85,14 @@ export class InvoiceService {
 
     // Recalculate total if items changed
     let total = Number(invoice.total);
-    let items = invoice.items;
+    let items = invoice.items as InvoiceItem[];
 
     if (data.items) {
       items = data.items.map(item => ({
         ...item,
         amount: item.quantity * item.rate,
       }));
-      total = items.reduce((sum, item) => sum + item.amount, 0);
+      total = items.reduce((sum: number, item: InvoiceItem) => sum + item.amount, 0);
     }
 
     return await this.repository.updateInvoice(id, {
@@ -156,6 +157,15 @@ export class InvoiceService {
     // TODO: Create transaction record in transactions table
     // TODO: Update order status if linked to an order
 
+    // Send payment notification to admins
+    const adminProfileIds = await this.getAdminProfileIds();
+    await notificationService.notifyInvoicePaid(
+      adminProfileIds,
+      invoice.invoiceNumber,
+      `Client #${invoice.clientId}`,
+      Number(invoice.total) || 0
+    );
+
     return invoice;
   }
 
@@ -166,7 +176,23 @@ export class InvoiceService {
   // ==================== OVERDUE MANAGEMENT ====================
 
   async markOverdueInvoices() {
-    return await this.repository.markOverdueInvoices();
+    const result = await this.repository.markOverdueInvoices();
+
+    // Send notifications for newly overdue invoices
+    const overdueInvoices = await this.repository.getOverdueInvoices();
+    const adminProfileIds = await this.getAdminProfileIds();
+
+    for (const invoice of overdueInvoices) {
+      await notificationService.notifyInvoiceOverdue(
+        adminProfileIds,
+        invoice.invoiceNumber,
+        `Client #${invoice.clientId}`,
+        Number(invoice.total) || 0,
+        new Date(invoice.dueDate)
+      );
+    }
+
+    return result;
   }
 
   async getOverdueInvoices() {
@@ -215,6 +241,14 @@ export class InvoiceService {
     const due = new Date(dueDate);
     const diffTime = due.getTime() - now.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  /**
+   * Get profile IDs of admin users who should receive invoice notifications
+   */
+  private async getAdminProfileIds(): Promise<number[]> {
+    // TODO: Implement actual admin profile lookup
+    return [];
   }
 }
 

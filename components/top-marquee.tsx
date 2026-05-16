@@ -46,9 +46,10 @@ export function TopMarquee() {
         table: 'settings',
         filter: 'key=eq.top_marquee'
       }, (payload) => {
-        if (payload.new?.value) {
+        const newVal = payload.new as { value?: string } | null;
+        if (newVal?.value) {
           try {
-            const parsed = JSON.parse(payload.new.value);
+            const parsed = JSON.parse(newVal.value);
             setIsVisible(parsed.enabled ?? false);
           } catch (e) {
             console.error('Error parsing marquee settings:', e);

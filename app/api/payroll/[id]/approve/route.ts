@@ -16,6 +16,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log("[API /api/payroll/[id]/approve] Approving payslip");
+
     // Rate limiting
     const clientIp = getClientIp(req);
     const rateLimitResult = checkRateLimit(
@@ -28,8 +30,10 @@ export async function POST(
       throw new RateLimitError(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000));
     }
 
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    console.log("[API /api/payroll/[id]/approve] Auth verified for user:", authContext.profile.userId);
+
     const { id } = await params;
     const payslipId = validateId(id, "payslip ID");
 
@@ -40,8 +44,12 @@ export async function POST(
 
     const { approverId, notes } = validatedData;
 
+    console.log("[API /api/payroll/[id]/approve] Approving payslip:", payslipId, "by:", approverId);
+
     // Approve the payslip
     const payslip = await payrollService.approvePayslip(payslipId, approverId, notes);
+
+    console.log("[API /api/payroll/[id]/approve] Payslip approved successfully for period:", { month: payslip.month, year: payslip.year });
 
     // Log to audit
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -50,7 +58,7 @@ export async function POST(
         action: "APPROVE",
         entity_type: "PAYSLIP",
         entity_id: payslipId,
-        operator_id: profile.userId,
+        operator_id: authContext.profile.userId,
         details: {
           approver: approverId,
           notes,
@@ -68,7 +76,7 @@ export async function POST(
   } catch (error) {
     const errorResponse = formatApiError(error);
     const statusCode = isApiError(error) ? (error as any).statusCode : 500;
-    console.error("Payslip approval error:", error);
+    console.error("[API /api/payroll/[id]/approve] Payslip approval error:", error);
     return NextResponse.json(errorResponse, { status: statusCode });
   }
 }

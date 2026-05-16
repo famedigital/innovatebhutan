@@ -25,6 +25,30 @@ export interface UpdateMilestoneDTO {
 export class MilestoneService {
   private repository = milestoneRepository;
 
+  // ==================== STATUS TRANSITIONS ====================
+
+  /**
+   * Valid milestone status transitions
+   * pending -> in_progress, cancelled
+   * in_progress -> complete, cancelled
+   * complete -> in_progress (reopened)
+   * cancelled -> pending (reopened)
+   */
+  private readonly validMilestoneTransitions: Record<MilestoneStatus, MilestoneStatus[]> = {
+    pending: ["in_progress", "cancelled"],
+    in_progress: ["complete", "cancelled"],
+    complete: ["in_progress"], // Allow reopening
+    cancelled: ["pending"], // Allow reopening
+  };
+
+  /**
+   * Validate milestone status transition
+   */
+  private validateMilestoneStatusTransition(currentStatus: MilestoneStatus, newStatus: MilestoneStatus): boolean {
+    if (currentStatus === newStatus) return true; // No-op is allowed
+    return this.validMilestoneTransitions[currentStatus]?.includes(newStatus) ?? false;
+  }
+
   // ==================== CRUD OPERATIONS ====================
 
   async createMilestone(
@@ -75,6 +99,17 @@ export class MilestoneService {
     const canModify = await projectMemberService.canModifyProject(milestone.projectId, operatorUserId);
     if (!canModify && operatorRole !== "ADMIN" && operatorRole !== "STAFF") {
       throw new AuthorizationError("You do not have permission to modify this milestone");
+    }
+
+    // Validate status transition if status is being changed
+    if (data.status && milestone.status !== data.status) {
+      const currentStatus = milestone.status as MilestoneStatus;
+      const newStatus = data.status;
+      if (!this.validateMilestoneStatusTransition(currentStatus, newStatus)) {
+        throw new Error(
+          `Cannot transition milestone from ${currentStatus} to ${newStatus}. Valid transitions: ${this.validMilestoneTransitions[currentStatus]?.join(", ") || "none"}`
+        );
+      }
     }
 
     // If status is being changed to 'complete', set the completedAt timestamp

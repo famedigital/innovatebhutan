@@ -10,12 +10,25 @@ import { validateRequest, validateId } from "@/lib/validations/validation";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-// POST /api/amc/[id]/renew - Renew an AMC contract
+/**
+ * POST /api/amc/[id]/renew - Renew an AMC contract
+ *
+ * Body (validated against renewAMCSchema):
+ * - startDate: New contract start date (required)
+ * - endDate: New contract end date (required)
+ * - amount: New contract amount as string (required)
+ * - copyHardwareDetails: Copy hardware details from old contract (default: true)
+ * - copyServicesIncluded: Copy services from old contract (default: true)
+ * - notes: Notes for the renewal (optional)
+ */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    console.log("[API /api/amc/[id]/renew] POST request received for id:", id);
+
     // Rate limiting
     const clientIp = getClientIp(req);
     const rateLimitResult = checkRateLimit(
@@ -25,20 +38,23 @@ export async function POST(
     );
 
     if (!rateLimitResult.allowed) {
+      console.warn("[API /api/amc/[id]/renew] Rate limit exceeded for IP:", clientIp);
       throw new RateLimitError(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000));
     }
 
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
-    const id = validateId(params.id, "AMC ID");
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    const amcId = validateId(id, "AMC ID");
 
     // Check if original AMC exists and is renewable
-    const existingAMC = await amcService.getAMCById(id);
+    const existingAMC = await amcService.getAMCById(amcId);
     if (!existingAMC) {
+      console.log("[API /api/amc/[id]/renew] AMC not found:", amcId);
       throw new NotFoundError("AMC");
     }
 
     if (!amcService.isAMCRenewable(existingAMC)) {
+      console.log("[API /api/amc/[id]/renew] AMC not renewable:", amcId, "status:", existingAMC.status);
       throw new ConflictError("This AMC cannot be renewed. It may be cancelled or already renewed.");
     }
 
@@ -48,7 +64,8 @@ export async function POST(
     const validatedData = validateRequest(renewAMCSchema, body);
 
     // Create renewal
-    const newAMC = await amcService.renewAMC(id, validatedData);
+    const newAMC = await amcService.renewAMC(amcId, validatedData);
+    console.log("[API /api/amc/[id]/renew] AMC renewed successfully:", amcId, "->", newAMC.id);
 
     // Log to audit
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -57,9 +74,9 @@ export async function POST(
         action: "RENEW",
         entity_type: "AMC",
         entity_id: newAMC.id,
-        operator_id: profile.userId,
+        operator_id: authContext.profile.userId,
         details: {
-          old_amc_id: id,
+          old_amc_id: amcId,
           old_contract_number: existingAMC.contractNumber,
           new_contract_number: newAMC.contractNumber,
         },
@@ -77,7 +94,13 @@ export async function POST(
   } catch (error) {
     const errorResponse = formatApiError(error);
     const statusCode = isApiError(error) ? (error as any).statusCode : 500;
-    console.error("AMC renewal error:", error);
+    const { id } = await params;
+    console.error("[API /api/amc/[id]/renew] AMC renewal error:", {
+      id,
+      error,
+      statusCode,
+      response: errorResponse,
+    });
     return NextResponse.json(errorResponse, { status: statusCode });
   }
 }

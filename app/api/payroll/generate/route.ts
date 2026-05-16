@@ -13,19 +13,28 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 // GET /api/payroll/generate - List payslips with filters
 export async function GET(req: NextRequest) {
   try {
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
+    console.log("[API /api/payroll/generate] Fetching payslips list");
+
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    console.log("[API /api/payroll/generate] Auth verified for user:", authContext.profile.userId);
+
     const searchParams = req.nextUrl.searchParams;
 
     // Parse and validate query parameters
-    const { page, limit, ...filters } = validateQueryParams(payslipQuerySchema, searchParams);
+    const queryParams = validateQueryParams(payslipQuerySchema, searchParams);
+    const page = queryParams.page ?? 1;
+    const limit = queryParams.limit ?? 20;
+    const { page: _, limit: __, ...filters } = queryParams;
     const offset = (page - 1) * limit;
 
+    console.log("[API /api/payroll/generate] Fetching payslips with filters:", { page, limit, filters });
     const result = await payrollService.listPayslips({
       ...filters,
       limit,
       offset,
     });
+    console.log("[API /api/payroll/generate] Fetched", result.payslips.length, "payslips");
 
     return NextResponse.json({
       success: true,
@@ -40,7 +49,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     const errorResponse = formatApiError(error);
     const statusCode = isApiError(error) ? (error as any).statusCode : 500;
-    console.error("Payslips fetch error:", error);
+    console.error("[API /api/payroll/generate] Payslips fetch error:", error);
     return NextResponse.json(errorResponse, { status: statusCode });
   }
 }
@@ -48,6 +57,8 @@ export async function GET(req: NextRequest) {
 // POST /api/payroll/generate - Generate a new payslip
 export async function POST(req: NextRequest) {
   try {
+    console.log("[API /api/payroll/generate] Starting payslip generation");
+
     // Rate limiting
     const clientIp = getClientIp(req);
     const rateLimitResult = checkRateLimit(
@@ -60,8 +71,9 @@ export async function POST(req: NextRequest) {
       throw new RateLimitError(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000));
     }
 
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    console.log("[API /api/payroll/generate] Auth verified for user:", authContext.profile.userId);
 
     const body = await req.json();
 
@@ -70,6 +82,8 @@ export async function POST(req: NextRequest) {
 
     const { employeeId, month, year, allowances, bonuses, deductions, workingDays, paidLeaveDays, unpaidLeaveDays, overtimeHours } =
       validatedData;
+
+    console.log("[API /api/payroll/generate] Generating payslip for employee:", employeeId, "period:", { month, year });
 
     // Generate payslip
     const payslip = await payrollService.generatePayslip(employeeId, month, year, {
@@ -82,6 +96,8 @@ export async function POST(req: NextRequest) {
       overtimeHours,
     });
 
+    console.log("[API /api/payroll/generate] Payslip generated successfully with net salary:", payslip.netSalary);
+
     // Log to audit
     const supabase = createClient(supabaseUrl, supabaseKey);
     await supabase.from("audit_logs").insert([
@@ -89,7 +105,7 @@ export async function POST(req: NextRequest) {
         action: "CREATE",
         entity_type: "PAYSLIP",
         entity_id: (payslip as any).id || null,
-        operator_id: profile.userId,
+        operator_id: authContext.profile.userId,
         details: {
           employee_id: employeeId,
           month,
@@ -108,13 +124,9 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    if (isApiError(error)) {
-      return NextResponse.json(formatAuthError(error), { status: (error as any).statusCode });
-    }
-    console.error("Payslip generation error:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to generate payslip" },
-      { status: 500 }
-    );
+    const errorResponse = formatApiError(error);
+    const statusCode = isApiError(error) ? (error as any).statusCode : 500;
+    console.error("[API /api/payroll/generate] Payslip generation error:", error);
+    return NextResponse.json(errorResponse, { status: statusCode });
   }
 }

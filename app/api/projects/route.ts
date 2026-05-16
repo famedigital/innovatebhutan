@@ -13,21 +13,37 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 // GET /api/projects - List projects with filters
 export async function GET(req: NextRequest) {
   try {
+    console.log('[API /api/projects] GET request received');
+
     // 🔒 Require authentication
-    const { profile } = await requireApiAuth(req);
+    const authContext = await requireApiAuth(req);
+    console.log('[API /api/projects] Auth successful:', {
+      userId: authContext.user.id,
+      role: authContext.profile.role,
+    });
+
     // 🔒 Require admin or staff role
-    requireStaffOrAdmin(profile);
+    requireStaffOrAdmin(authContext.profile);
+    console.log('[API /api/projects] Role check passed');
 
     const searchParams = req.nextUrl.searchParams;
 
     // Parse and validate query parameters
-    const { page, limit, ...filters } = validateQueryParams(projectQuerySchema, searchParams);
+    const queryParams = validateQueryParams(projectQuerySchema, searchParams);
+    const page = queryParams.page ?? 1;
+    const limit = queryParams.limit ?? 20;
+    const { page: _, limit: __, ...filters } = queryParams;
     const offset = (page - 1) * limit;
 
     const result = await projectService.listProjects({
       ...filters,
       limit,
       offset,
+    });
+
+    console.log('[API /api/projects] Projects fetched successfully:', {
+      count: result.projects.length,
+      total: result.total,
     });
 
     return NextResponse.json({
@@ -43,7 +59,11 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     const errorResponse = formatApiError(error);
     const statusCode = isApiError(error) ? (error as any).statusCode : 500;
-    console.error("Projects fetch error:", error);
+    console.error('[API /api/projects] Error:', {
+      error,
+      statusCode,
+      response: errorResponse,
+    });
     return NextResponse.json(errorResponse, { status: statusCode });
   }
 }
@@ -51,6 +71,8 @@ export async function GET(req: NextRequest) {
 // POST /api/projects - Create a new project
 export async function POST(req: NextRequest) {
   try {
+    console.log('[API /api/projects] POST request received');
+
     // 🔒 Rate limiting
     const clientIp = getClientIp(req);
     const rateLimitResult = checkRateLimit(
@@ -64,9 +86,15 @@ export async function POST(req: NextRequest) {
     }
 
     // 🔒 Require authentication
-    const { profile } = await requireApiAuth(req);
+    const authContext = await requireApiAuth(req);
+    console.log('[API /api/projects] Auth successful:', {
+      userId: authContext.user.id,
+      role: authContext.profile.role,
+    });
+
     // 🔒 Require admin or staff role
-    requireStaffOrAdmin(profile);
+    requireStaffOrAdmin(authContext.profile);
+    console.log('[API /api/projects] Role check passed');
 
     const body = await req.json();
 
@@ -75,7 +103,7 @@ export async function POST(req: NextRequest) {
 
     const project = await projectService.createProject(
       validatedData,
-      profile.userId
+      authContext.profile.userId
     );
 
     // Log to audit
@@ -85,10 +113,15 @@ export async function POST(req: NextRequest) {
         action: "CREATE",
         entity_type: "PROJECT",
         entity_id: project.id,
-        operator_id: profile.userId,
+        operator_id: authContext.profile.userId,
         details: { project_name: project.name, client_id: project.clientId },
       },
     ]);
+
+    console.log('[API /api/projects] Project created successfully:', {
+      projectId: project.id,
+      projectName: project.name,
+    });
 
     return NextResponse.json(
       {
@@ -101,7 +134,11 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const errorResponse = formatApiError(error);
     const statusCode = isApiError(error) ? (error as any).statusCode : 500;
-    console.error("Project creation error:", error);
+    console.error('[API /api/projects] Error:', {
+      error,
+      statusCode,
+      response: errorResponse,
+    });
     return NextResponse.json(errorResponse, { status: statusCode });
   }
 }

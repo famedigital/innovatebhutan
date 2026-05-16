@@ -1,17 +1,30 @@
-import { db } from "@/db";
-import { notifications, profiles } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { notificationRepository } from "@/lib/repositories/notificationRepository";
+import type { Notification } from "@/lib/repositories/notificationRepository";
 
-type Notification = typeof notifications.$inferSelect;
-type NewNotification = typeof notifications.$inferInsert;
+export type NotificationCategory =
+  | "task_assigned"
+  | "mentioned"
+  | "due_soon"
+  | "overdue"
+  | "milestone_completed"
+  | "comment_added"
+  | "project_updated"
+  | "amc_expiring"
+  | "amc_expired"
+  | "invoice_overdue"
+  | "invoice_paid"
+  | "payroll_ready"
+  | "payroll_approved"
+  | "payroll_paid"
+  | "system";
 
-export type NotificationCategory = "task_assigned" | "mentioned" | "due_soon" | "overdue" | "milestone_completed" | "comment_added" | "project_updated";
+export type NotificationType = "info" | "warning" | "critical" | "success";
 
 export interface CreateNotificationDTO {
-  profileId: number; // Integer ID from profiles table
+  profileId: number;
   title: string;
   message: string;
-  type?: "info" | "warning" | "critical" | "success";
+  type?: NotificationType;
   category?: NotificationCategory;
   entityType?: string;
   entityId?: number;
@@ -22,93 +35,122 @@ export interface CreateNotificationDTO {
  * Service for in-app notifications
  */
 export class NotificationService {
-  private db = db;
+  private repository = notificationRepository;
+
+  // ==================== CRUD OPERATIONS ====================
 
   /**
    * Create a notification
    */
   async createNotification(data: CreateNotificationDTO): Promise<Notification> {
-    const [notification] = await this.db
-      .insert(notifications)
-      .values({
-        userId: data.profileId,
-        title: data.title,
-        message: data.message,
-        type: data.type || "info",
-        category: data.category,
-        entityType: data.entityType,
-        entityId: data.entityId,
-        link: data.link,
-        read: false,
-      })
-      .returning();
-
-    return notification;
+    return await this.repository.createNotification({
+      userId: data.profileId,
+      title: data.title,
+      message: data.message,
+      type: data.type || "info",
+      category: data.category,
+      entityType: data.entityType,
+      entityId: data.entityId,
+      link: data.link,
+      read: false,
+    });
   }
 
   /**
    * Get notifications for a user
    */
-  async getUserNotifications(profileId: number, limit: number = 50, unreadOnly: boolean = false): Promise<Notification[]> {
-    const conditions = [eq(notifications.userId, profileId)];
+  async getUserNotifications(
+    profileId: number,
+    limit: number = 50,
+    unreadOnly: boolean = false
+  ): Promise<{ notifications: Notification[]; total: number }> {
+    return await this.repository.listNotifications({
+      userId: profileId,
+      limit,
+      unreadOnly,
+    });
+  }
 
-    if (unreadOnly) {
-      conditions.push(eq(notifications.read, false));
-    }
-
-    return await this.db
-      .select()
-      .from(notifications)
-      .where(and(...conditions))
-      .orderBy(desc(notifications.createdAt))
-      .limit(limit);
+  /**
+   * Get notifications with details
+   */
+  async getUserNotificationsWithDetails(
+    profileId: number,
+    filters?: { type?: string; category?: string; unreadOnly?: boolean; limit?: number }
+  ) {
+    return await this.repository.listNotificationsWithDetails({
+      userId: profileId,
+      ...filters,
+    });
   }
 
   /**
    * Mark notification as read
    */
-  async markAsRead(notificationId: number): Promise<void> {
-    await this.db
-      .update(notifications)
-      .set({ read: true })
-      .where(eq(notifications.id, notificationId));
+  async markAsRead(notificationId: number): Promise<Notification> {
+    return await this.repository.markAsRead(notificationId);
+  }
+
+  /**
+   * Mark multiple notifications as read
+   */
+  async markMultipleAsRead(notificationIds: number[]): Promise<void> {
+    await this.repository.markMultipleAsRead(notificationIds);
   }
 
   /**
    * Mark all notifications as read for a user
    */
   async markAllAsRead(profileId: number): Promise<void> {
-    await this.db
-      .update(notifications)
-      .set({ read: true })
-      .where(and(eq(notifications.userId, profileId), eq(notifications.read, false)));
+    await this.repository.markAllAsRead(profileId);
   }
 
   /**
    * Delete a notification
    */
   async deleteNotification(notificationId: number): Promise<void> {
-    await this.db.delete(notifications).where(eq(notifications.id, notificationId));
+    await this.repository.deleteNotification(notificationId);
+  }
+
+  /**
+   * Delete all notifications for a user
+   */
+  async deleteAllNotifications(profileId: number): Promise<void> {
+    await this.repository.deleteAllNotifications(profileId);
+  }
+
+  /**
+   * Delete all read notifications for a user
+   */
+  async deleteAllReadNotifications(profileId: number): Promise<void> {
+    await this.repository.deleteAllReadNotifications(profileId);
   }
 
   /**
    * Get unread count for a user
    */
   async getUnreadCount(profileId: number): Promise<number> {
-    const [result] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(notifications)
-      .where(and(eq(notifications.userId, profileId), eq(notifications.read, false)));
-
-    return result?.count || 0;
+    return await this.repository.getUnreadCount(profileId);
   }
 
-  // ==================== CONVENIENCE METHODS ====================
+  /**
+   * Get notification statistics for a user
+   */
+  async getNotificationStats(profileId: number) {
+    return await this.repository.getNotificationStats(profileId);
+  }
+
+  // ==================== PROJECT NOTIFICATIONS ====================
 
   /**
    * Notify user about task assignment
    */
-  async notifyTaskAssigned(profileId: number, taskTitle: string, projectId: number, taskId: number): Promise<void> {
+  async notifyTaskAssigned(
+    profileId: number,
+    taskTitle: string,
+    projectId: number,
+    taskId: number
+  ): Promise<void> {
     await this.createNotification({
       profileId,
       title: "Task Assigned",
@@ -124,7 +166,12 @@ export class NotificationService {
   /**
    * Notify user about mention in comment
    */
-  async notifyMentioned(profileId: number, commenterName: string, taskTitle: string, projectId: number): Promise<void> {
+  async notifyMentioned(
+    profileId: number,
+    commenterName: string,
+    taskTitle: string,
+    projectId: number
+  ): Promise<void> {
     await this.createNotification({
       profileId,
       title: "You were mentioned",
@@ -139,7 +186,12 @@ export class NotificationService {
   /**
    * Notify user about task due soon
    */
-  async notifyDueSoon(profileId: number, taskTitle: string, dueDate: Date, projectId: number): Promise<void> {
+  async notifyDueSoon(
+    profileId: number,
+    taskTitle: string,
+    dueDate: Date,
+    projectId: number
+  ): Promise<void> {
     await this.createNotification({
       profileId,
       title: "Task Due Soon",
@@ -154,7 +206,11 @@ export class NotificationService {
   /**
    * Notify user about overdue task
    */
-  async notifyOverdue(profileId: number, taskTitle: string, projectId: number): Promise<void> {
+  async notifyTaskOverdue(
+    profileId: number,
+    taskTitle: string,
+    projectId: number
+  ): Promise<void> {
     await this.createNotification({
       profileId,
       title: "Task Overdue",
@@ -169,7 +225,12 @@ export class NotificationService {
   /**
    * Notify user about milestone completion
    */
-  async notifyMilestoneCompleted(profileId: number, milestoneName: string, projectName: string, projectId: number): Promise<void> {
+  async notifyMilestoneCompleted(
+    profileId: number,
+    milestoneName: string,
+    projectName: string,
+    projectId: number
+  ): Promise<void> {
     await this.createNotification({
       profileId,
       title: "Milestone Completed",
@@ -202,10 +263,223 @@ export class NotificationService {
       });
     }
   }
-}
 
-// Import sql helper
-import { sql } from "drizzle-orm";
+  /**
+   * Notify about project update
+   */
+  async notifyProjectUpdated(
+    profileId: number,
+    projectName: string,
+    updateType: string,
+    projectId: number
+  ): Promise<void> {
+    await this.createNotification({
+      profileId,
+      title: "Project Updated",
+      message: `${updateType}: ${projectName}`,
+      type: "info",
+      category: "project_updated",
+      entityType: "project",
+      entityId: projectId,
+      link: `/admin/projects?projectId=${projectId}`,
+    });
+  }
+
+  // ==================== AMC NOTIFICATIONS ====================
+
+  /**
+   * Notify about AMC expiring soon
+   */
+  async notifyAMCExpiring(
+    profileIds: number[],
+    clientName: string,
+    contractNumber: string,
+    expiryDate: Date,
+    daysUntilExpiry: number
+  ): Promise<void> {
+    for (const profileId of profileIds) {
+      await this.createNotification({
+        profileId,
+        title: "AMC Expiring Soon",
+        message: `AMC contract ${contractNumber} for ${clientName} expires in ${daysUntilExpiry} days (${expiryDate.toLocaleDateString()})`,
+        type: "warning",
+        category: "amc_expiring",
+        entityType: "amc",
+        link: "/admin/amc",
+      });
+    }
+  }
+
+  /**
+   * Notify about AMC expired
+   */
+  async notifyAMCExpired(
+    profileIds: number[],
+    clientName: string,
+    contractNumber: string,
+    expiryDate: Date
+  ): Promise<void> {
+    for (const profileId of profileIds) {
+      await this.createNotification({
+        profileId,
+        title: "AMC Contract Expired",
+        message: `AMC contract ${contractNumber} for ${clientName} has expired on ${expiryDate.toLocaleDateString()}`,
+        type: "critical",
+        category: "amc_expired",
+        entityType: "amc",
+        link: "/admin/amc",
+      });
+    }
+  }
+
+  // ==================== INVOICE NOTIFICATIONS ====================
+
+  /**
+   * Notify about invoice overdue
+   */
+  async notifyInvoiceOverdue(
+    profileIds: number[],
+    invoiceNumber: string,
+    clientName: string,
+    amount: number,
+    dueDate: Date
+  ): Promise<void> {
+    for (const profileId of profileIds) {
+      await this.createNotification({
+        profileId,
+        title: "Invoice Overdue",
+        message: `Invoice ${invoiceNumber} for ${clientName} (Nu. ${amount.toLocaleString()}) is overdue. Due: ${dueDate.toLocaleDateString()}`,
+        type: "critical",
+        category: "invoice_overdue",
+        entityType: "invoice",
+        link: "/admin/invoice",
+      });
+    }
+  }
+
+  /**
+   * Notify about invoice paid
+   */
+  async notifyInvoicePaid(
+    profileIds: number[],
+    invoiceNumber: string,
+    clientName: string,
+    amount: number
+  ): Promise<void> {
+    for (const profileId of profileIds) {
+      await this.createNotification({
+        profileId,
+        title: "Invoice Paid",
+        message: `Invoice ${invoiceNumber} for ${clientName} (Nu. ${amount.toLocaleString()}) has been paid`,
+        type: "success",
+        category: "invoice_paid",
+        entityType: "invoice",
+        link: "/admin/invoice",
+      });
+    }
+  }
+
+  // ==================== PAYROLL NOTIFICATIONS ====================
+
+  /**
+   * Notify about payroll ready for review
+   */
+  async notifyPayrollReady(
+    profileIds: number[],
+    month: number,
+    year: number
+  ): Promise<void> {
+    for (const profileId of profileIds) {
+      await this.createNotification({
+        profileId,
+        title: "Payroll Ready for Review",
+        message: `Payroll for ${new Date(year, month - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" })} is ready for approval`,
+        type: "info",
+        category: "payroll_ready",
+        entityType: "payroll",
+        link: "/admin/hr",
+      });
+    }
+  }
+
+  /**
+   * Notify about payroll approved
+   */
+  async notifyPayrollApproved(
+    profileIds: number[],
+    month: number,
+    year: number
+  ): Promise<void> {
+    for (const profileId of profileIds) {
+      await this.createNotification({
+        profileId,
+        title: "Payroll Approved",
+        message: `Payroll for ${new Date(year, month - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" })} has been approved`,
+        type: "success",
+        category: "payroll_approved",
+        entityType: "payroll",
+        link: "/admin/hr",
+      });
+    }
+  }
+
+  /**
+   * Notify about payroll paid
+   */
+  async notifyPayrollPaid(
+    profileIds: number[],
+    month: number,
+    year: number
+  ): Promise<void> {
+    for (const profileId of profileIds) {
+      await this.createNotification({
+        profileId,
+        title: "Payroll Paid",
+        message: `Payroll for ${new Date(year, month - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" })} has been processed`,
+        type: "success",
+        category: "payroll_paid",
+        entityType: "payroll",
+        link: "/admin/hr",
+      });
+    }
+  }
+
+  // ==================== SYSTEM NOTIFICATIONS ====================
+
+  /**
+   * Send a general system notification
+   */
+  async notifySystem(
+    profileIds: number[],
+    title: string,
+    message: string,
+    type: NotificationType = "info"
+  ): Promise<void> {
+    for (const profileId of profileIds) {
+      await this.createNotification({
+        profileId,
+        title,
+        message,
+        type,
+        category: "system",
+        link: "/admin/notifications",
+      });
+    }
+  }
+
+  /**
+   * Send notification to all admins
+   */
+  async notifyAdmins(
+    title: string,
+    message: string,
+    type: NotificationType = "info"
+  ): Promise<void> {
+    // This would typically fetch all admin profile IDs
+    // For now, this is a placeholder that would be implemented with a profile lookup
+    // await this.notifySystem(adminProfileIds, title, message, type);
+  }
+}
 
 // Singleton instance
 export const notificationService = new NotificationService();

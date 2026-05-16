@@ -10,21 +10,27 @@ import { validateRequest, validateId } from "@/lib/validations/validation";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-// GET /api/amc/[id] - Get a single AMC
+/**
+ * GET /api/amc/[id] - Get a single AMC
+ */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
-    const id = validateId(params.id, "AMC ID");
+    const { id } = await params;
+    console.log("[API /api/amc/[id]] GET request received for id:", id);
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    const amcId = validateId(id, "AMC ID");
 
-    const amc = await amcService.getAMCById(id);
+    const amc = await amcService.getAMCById(amcId);
     if (!amc) {
+      console.log("[API /api/amc/[id]] AMC not found:", amcId);
       throw new NotFoundError("AMC");
     }
 
+    console.log("[API /api/amc/[id]] Returning AMC:", amcId);
     return NextResponse.json({
       success: true,
       data: amc,
@@ -32,17 +38,28 @@ export async function GET(
   } catch (error) {
     const errorResponse = formatApiError(error);
     const statusCode = isApiError(error) ? (error as any).statusCode : 500;
-    console.error("AMC fetch error:", error);
+    const { id } = await params.catch(() => ({ id: 'unknown' }));
+    console.error("[API /api/amc/[id]] AMC fetch error:", {
+      id,
+      error,
+      statusCode,
+      response: errorResponse,
+    });
     return NextResponse.json(errorResponse, { status: statusCode });
   }
 }
 
-// PUT /api/amc/[id] - Update an AMC
+/**
+ * PUT /api/amc/[id] - Update an AMC
+ */
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    console.log("[API /api/amc/[id]] PUT request received for id:", id);
+
     // Rate limiting
     const clientIp = getClientIp(req);
     const rateLimitResult = checkRateLimit(
@@ -52,19 +69,21 @@ export async function PUT(
     );
 
     if (!rateLimitResult.allowed) {
+      console.warn("[API /api/amc/[id]] Rate limit exceeded for IP:", clientIp);
       throw new RateLimitError(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000));
     }
 
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
-    const id = validateId(params.id, "AMC ID");
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    const amcId = validateId(id, "AMC ID");
 
     const body = await req.json();
 
     // Validate request body
     const validatedData = validateRequest(updateAMCSchema, body);
 
-    const amc = await amcService.updateAMC(id, validatedData);
+    const amc = await amcService.updateAMC(amcId, validatedData);
+    console.log("[API /api/amc/[id]] AMC updated successfully:", amcId);
 
     // Log to audit
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -73,7 +92,7 @@ export async function PUT(
         action: "UPDATE",
         entity_type: "AMC",
         entity_id: amc.id,
-        operator_id: profile.userId,
+        operator_id: authContext.profile.userId,
         details: { contract_number: amc.contractNumber },
       },
     ]);
@@ -84,23 +103,30 @@ export async function PUT(
       data: amc,
     });
   } catch (error) {
-    if (isApiError(error)) {
-      return NextResponse.json(formatAuthError(error), { status: (error as any).statusCode });
-    }
-    console.error("AMC update error:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to update AMC" },
-      { status: 500 }
-    );
+    const errorResponse = formatApiError(error);
+    const statusCode = isApiError(error) ? (error as any).statusCode : 500;
+    const { id } = await params.catch(() => ({ id: 'unknown' }));
+    console.error("[API /api/amc/[id]] AMC update error:", {
+      id,
+      error,
+      statusCode,
+      response: errorResponse,
+    });
+    return NextResponse.json(errorResponse, { status: statusCode });
   }
 }
 
-// DELETE /api/amc/[id] - Delete an AMC
+/**
+ * DELETE /api/amc/[id] - Delete an AMC
+ */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    console.log("[API /api/amc/[id]] DELETE request received for id:", id);
+
     // Rate limiting
     const clientIp = getClientIp(req);
     const rateLimitResult = checkRateLimit(
@@ -110,14 +136,16 @@ export async function DELETE(
     );
 
     if (!rateLimitResult.allowed) {
+      console.warn("[API /api/amc/[id]] Rate limit exceeded for IP:", clientIp);
       throw new RateLimitError(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000));
     }
 
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
-    const id = validateId(params.id, "AMC ID");
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    const amcId = validateId(id, "AMC ID");
 
-    await amcService.deleteAMC(id);
+    await amcService.deleteAMC(amcId);
+    console.log("[API /api/amc/[id]] AMC deleted successfully:", amcId);
 
     // Log to audit
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -125,8 +153,8 @@ export async function DELETE(
       {
         action: "DELETE",
         entity_type: "AMC",
-        entity_id: id,
-        operator_id: profile.userId,
+        entity_id: amcId,
+        operator_id: authContext.profile.userId,
         details: {},
       },
     ]);
@@ -136,23 +164,30 @@ export async function DELETE(
       message: "AMC deleted successfully",
     });
   } catch (error) {
-    if (isApiError(error)) {
-      return NextResponse.json(formatAuthError(error), { status: (error as any).statusCode });
-    }
-    console.error("AMC deletion error:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to delete AMC" },
-      { status: 500 }
-    );
+    const errorResponse = formatApiError(error);
+    const statusCode = isApiError(error) ? (error as any).statusCode : 500;
+    const { id } = await params.catch(() => ({ id: 'unknown' }));
+    console.error("[API /api/amc/[id]] AMC deletion error:", {
+      id,
+      error,
+      statusCode,
+      response: errorResponse,
+    });
+    return NextResponse.json(errorResponse, { status: statusCode });
   }
 }
 
-// PATCH /api/amc/[id] - Update AMC status
+/**
+ * PATCH /api/amc/[id] - Update AMC status
+ */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    console.log("[API /api/amc/[id]] PATCH request received for id:", id);
+
     // Rate limiting
     const clientIp = getClientIp(req);
     const rateLimitResult = checkRateLimit(
@@ -162,29 +197,33 @@ export async function PATCH(
     );
 
     if (!rateLimitResult.allowed) {
+      console.warn("[API /api/amc/[id]] Rate limit exceeded for IP:", clientIp);
       throw new RateLimitError(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000));
     }
 
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
-    const id = validateId(params.id, "AMC ID");
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    const amcId = validateId(id, "AMC ID");
 
     const body = await req.json();
 
     // Validate request body
     const validatedData = validateRequest(updateAMCStatusSchema, body);
 
-    const amc = await amcService.updateAMCStatus(id, validatedData.status);
+    // Log to audit - fetch old AMC before update
+    const oldAMC = await amcService.getAMCById(amcId);
 
-    // Log to audit
+    const amc = await amcService.updateAMCStatus(amcId, validatedData.status);
+    console.log("[API /api/amc/[id]] AMC status updated:", amcId, "from", oldAMC?.status, "to", validatedData.status);
+
     const supabase = createClient(supabaseUrl, supabaseKey);
     await supabase.from("audit_logs").insert([
       {
         action: "STATUS_UPDATE",
         entity_type: "AMC",
         entity_id: amc.id,
-        operator_id: profile.userId,
-        details: { old_status: amc.status, new_status: validationResult.data.status },
+        operator_id: authContext.profile.userId,
+        details: { old_status: oldAMC?.status, new_status: validatedData.status },
       },
     ]);
 
@@ -194,13 +233,15 @@ export async function PATCH(
       data: amc,
     });
   } catch (error) {
-    if (isApiError(error)) {
-      return NextResponse.json(formatAuthError(error), { status: (error as any).statusCode });
-    }
-    console.error("AMC status update error:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to update AMC status" },
-      { status: 500 }
-    );
+    const errorResponse = formatApiError(error);
+    const statusCode = isApiError(error) ? (error as any).statusCode : 500;
+    const { id } = await params.catch(() => ({ id: 'unknown' }));
+    console.error("[API /api/amc/[id]] AMC status update error:", {
+      id,
+      error,
+      statusCode,
+      response: errorResponse,
+    });
+    return NextResponse.json(errorResponse, { status: statusCode });
   }
 }

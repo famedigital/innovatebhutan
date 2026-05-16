@@ -1,18 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  FileText, Plus, Search, Download, Send, Eye, Trash2, 
-  Calendar, DollarSign, User, RefreshCw, CheckCircle, Clock, 
-  AlertCircle, X, Printer, CreditCard
+import {
+  FileText, Plus, Search, Send, Eye, Trash2,
+  Calendar, DollarSign, RefreshCw, CheckCircle, Clock,
+  AlertCircle, X, CreditCard, Ban, XCircle, AlertTriangle
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle
+} from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 
@@ -26,6 +30,7 @@ interface Invoice {
   total: number;
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
   items: InvoiceItem[];
+  notes?: string;
 }
 
 interface InvoiceItem {
@@ -33,21 +38,32 @@ interface InvoiceItem {
   description: string;
   quantity: number;
   rate: number;
-  amount: number;
+  amount?: number;
 }
+
+type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+
+type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 
 export default function InvoicePage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingState, setLoadingState] = useState<LoadingState>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<Record<number, boolean>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showCreate, setShowCreate] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newInvoice, setNewInvoice] = useState({
     clientId: "",
     issueDate: new Date().toISOString().split('T')[0],
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    items: [{ description: "", quantity: 1, rate: 0 }] as InvoiceItem[]
+    items: [{ description: "", quantity: 1, rate: 0 }] as InvoiceItem[],
+    notes: ""
   });
 
   const supabase = createClient();
@@ -58,21 +74,59 @@ export default function InvoicePage() {
 
   const fetchData = async () => {
     setLoading(true);
+    setLoadingState('loading');
+    setError(null);
+
+    console.log('[Invoice Page] Fetching data...');
+
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const errorMsg = "Authentication required. Please log in.";
+        console.error('[Invoice Page]', errorMsg);
+        setError(errorMsg);
+        toast.error(errorMsg);
+        setLoadingState('error');
+        setLoading(false);
+        return;
+      }
+
+      console.log('[Invoice Page] User authenticated, fetching invoices and clients...');
+
       const [invoicesRes, clientsRes] = await Promise.all([
-        supabase.from('invoices').select('*, clients(name)').order('created_at', { ascending: false }),
+        fetch('/api/invoices', {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        }).then(async r => {
+          const data = await r.json();
+          console.log('[Invoice Page] Invoices API response:', { status: r.status, data });
+          return { status: r.status, data };
+        }).catch(err => {
+          console.error('[Invoice Page] Invoices fetch error:', err);
+          return { status: 0, data: { success: false, error: 'Network error. Please check your connection.' } };
+        }),
         supabase.from('clients').select('id, name').eq('active', true)
       ]);
 
-      const invoicesWithClient = (invoicesRes.data || []).map((inv: any) => ({
-        ...inv,
-        client_name: inv.clients?.name
-      }));
+      if (!invoicesRes.data.success) {
+        const errorMsg = invoicesRes.data.error || 'Failed to load invoices';
+        console.error('[Invoice Page]', errorMsg);
+        setError(errorMsg);
+        toast.error(errorMsg);
+        setLoadingState('error');
+      } else {
+        console.log('[Invoice Page] Invoices loaded successfully:', invoicesRes.data.data?.length || 0);
+        setInvoices(invoicesRes.data.data || []);
+        setLoadingState('success');
+      }
 
-      setInvoices(invoicesWithClient);
       setClients(clientsRes.data || []);
-    } catch (err) {
-      console.error("Fetch error:", err);
+      console.log('[Invoice Page] Clients loaded:', clientsRes.data?.length || 0);
+    } catch (err: any) {
+      const errorMsg = err?.message || 'Failed to load invoices. Please try again.';
+      console.error('[Invoice Page] Unexpected error:', err);
+      setError(errorMsg);
+      toast.error(errorMsg);
+      setLoadingState('error');
     } finally {
       setLoading(false);
     }
@@ -90,51 +144,153 @@ export default function InvoicePage() {
       return;
     }
 
-    const total = validItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
-    const invoiceNumber = `INV-${Date.now().toString().slice(6)}`;
+    setIsSubmitting(true);
+
+    console.log('[Invoice Page] Creating invoice:', { clientId: newInvoice.clientId, itemCount: validItems.length });
 
     try {
-      const { data, error } = await supabase.from('invoices').insert({
-        invoice_number: invoiceNumber,
-        client_id: parseInt(newInvoice.clientId),
-        issue_date: newInvoice.issueDate,
-        due_date: newInvoice.dueDate,
-        total,
-        status: 'draft',
-        items: validItems
-      }).select().single();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Authentication required");
+        setIsSubmitting(false);
+        return;
+      }
 
-      if (error) throw error;
-
-      toast.success("Invoice created!");
-      setShowCreate(false);
-      setNewInvoice({
-        clientId: "",
-        issueDate: new Date().toISOString().split('T')[0],
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        items: [{ description: "", quantity: 1, rate: 0 }]
+      const response = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          clientId: parseInt(newInvoice.clientId),
+          issueDate: newInvoice.issueDate,
+          dueDate: newInvoice.dueDate,
+          items: validItems.map(item => ({
+            description: item.description,
+            quantity: item.quantity,
+            rate: item.rate,
+            amount: item.quantity * item.rate
+          })),
+          notes: newInvoice.notes || undefined
+        })
       });
-      fetchData();
+
+      const result = await response.json();
+
+      console.log('[Invoice Page] Create invoice response:', { status: response.status, result });
+
+      if (result.success) {
+        toast.success("Invoice created!");
+        setShowCreate(false);
+        setNewInvoice({
+          clientId: "",
+          issueDate: new Date().toISOString().split('T')[0],
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          items: [{ description: "", quantity: 1, rate: 0 }],
+          notes: ""
+        });
+        fetchData();
+      } else {
+        console.error('[Invoice Page] Create invoice failed:', result.error);
+        toast.error(result.error || "Failed to create invoice");
+      }
     } catch (err: any) {
+      console.error('[Invoice Page] Create invoice error:', err);
       toast.error("Failed: " + err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const updateStatus = async (id: number, status: string) => {
-    const { error } = await supabase.from('invoices').update({ status }).eq('id', id);
-    if (!error) {
-      toast.success("Status updated");
-      fetchData();
+  const updateStatus = async (id: number, status: InvoiceStatus) => {
+    setActionLoading(prev => ({ ...prev, [id]: true }));
+
+    console.log('[Invoice Page] Updating invoice status:', { id, status });
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Authentication required");
+        setActionLoading(prev => ({ ...prev, [id]: false }));
+        return;
+      }
+
+      const response = await fetch(`/api/invoices/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ status })
+      });
+
+      const result = await response.json();
+
+      console.log('[Invoice Page] Update status response:', { status: response.status, result });
+
+      if (result.success) {
+        toast.success(`Invoice marked as ${status}`);
+        fetchData();
+      } else {
+        console.error('[Invoice Page] Update status failed:', result.error);
+        toast.error(result.error || "Failed to update status");
+      }
+    } catch (err: any) {
+      console.error('[Invoice Page] Update status error:', err);
+      toast.error("Failed: " + err.message);
+    } finally {
+      setActionLoading(prev => ({ ...prev, [id]: false }));
     }
   };
 
   const deleteInvoice = async (id: number) => {
-    if (!confirm("Delete this invoice?")) return;
-    const { error } = await supabase.from('invoices').delete().eq('id', id);
-    if (!error) {
-      toast.success("Deleted");
-      fetchData();
+    if (!confirm("Delete this invoice? This action cannot be undone.")) return;
+
+    setActionLoading(prev => ({ ...prev, [id]: true }));
+
+    console.log('[Invoice Page] Deleting invoice:', id);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Authentication required");
+        setActionLoading(prev => ({ ...prev, [id]: false }));
+        return;
+      }
+
+      const response = await fetch(`/api/invoices/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+
+      const result = await response.json();
+
+      console.log('[Invoice Page] Delete invoice response:', { status: response.status, result });
+
+      if (result.success) {
+        toast.success("Invoice deleted");
+        fetchData();
+      } else {
+        console.error('[Invoice Page] Delete invoice failed:', result.error);
+        toast.error(result.error || "Failed to delete invoice");
+      }
+    } catch (err: any) {
+      console.error('[Invoice Page] Delete invoice error:', err);
+      toast.error("Failed: " + err.message);
+    } finally {
+      setActionLoading(prev => ({ ...prev, [id]: false }));
     }
+  };
+
+  const getDaysUntilDue = (dueDate: string, status: InvoiceStatus): number | null => {
+    if (status === 'paid' || status === 'cancelled' || status === 'draft') {
+      return null;
+    }
+    const now = new Date();
+    const due = new Date(dueDate);
+    const diffTime = due.getTime() - now.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   const addItem = () => {
@@ -162,6 +318,11 @@ export default function InvoicePage() {
     }
   };
 
+  const openDetailModal = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setShowDetail(true);
+  };
+
   const filteredInvoices = invoices.filter(inv => {
     const matchesSearch = inv.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.client_name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -171,31 +332,62 @@ export default function InvoicePage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-700';
-      case 'sent': return 'bg-blue-100 text-blue-700';
-      case 'paid': return 'bg-green-100 text-green-700';
-      case 'overdue': return 'bg-red-100 text-red-700';
-      case 'cancelled': return 'bg-gray-100 text-gray-500';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'draft': return 'bg-gray-100 text-gray-700 border-gray-200';
+      case 'sent': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'paid': return 'bg-green-100 text-green-700 border-green-200';
+      case 'overdue': return 'bg-red-100 text-red-700 border-red-200';
+      case 'cancelled': return 'bg-gray-100 text-gray-500 border-gray-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'paid': return <CheckCircle className="w-4 h-4" />;
-      case 'overdue': return <AlertCircle className="w-4 h-4" />;
-      case 'sent': return <Send className="w-4 h-4" />;
-      default: return <Clock className="w-4 h-4" />;
+      case 'paid': return <CheckCircle className="w-3.5 h-3.5" />;
+      case 'overdue': return <AlertCircle className="w-3.5 h-3.5" />;
+      case 'sent': return <Send className="w-3.5 h-3.5" />;
+      case 'cancelled': return <XCircle className="w-3.5 h-3.5" />;
+      default: return <Clock className="w-3.5 h-3.5" />;
     }
   };
 
   // Stats
-  const totalPending = invoices.filter(i => i.status === 'sent').reduce((sum, i) => sum + i.total, 0);
-  const totalOverdue = invoices.filter(i => i.status === 'overdue').reduce((sum, i) => sum + i.total, 0);
-  const totalPaid = invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + i.total, 0);
+  const totalPending = invoices.filter(i => i.status === 'sent').reduce((sum, i) => sum + (Number(i.total) || 0), 0);
+  const totalOverdue = invoices.filter(i => i.status === 'overdue').reduce((sum, i) => sum + (Number(i.total) || 0), 0);
+  const totalPaid = invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + (Number(i.total) || 0), 0);
 
   if (loading) {
-    return <div className="p-6 flex items-center justify-center"><RefreshCw className="w-6 h-6 animate-spin text-[#3ECF8E]" /></div>;
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[400px]">
+        <RefreshCw className="w-8 h-8 animate-spin text-[#3ECF8E] mb-4" />
+        <p className="text-[#717171]">Loading invoices...</p>
+      </div>
+    );
+  }
+
+  if (error && loadingState === 'error') {
+    return (
+      <div className="p-6">
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+            <AlertTriangle className="w-8 h-8 text-red-600" />
+          </div>
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-[#1A1A1A] mb-2">Failed to Load Invoices</h2>
+            <p className="text-[#717171] mb-4">{error}</p>
+          </div>
+          <div className="flex gap-3">
+            <Button onClick={fetchData} className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Again
+            </Button>
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Reload Page
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -205,11 +397,24 @@ export default function InvoicePage() {
           <h1 className="text-2xl font-bold text-[#1A1A1A]">Invoices</h1>
           <p className="text-sm text-[#717171]">Manage client invoices and payments</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white">
+        <Button
+          onClick={() => setShowCreate(true)}
+          className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white"
+          disabled={clients.length === 0}
+        >
           <Plus className="w-4 h-4 mr-2" />
           New Invoice
         </Button>
       </div>
+
+      {clients.length === 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          <p className="text-sm text-amber-800">
+            No active clients found. Please create a client first before creating invoices.
+          </p>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -233,7 +438,7 @@ export default function InvoicePage() {
         </Card>
         <Card>
           <CardContent className="p-3">
-            <p className="text-[10px] text-[#717171] uppercase">Paid This Month</p>
+            <p className="text-[10px] text-[#717171] uppercase">Collected</p>
             <p className="text-xl font-bold text-green-600">Nu. {totalPaid.toLocaleString()}</p>
           </CardContent>
         </Card>
@@ -243,8 +448,8 @@ export default function InvoicePage() {
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#717171]" />
-          <Input 
-            placeholder="Search invoices..." 
+          <Input
+            placeholder="Search invoices..."
             className="pl-9 bg-[#F3F3F1] border-[#E5E5E1]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -260,6 +465,7 @@ export default function InvoicePage() {
             <SelectItem value="sent">Sent</SelectItem>
             <SelectItem value="paid">Paid</SelectItem>
             <SelectItem value="overdue">Overdue</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -287,167 +493,353 @@ export default function InvoicePage() {
                     <p>No invoices found</p>
                   </td>
                 </tr>
-              ) : filteredInvoices.map((inv) => (
-                <tr key={inv.id} className="border-b border-[#E5E5E1] hover:bg-[#F3F3F1]">
-                  <td className="p-3 text-sm font-medium">{inv.invoice_number}</td>
-                  <td className="p-3 text-sm">{inv.client_name || 'Unknown Client'}</td>
-                  <td className="p-3 text-sm text-[#717171]">{new Date(inv.issue_date).toLocaleDateString()}</td>
-                  <td className="p-3 text-sm text-[#717171]">{new Date(inv.due_date).toLocaleDateString()}</td>
-                  <td className="p-3 text-sm font-medium text-right">Nu. {inv.total.toLocaleString()}</td>
-                  <td className="p-3 text-center">
-                    <Badge className={`${getStatusColor(inv.status)} text-[10px]`}>
-                      <span className="flex items-center gap-1">
-                        {getStatusIcon(inv.status)}
-                        {inv.status}
-                      </span>
-                    </Badge>
-                  </td>
-                  <td className="p-3 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => updateStatus(inv.id, 'sent')}>
-                        <Send className="w-3 h-3" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => updateStatus(inv.id, 'paid')}>
-                        <CheckCircle className="w-3 h-3 text-green-600" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => deleteInvoice(inv.id)}>
-                        <Trash2 className="w-3 h-3 text-red-500" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              ) : filteredInvoices.map((inv) => {
+                const daysUntilDue = getDaysUntilDue(inv.due_date, inv.status);
+                return (
+                  <tr key={inv.id} className="border-b border-[#E5E5E1] hover:bg-[#F3F3F1]">
+                    <td className="p-3 text-sm font-medium">{inv.invoice_number}</td>
+                    <td className="p-3 text-sm">{inv.client_name || 'Unknown Client'}</td>
+                    <td className="p-3 text-sm text-[#717171]">{new Date(inv.issue_date).toLocaleDateString()}</td>
+                    <td className="p-3 text-sm">
+                      <div className="flex items-center gap-1">
+                        <span className={daysUntilDue !== null && daysUntilDue < 0 ? "text-red-600" : "text-[#717171]"}>
+                          {new Date(inv.due_date).toLocaleDateString()}
+                        </span>
+                        {daysUntilDue !== null && daysUntilDue < 0 && (
+                          <Badge className="bg-red-100 text-red-700 text-[9px] px-1">Overdue</Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3 text-sm font-medium text-right">Nu. {Number(inv.total || 0).toLocaleString()}</td>
+                    <td className="p-3 text-center">
+                      <Badge className={`${getStatusColor(inv.status)} text-[10px]`}>
+                        <span className="flex items-center gap-1">
+                          {getStatusIcon(inv.status)}
+                          {inv.status}
+                        </span>
+                      </Badge>
+                    </td>
+                    <td className="p-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openDetailModal(inv)}
+                          title="View details"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
+                        {inv.status === 'draft' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => updateStatus(inv.id, 'sent')}
+                            disabled={actionLoading[inv.id]}
+                            title="Send invoice"
+                          >
+                            {actionLoading[inv.id] ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                          </Button>
+                        )}
+                        {(inv.status === 'sent' || inv.status === 'overdue') && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => updateStatus(inv.id, 'paid')}
+                            disabled={actionLoading[inv.id]}
+                            title="Mark as paid"
+                          >
+                            {actionLoading[inv.id] ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5 text-green-600" />}
+                          </Button>
+                        )}
+                        {(inv.status === 'draft' || inv.status === 'sent') && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => updateStatus(inv.id, 'cancelled')}
+                            disabled={actionLoading[inv.id]}
+                            title="Cancel invoice"
+                          >
+                            {actionLoading[inv.id] ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5 text-red-500" />}
+                          </Button>
+                        )}
+                        {inv.status === 'draft' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deleteInvoice(inv.id)}
+                            disabled={actionLoading[inv.id]}
+                            title="Delete invoice"
+                          >
+                            {actionLoading[inv.id] ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 text-red-500" />}
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </CardContent>
       </Card>
 
       {/* Create Invoice Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-[#E5E5E1]">
-              <h3 className="font-semibold">Create New Invoice</h3>
-              <Button variant="ghost" size="icon" onClick={() => setShowCreate(false)}>×</Button>
-            </div>
-            
-            <div className="p-4 space-y-4">
-              {/* Client & Dates */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">Client *</label>
-                  <Select value={newInvoice.clientId} onValueChange={(v) => setNewInvoice({...newInvoice, clientId: v})}>
-                    <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
-                      <SelectValue placeholder="Select client" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-[#E5E5E1]">
-                      {clients.map(client => (
-                        <SelectItem key={client.id} value={client.id.toString()}>{client.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">Issue Date</label>
-                  <Input 
-                    type="date" 
-                    value={newInvoice.issueDate}
-                    onChange={(e) => setNewInvoice({...newInvoice, issueDate: e.target.value})}
-                    className="bg-[#F3F3F1] border-[#E5E5E1]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">Due Date</label>
-                  <Input 
-                    type="date" 
-                    value={newInvoice.dueDate}
-                    onChange={(e) => setNewInvoice({...newInvoice, dueDate: e.target.value})}
-                    className="bg-[#F3F3F1] border-[#E5E5E1]"
-                  />
-                </div>
-              </div>
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="bg-white border-[#E5E5E1] max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Invoice</DialogTitle>
+            <DialogDescription>Create a new invoice for a client</DialogDescription>
+          </DialogHeader>
 
-              {/* Invoice Items */}
+          <div className="space-y-4">
+            {/* Client & Dates */}
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <label className="text-xs text-[#717171]">Invoice Items</label>
-                <div className="border border-[#E5E5E1] rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-[#F3F3F1]">
-                      <tr>
-                        <th className="text-left p-2">Description</th>
-                        <th className="text-center p-2 w-20">Qty</th>
-                        <th className="text-right p-2 w-28">Rate</th>
-                        <th className="text-right p-2 w-28">Amount</th>
-                        <th className="p-2 w-8"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {newInvoice.items.map((item, index) => (
-                        <tr key={index} className="border-t border-[#E5E5E1]">
-                          <td className="p-2">
-                            <Input 
-                              placeholder="Service description"
-                              value={item.description}
-                              onChange={(e) => updateItem(index, 'description', e.target.value)}
-                              className="border-0 bg-transparent"
-                            />
-                          </td>
-                          <td className="p-2">
-                            <Input 
-                              type="number"
-                              min="1"
-                              value={item.quantity}
-                              onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                              className="border-0 bg-transparent text-center"
-                            />
-                          </td>
-                          <td className="p-2">
-                            <Input 
-                              type="number"
-                              value={item.rate}
-                              onChange={(e) => updateItem(index, 'rate', parseFloat(e.target.value) || 0)}
-                              className="border-0 bg-transparent text-right"
-                            />
-                          </td>
-                          <td className="p-2 text-right font-medium">
-                            Nu. {(item.quantity * item.rate).toLocaleString()}
-                          </td>
-                          <td className="p-2">
-                            <Button size="sm" variant="ghost" onClick={() => removeItem(index)}>
-                              <X className="w-3 h-3" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <Button variant="outline" size="sm" onClick={addItem} className="border-[#E5E5E1]">
-                  <Plus className="w-3 h-3 mr-1" /> Add Item
-                </Button>
+                <label className="text-xs font-medium text-[#717171]">Client *</label>
+                <Select value={newInvoice.clientId} onValueChange={(v) => setNewInvoice({ ...newInvoice, clientId: v })}>
+                  <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
+                    <SelectValue placeholder="Select client" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-[#E5E5E1]">
+                    {clients.map(client => (
+                      <SelectItem key={client.id} value={client.id.toString()}>{client.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-
-              {/* Total */}
-              <div className="flex justify-end">
-                <div className="text-right">
-                  <p className="text-sm text-[#717171]">Total Amount</p>
-                  <p className="text-2xl font-bold text-[#3ECF8E]">
-                    Nu. {newInvoice.items.reduce((sum, item) => sum + (item.quantity * item.rate), 0).toLocaleString()}
-                  </p>
-                </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[#717171]">Issue Date</label>
+                <Input
+                  type="date"
+                  value={newInvoice.issueDate}
+                  onChange={(e) => setNewInvoice({ ...newInvoice, issueDate: e.target.value })}
+                  className="bg-[#F3F3F1] border-[#E5E5E1]"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[#717171]">Due Date</label>
+                <Input
+                  type="date"
+                  value={newInvoice.dueDate}
+                  onChange={(e) => setNewInvoice({ ...newInvoice, dueDate: e.target.value })}
+                  className="bg-[#F3F3F1] border-[#E5E5E1]"
+                />
               </div>
             </div>
 
-            <div className="p-4 border-t border-[#E5E5E1] flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
-              <Button className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white" onClick={createInvoice}>
-                <FileText className="w-4 h-4 mr-2" />
-                Create Invoice
+            {/* Invoice Items */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-[#717171]">Invoice Items</label>
+              <div className="border border-[#E5E5E1] rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-[#F3F3F1]">
+                    <tr>
+                      <th className="text-left p-2">Description</th>
+                      <th className="text-center p-2 w-20">Qty</th>
+                      <th className="text-right p-2 w-28">Rate</th>
+                      <th className="text-right p-2 w-28">Amount</th>
+                      <th className="p-2 w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {newInvoice.items.map((item, index) => (
+                      <tr key={index} className="border-t border-[#E5E5E1]">
+                        <td className="p-2">
+                          <Input
+                            placeholder="Service description"
+                            value={item.description}
+                            onChange={(e) => updateItem(index, 'description', e.target.value)}
+                            className="border-0 bg-transparent"
+                          />
+                        </td>
+                        <td className="p-2">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                            className="border-0 bg-transparent text-center"
+                          />
+                        </td>
+                        <td className="p-2">
+                          <Input
+                            type="number"
+                            value={item.rate}
+                            onChange={(e) => updateItem(index, 'rate', parseFloat(e.target.value) || 0)}
+                            className="border-0 bg-transparent text-right"
+                          />
+                        </td>
+                        <td className="p-2 text-right font-medium">
+                          Nu. {(item.quantity * item.rate).toLocaleString()}
+                        </td>
+                        <td className="p-2">
+                          <Button size="sm" variant="ghost" onClick={() => removeItem(index)}>
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Button variant="outline" size="sm" onClick={addItem} className="border-[#E5E5E1]">
+                <Plus className="w-3 h-3 mr-1" /> Add Item
               </Button>
             </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-[#717171]">Notes</label>
+              <Input
+                placeholder="Payment terms, bank details, etc."
+                value={newInvoice.notes}
+                onChange={(e) => setNewInvoice({ ...newInvoice, notes: e.target.value })}
+                className="bg-[#F3F3F1] border-[#E5E5E1]"
+              />
+            </div>
+
+            {/* Total */}
+            <div className="flex justify-end">
+              <div className="text-right">
+                <p className="text-sm text-[#717171]">Total Amount</p>
+                <p className="text-2xl font-bold text-[#3ECF8E]">
+                  Nu. {newInvoice.items.reduce((sum, item) => sum + (item.quantity * item.rate), 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreate(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button
+              className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white"
+              onClick={createInvoice}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Create Invoice
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invoice Detail Modal */}
+      <Dialog open={showDetail} onOpenChange={setShowDetail}>
+        <DialogContent className="bg-white border-[#E5E5E1] max-w-2xl max-h-[90vh] overflow-y-auto">
+          {selectedInvoice && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selectedInvoice.invoice_number}</DialogTitle>
+                <DialogDescription>
+                  {selectedInvoice.client_name} • {new Date(selectedInvoice.issue_date).toLocaleDateString()}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-[#717171]">Issue Date</p>
+                    <p className="text-sm font-medium">{new Date(selectedInvoice.issue_date).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#717171]">Due Date</p>
+                    <p className="text-sm font-medium">{new Date(selectedInvoice.due_date).toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-[#717171] mb-2">Line Items</p>
+                  <div className="border border-[#E5E5E1] rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-[#F3F3F1]">
+                        <tr>
+                          <th className="text-left p-2">Description</th>
+                          <th className="text-center p-2 w-16">Qty</th>
+                          <th className="text-right p-2 w-20">Rate</th>
+                          <th className="text-right p-2 w-20">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(selectedInvoice.items || []).map((item, index) => (
+                          <tr key={index} className="border-t border-[#E5E5E1]">
+                            <td className="p-2">{item.description}</td>
+                            <td className="p-2 text-center">{item.quantity}</td>
+                            <td className="p-2 text-right">Nu. {item.rate?.toLocaleString() || 0}</td>
+                            <td className="p-2 text-right font-medium">
+                              Nu. {((item.quantity || 0) * (item.rate || 0)).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-[#F3F3F1]">
+                        <tr>
+                          <td colSpan={3} className="p-2 text-right font-medium">Total</td>
+                          <td className="p-2 text-right font-bold text-[#3ECF8E]">
+                            Nu. {Number(selectedInvoice.total || 0).toLocaleString()}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+
+                {selectedInvoice.notes && (
+                  <div>
+                    <p className="text-xs text-[#717171]">Notes</p>
+                    <p className="text-sm">{selectedInvoice.notes}</p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-center">
+                  <Badge className={`${getStatusColor(selectedInvoice.status)} px-3 py-1`}>
+                    <span className="flex items-center gap-1">
+                      {getStatusIcon(selectedInvoice.status)}
+                      {selectedInvoice.status.toUpperCase()}
+                    </span>
+                  </Badge>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowDetail(false)}>Close</Button>
+                {selectedInvoice.status === 'draft' && (
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => {
+                      updateStatus(selectedInvoice.id, 'sent');
+                      setShowDetail(false);
+                    }}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Invoice
+                  </Button>
+                )}
+                {(selectedInvoice.status === 'sent' || selectedInvoice.status === 'overdue') && (
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => {
+                      updateStatus(selectedInvoice.id, 'paid');
+                      setShowDetail(false);
+                    }}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Mark as Paid
+                  </Button>
+                )}
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -173,40 +173,13 @@ export function IncidentDispatchModal({ trigger }: { trigger: React.ReactNode })
           <Button variant="outline" className="border-[#E5E5E1]" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button 
+          <Button
             disabled={loading}
             onClick={handleDispatch}
             className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white"
           >
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
             Create Ticket
-          </Button>
-        </DialogFooter>
-                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary">Neural Pre-flight Suggestion</span>
-             </div>
-             <p className="text-[10px] font-bold text-zinc-500 leading-relaxed italic">
-                {subject ? `AI suggests tagging this as a ${priority} priority incident for ${clients.find(c => c.id.toString() === selectedClientId)?.name || 'the node'}.` : "Awaiting subject entry for triage simulation..."}
-             </p>
-             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent h-full w-20 animate-marquee" />
-          </div>
-        </div>
-
-        <DialogFooter className="p-6 pt-0 border-t border-white/5 mt-0 bg-white/[0.02]">
-           <Button 
-            variant="ghost" 
-            onClick={() => setOpen(false)}
-            className="text-zinc-500 font-black uppercase text-[10px] tracking-widest hover:text-white"
-          >
-            Cancel Protocol
-          </Button>
-          <Button 
-            disabled={loading}
-            onClick={handleDispatch}
-            className="bg-primary hover:bg-[#32e612] text-black font-black uppercase tracking-widest text-[10px] h-10 px-8 flex items-center gap-2"
-          >
-            {loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
-            Confirm Dispatch
           </Button>
         </DialogFooter>
       </DialogContent>

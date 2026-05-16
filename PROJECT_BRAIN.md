@@ -195,16 +195,49 @@ The audits repeatedly flag that some of these are missing or inconsistent. The E
 - **Audit logging** for all mutations (create/update/delete + key workflow transitions).
 - **Input validation** (Zod) and consistent API error formatting.
 
-## Current “known gaps” (from audits)
-These are intentionally listed so future work stays coherent:
-- **API auth/authz** gaps across ERP APIs (must enforce, not just UI middleware).
-- **Transactions/atomicity** missing in multi-write operations (projects, AMC renewals, invoices).
-- **Invoice risks**: insecure invoice numbering and UI patterns that may bypass service layer.
-- **Projects performance**: progress calculation inefficiency; missing indexes; missing soft delete.
-- **Background jobs/notifications**: needed for AMC expiry alerts, payroll reminders, invoice overdue handling.
-- **Testing**: currently minimal/absent; high regression risk.
+## Post-Fix Status (April 2026)
 
-References: `audit.md`, `audit2.md`
+### Completed Fixes (13/13 Tasks)
+Between April 19-21, 2026, comprehensive fixes were completed by 13 specialized agents:
+
+**Database Schema**:
+- Clients table: Added email, phone, address, city, country columns (migration 0010)
+- Profiles table: Added full_name, role, created_at columns (migration 0011)
+- RLS policies: Created 80+ policies across 21 tables (migration 0012)
+
+**API Authentication**:
+- Fixed ES module import error in `lib/auth/api-auth.ts`
+- Standardized error handling (formatApiError) across all API routes
+- Added role normalization (case/whitespace handling)
+- Added comprehensive structured logging
+
+**UI/UX**:
+- Added loading states (skeletons, spinners) across all modules
+- Added error states with retry buttons
+- Created client creation modal
+- Fixed undefined variable bugs in payroll/invoice APIs
+
+**Modules Fixed**: Projects, AMC, Invoices, Payroll/HR, Clients, Profiles
+
+**See**: `docs/ERP_FIX_PROGRESS.md` for complete summary, `docs/ERP_KNOWN_ISSUES.md` for remaining issues.
+
+### Pending Critical Items
+1. **Run database migrations**: 0010, 0011, 0012 must be applied to database
+2. **Verify RLS**: Test Row-Level Security policies with different user roles
+3. **Transaction atomicity**: Multi-write operations still need DB transactions
+4. **Rate limiting**: API endpoints lack rate limiting
+5. **Background jobs**: AMC expiry alerts, invoice overdue handling not implemented
+6. **Testing**: Unit/integration tests minimal or absent
+
+### Remaining Known Gaps
+- **Transactions/atomicity** missing in multi-write operations (projects, AMC renewals, invoices)
+- **Invoice numbering**: potential race condition in generation
+- **Projects performance**: progress calculation could be optimized with DB aggregation
+- **Background jobs/notifications**: needed for AMC expiry alerts, payroll reminders, invoice overdue handling
+- **Testing**: currently minimal/absent; high regression risk
+- **Audit logging**: not all mutations write to audit_logs table
+
+References: `audit.md`, `audit2.md`, `docs/ERP_FIX_PROGRESS.md`, `docs/ERP_KNOWN_ISSUES.md`
 
 ## “How to add a new ERP module” (repeatable recipe)
 1. **Model**: add table(s) + relations in `db/schema.ts`.

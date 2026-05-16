@@ -1,84 +1,143 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { clients } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from "@/lib/auth/api-auth";
 
-// GET /api/clients - List all clients
-export async function GET() {
+/**
+ * GET /api/clients - List all clients
+ *
+ * Returns all clients with full contact details and metadata.
+ *
+ * SECURITY: Requires authenticated user with STAFF or ADMIN role
+ */
+export async function GET(req: NextRequest) {
   try {
-    let allClients: Array<{
-      id: number;
-      name: string;
-      active?: boolean | null;
-      logoUrl?: string | null;
-    }> = [];
+    // Authenticate and authorize
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
 
-    try {
-      allClients = await db
-        .select({
-          id: clients.id,
-          name: clients.name,
-          active: clients.active,
-          logoUrl: clients.logoUrl,
-        })
-        .from(clients)
-        .orderBy(clients.name);
-    } catch (queryError) {
-      // Backward compatibility for older schemas missing logo_url.
-      const message = queryError instanceof Error ? queryError.message : "";
-      if (!message.includes('column "logo_url" does not exist')) {
-        throw queryError;
-      }
-
-      allClients = await db
-        .select({
-          id: clients.id,
-          name: clients.name,
-          active: clients.active,
-        })
-        .from(clients)
-        .orderBy(clients.name);
-    }
+    const allClients = await db
+      .select({
+        id: clients.id,
+        name: clients.name,
+        active: clients.active,
+        contactPerson: clients.contactPerson,
+        email: clients.email,
+        phone: clients.phone,
+        whatsapp: clients.whatsapp,
+        whatsappGroupId: clients.whatsappGroupId,
+        whatsappGroupLink: clients.whatsappGroupLink,
+        logoUrl: clients.logoUrl,
+        address: clients.address,
+        city: clients.city,
+        country: clients.country,
+        createdAt: clients.createdAt,
+      })
+      .from(clients)
+      .orderBy(clients.name);
 
     return NextResponse.json({
       success: true,
       data: allClients,
+      count: allClients.length,
     });
   } catch (error) {
-    console.error("Clients fetch error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch clients" },
-      { status: 500 }
-    );
+    console.error("[API /api/clients] Fetch error:", error);
+
+    return NextResponse.json(formatApiError(error), {
+      status: error instanceof Error && "statusCode" in error
+        ? (error as any).statusCode
+        : 500
+    });
   }
 }
 
-// POST /api/clients - Create a new client
+/**
+ * POST /api/clients - Create a new client
+ *
+ * Creates a new client with full contact details.
+ * All fields are optional except `name`.
+ *
+ * SECURITY: Requires authenticated user with STAFF or ADMIN role
+ */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { name } = body;
+    // Authenticate and authorize
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
 
-    if (!name || typeof name !== 'string' || name.trim() === '') {
+    const body = await req.json();
+    const {
+      name,
+      contactPerson,
+      email,
+      phone,
+      whatsapp,
+      whatsappGroupId,
+      whatsappGroupLink,
+      logoUrl,
+      address,
+      city,
+      country,
+      active,
+    } = body;
+
+    // Validate required field
+    if (!name || typeof name !== "string" || name.trim() === "") {
       return NextResponse.json(
         { success: false, error: "Client name is required" },
         { status: 400 }
       );
     }
 
+    // Validate email format if provided
+    if (email && typeof email === "string") {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return NextResponse.json(
+          { success: false, error: "Invalid email format" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Create client with all provided fields
     const [newClient] = await db
       .insert(clients)
-      .values({ name: name.trim() })
+      .values({
+        name: name.trim(),
+        contactPerson: contactPerson?.trim() || null,
+        email: email?.trim() || null,
+        phone: phone?.trim() || null,
+        whatsapp: whatsapp?.trim() || null,
+        whatsappGroupId: whatsappGroupId?.trim() || null,
+        whatsappGroupLink: whatsappGroupLink?.trim() || null,
+        logoUrl: logoUrl?.trim() || null,
+        address: address?.trim() || null,
+        city: city?.trim() || null,
+        country: country?.trim() || null,
+        active: active !== undefined ? active : true,
+      })
       .returning();
 
-    return NextResponse.json({
-      success: true,
-      data: newClient,
-    }, { status: 201 });
-  } catch (error) {
-    console.error("Client creation error:", error);
+    console.log("[API /api/clients] Created client:", newClient.id, newClient.name);
+
     return NextResponse.json(
-      { success: false, error: "Failed to create client" },
-      { status: 500 }
+      {
+        success: true,
+        data: newClient,
+        message: "Client created successfully",
+      },
+      { status: 201 }
     );
+  } catch (error) {
+    console.error("[API /api/clients] Creation error:", error);
+
+    return NextResponse.json(formatApiError(error), {
+      status: error instanceof Error && "statusCode" in error
+        ? (error as any).statusCode
+        : 500
+    });
   }
 }

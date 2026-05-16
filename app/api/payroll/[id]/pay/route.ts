@@ -16,6 +16,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log("[API /api/payroll/[id]/pay] Marking payslip as paid");
+
     // Rate limiting
     const clientIp = getClientIp(req);
     const rateLimitResult = checkRateLimit(
@@ -28,8 +30,10 @@ export async function POST(
       throw new RateLimitError(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000));
     }
 
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    console.log("[API /api/payroll/[id]/pay] Auth verified for user:", authContext.profile.userId);
+
     const { id } = await params;
     const payslipId = validateId(id, "payslip ID");
 
@@ -40,9 +44,12 @@ export async function POST(
 
     const { paymentMethod, paymentDate, transactionReference, notes } = validatedData;
 
+    console.log("[API /api/payroll/[id]/pay] Marking payslip as paid:", payslipId, "method:", paymentMethod);
+
     // Check if payslip is ready for payment
     const isReady = await payrollService.isReadyForPayment(payslipId);
     if (!isReady) {
+      console.log("[API /api/payroll/[id]/pay] Payslip not ready for payment");
       return NextResponse.json(
         { success: false, error: "Payslip must be approved before marking as paid" },
         { status: 400 }
@@ -52,6 +59,8 @@ export async function POST(
     // Mark as paid
     const payslip = await payrollService.markAsPaid(payslipId, paymentMethod, paymentDate);
 
+    console.log("[API /api/payroll/[id]/pay] Payslip marked as paid successfully");
+
     // Log to audit
     const supabase = createClient(supabaseUrl, supabaseKey);
     await supabase.from("audit_logs").insert([
@@ -59,7 +68,7 @@ export async function POST(
         action: "PAY",
         entity_type: "PAYSLIP",
         entity_id: payslipId,
-        operator_id: profile.userId,
+        operator_id: authContext.profile.userId,
         details: {
           payment_method: paymentMethod,
           payment_date: paymentDate,
@@ -78,7 +87,7 @@ export async function POST(
   } catch (error) {
     const errorResponse = formatApiError(error);
     const statusCode = isApiError(error) ? (error as any).statusCode : 500;
-    console.error("Payslip payment error:", error);
+    console.error("[API /api/payroll/[id]/pay] Payslip payment error:", error);
     return NextResponse.json(errorResponse, { status: statusCode });
   }
 }

@@ -8,6 +8,8 @@ type NewTaskChecklistItem = typeof taskChecklistItems.$inferInsert;
 /**
  * Repository for task checklist items
  */
+export type { TaskChecklistItem, NewTaskChecklistItem };
+
 export class TaskChecklistRepository {
   private db = db;
 

@@ -9,6 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import { ServicesEditor } from "@/components/admin/website/ServicesEditor";
+import { StatsEditor } from "@/components/admin/website/StatsEditor";
+import { NavigationEditor } from "@/components/admin/website/NavigationEditor";
+import { ContactEditor } from "@/components/admin/website/ContactEditor";
+import { HeroEditor } from "@/components/admin/website/HeroEditor";
 
 interface PageContent {
   id?: string;
@@ -39,6 +44,7 @@ export default function WebsitePage() {
   const [pages, setPages] = useState<PageContent[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [landingPages, setLandingPages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("home");
@@ -137,6 +143,44 @@ export default function WebsitePage() {
     }
   };
 
+  const createLandingPage = async () => {
+    const name = prompt("Enter landing page name:");
+    if (!name) return;
+    const slug = prompt("Enter URL slug (e.g., 'summer-campaign'):", name.toLowerCase().replace(/\s+/g, '-'));
+    if (!slug) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('landing_pages')
+        .insert({ name, slug })
+        .select()
+        .single();
+
+      if (error) throw error;
+      setLandingPages(prev => [...prev, data]);
+      toast.success("Landing page created!");
+    } catch (err) {
+      toast.error("Failed to create landing page");
+    }
+  };
+
+  const deleteLandingPage = async (id: string) => {
+    if (!confirm("Delete this landing page?")) return;
+    try {
+      await supabase.from('landing_pages').delete().eq('id', id);
+      setLandingPages(prev => prev.filter(p => p.id !== id));
+      toast.success("Landing page deleted");
+    } catch (err) {
+      toast.error("Failed to delete landing page");
+    }
+  };
+
+  const copyLink = (slug: string) => {
+    const url = `${window.location.origin}/${slug}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link copied!");
+  };
+
   if (loading) {
     return <div className="p-6 flex items-center justify-center"><RefreshCw className="w-6 h-6 animate-spin text-[#3ECF8E]" /></div>;
   }
@@ -179,77 +223,41 @@ export default function WebsitePage() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="border-[#E5E5E1]">
+        <TabsList className="border-[#E5E5E1] flex-wrap">
           <TabsTrigger value="home">Home / Hero</TabsTrigger>
+          <TabsTrigger value="services">Services</TabsTrigger>
+          <TabsTrigger value="stats">Stats</TabsTrigger>
+          <TabsTrigger value="navigation">Navigation</TabsTrigger>
+          <TabsTrigger value="contact">Contact</TabsTrigger>
           <TabsTrigger value="landing">Landing Pages</TabsTrigger>
           <TabsTrigger value="company">Company</TabsTrigger>
-          <TabsTrigger value="services">Services</TabsTrigger>
           <TabsTrigger value="brands">Brands</TabsTrigger>
           <TabsTrigger value="support">Support</TabsTrigger>
-          <TabsTrigger value="contact">Contact</TabsTrigger>
         </TabsList>
 
-        {/* HOME PAGE */}
-        <TabsContent value="home" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader><CardTitle className="text-sm font-medium">Hero Section</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">Hero Title</label>
-                  <Input 
-                    value={getContent('home', 'hero', 'title', 'INNOVATES BHUTAN')}
-                    onChange={(e) => updateContent('home', 'hero', 'title', e.target.value)}
-                    className="bg-[#F3F3F1] border-[#E5E5E1]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">Hero Subtitle</label>
-                  <Input 
-                    value={getContent('home', 'hero', 'subtitle', 'IT Solutions for Bhutan')}
-                    onChange={(e) => updateContent('home', 'hero', 'subtitle', e.target.value)}
-                    className="bg-[#F3F3F1] border-[#E5E5E1]"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs text-[#717171]">Hero Description</label>
-                <textarea 
-                  className="w-full h-20 p-3 bg-[#F3F3F1] border-[#E5E5E1] rounded-lg text-sm resize-none"
-                  value={getContent('home', 'hero', 'description', 'For over 15 years, we\'ve linked enterprises with high-performance IT solutions across Bhutan.')}
-                  onChange={(e) => updateContent('home', 'hero', 'description', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs text-[#717171]">CTA Button Text</label>
-                <Input 
-                  value={getContent('home', 'hero', 'cta', 'Get Started')}
-                  onChange={(e) => updateContent('home', 'hero', 'cta', e.target.value)}
-                  className="bg-[#F3F3F1] border-[#E5E5E1]"
-                />
-              </div>
-            </CardContent>
-          </Card>
+        {/* HOME PAGE - HERO */}
+        <TabsContent value="home" className="mt-4">
+          <HeroEditor />
+        </TabsContent>
 
-          <Card>
-            <CardHeader><CardTitle className="text-sm font-medium">Stats Section</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">Stat 1 Label</label>
-                  <Input value={getContent('home', 'stats', 'stat1_label', '500+')} onChange={(e) => updateContent('home', 'stats', 'stat1_label', e.target.value)} className="bg-[#F3F3F1] border-[#E5E5E1]" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">Stat 1 Sub</label>
-                  <Input value={getContent('home', 'stats', 'stat1_sub', 'Enterprises')} onChange={(e) => updateContent('home', 'stats', 'stat1_sub', e.target.value)} className="bg-[#F3F3F1] border-[#E5E5E1]" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">Stat 2 Label</label>
-                  <Input value={getContent('home', 'stats', 'stat2_label', '20/20')} onChange={(e) => updateContent('home', 'stats', 'stat2_label', e.target.value)} className="bg-[#F3F3F1] border-[#E5E5E1]" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* STATS */}
+        <TabsContent value="stats" className="mt-4">
+          <StatsEditor />
+        </TabsContent>
+
+        {/* NAVIGATION */}
+        <TabsContent value="navigation" className="mt-4">
+          <NavigationEditor />
+        </TabsContent>
+
+        {/* SERVICES */}
+        <TabsContent value="services" className="mt-4">
+          <ServicesEditor />
+        </TabsContent>
+
+        {/* CONTACT */}
+        <TabsContent value="contact" className="mt-4">
+          <ContactEditor />
         </TabsContent>
 
         {/* LANDING PAGES */}
@@ -345,45 +353,6 @@ export default function WebsitePage() {
           </Card>
         </TabsContent>
 
-        {/* SERVICES */}
-        <TabsContent value="services" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-medium">Service Catalog</CardTitle>
-              <Button size="sm" className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white">
-                <Plus className="w-4 h-4 mr-1" /> Add Service
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {services.length === 0 ? (
-                <p className="text-sm text-[#717171] text-center py-8">No services yet. Add from Services page.</p>
-              ) : (
-                <div className="space-y-2">
-                  {services.map(service => (
-                    <div key={service.id} className="flex items-center justify-between p-3 bg-[#F3F3F1] rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <ImageIcon className="w-5 h-5 text-[#3ECF8E]" />
-                        <div>
-                          <p className="text-sm font-medium">{service.name}</p>
-                          <p className="text-xs text-[#717171]">{service.description?.substring(0, 50)}...</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={service.active ? "default" : "outline"} className={service.active ? "bg-green-100 text-green-700" : ""}>
-                          {service.active ? 'Active' : 'Inactive'}
-                        </Badge>
-                        <Button size="sm" variant="ghost" onClick={() => toggleService(service.id!, !service.active)}>
-                          {service.active ? 'Disable' : 'Enable'}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* BRANDS */}
         <TabsContent value="brands" className="space-y-4 mt-4">
           <Card>
@@ -441,46 +410,8 @@ export default function WebsitePage() {
         </TabsContent>
 
         {/* CONTACT */}
-        <TabsContent value="contact" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader><CardTitle className="text-sm font-medium">Contact Information</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">Email</label>
-                  <Input 
-                    value={getContent('contact', 'info', 'email', 'info@innovates.bt')}
-                    onChange={(e) => updateContent('contact', 'info', 'email', e.target.value)}
-                    className="bg-[#F3F3F1] border-[#E5E5E1]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">Phone</label>
-                  <Input 
-                    value={getContent('contact', 'info', 'phone', '+975 17268753')}
-                    onChange={(e) => updateContent('contact', 'info', 'phone', e.target.value)}
-                    className="bg-[#F3F3F1] border-[#E5E5E1]"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs text-[#717171]">Address</label>
-                <Input 
-                  value={getContent('contact', 'info', 'address', 'Thimphu, Bhutan')}
-                  onChange={(e) => updateContent('contact', 'info', 'address', e.target.value)}
-                  className="bg-[#F3F3F1] border-[#E5E5E1]"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs text-[#717171]">WhatsApp Link</label>
-                <Input 
-                  value={getContent('contact', 'info', 'whatsapp', 'https://wa.me/97517268753')}
-                  onChange={(e) => updateContent('contact', 'info', 'whatsapp', e.target.value)}
-                  className="bg-[#F3F3F1] border-[#E5E5E1]"
-                />
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="contact" className="mt-4">
+          <ContactEditor />
         </TabsContent>
       </Tabs>
     </div>

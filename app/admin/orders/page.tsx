@@ -37,6 +37,7 @@ interface Order {
   customerLocation: string | null;
   status: "pending" | "deploying" | "complete" | "cancelled";
   totalAmount: string;
+  meta: Record<string, any> | null;
   itemCount?: number;
   createdAt: string;
   updatedAt: string;
@@ -319,7 +320,13 @@ export default function OrdersPage() {
             handleModalClose();
             fetchOrders();
           }}
-          editOrder={editOrder}
+          editOrder={editOrder ? {
+            id: editOrder.id,
+            customerName: editOrder.customerName,
+            customerPhone: editOrder.customerPhone,
+            customerLocation: editOrder.customerLocation ?? undefined,
+            status: editOrder.status,
+          } : null}
         />
       )}
 

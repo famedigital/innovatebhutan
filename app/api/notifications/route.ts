@@ -11,19 +11,25 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const unreadOnly = searchParams.get("unreadOnly") === "true";
+    const type = searchParams.get("type") || undefined;
+    const category = searchParams.get("category") || undefined;
 
-    const notifications = await notificationService.getUserNotifications(
-      profile.id,
-      Math.min(limit, 100),
-      unreadOnly
-    );
+    const notifications = await notificationService.getUserNotificationsWithDetails(profile.id, {
+      limit: Math.min(limit, 100),
+      unreadOnly,
+      type,
+      category,
+    });
 
     const unreadCount = await notificationService.getUnreadCount(profile.id);
+    const stats = await notificationService.getNotificationStats(profile.id);
 
     return NextResponse.json({
       success: true,
-      data: notifications,
+      data: notifications.notifications,
+      total: notifications.total,
       unreadCount,
+      stats,
     });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -43,7 +49,7 @@ export async function PATCH(req: NextRequest) {
     const { profile } = await requireApiAuth(req);
 
     const body = await req.json();
-    const { action, notificationId } = body;
+    const { action, notificationId, notificationIds } = body;
 
     if (action === "mark_all_read") {
       await notificationService.markAllAsRead(profile.id);
@@ -63,6 +69,15 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
+    if (action === "mark_multiple_read" && Array.isArray(notificationIds)) {
+      await notificationService.markMultipleAsRead(notificationIds);
+
+      return NextResponse.json({
+        success: true,
+        message: `${notificationIds.length} notifications marked as read`,
+      });
+    }
+
     return NextResponse.json(
       { success: false, error: "Invalid action" },
       { status: 400 }
@@ -79,27 +94,53 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// DELETE /api/notifications - Delete a notification
+// DELETE /api/notifications - Delete notifications
 export async function DELETE(req: NextRequest) {
   try {
     const { profile } = await requireApiAuth(req);
 
     const { searchParams } = new URL(req.url);
     const notificationId = parseInt(searchParams.get("id") || "0");
+    const action = searchParams.get("action") || "single";
 
-    if (!notificationId) {
+    if (action === "all") {
+      await notificationService.deleteAllNotifications(profile.id);
+
+      return NextResponse.json({
+        success: true,
+        message: "All notifications deleted successfully",
+      });
+    }
+
+    if (action === "read") {
+      await notificationService.deleteAllReadNotifications(profile.id);
+
+      return NextResponse.json({
+        success: true,
+        message: "All read notifications deleted successfully",
+      });
+    }
+
+    if (action === "single" && !notificationId) {
       return NextResponse.json(
-        { success: false, error: "Notification ID is required" },
+        { success: false, error: "Notification ID is required for single delete" },
         { status: 400 }
       );
     }
 
-    await notificationService.deleteNotification(notificationId);
+    if (notificationId) {
+      await notificationService.deleteNotification(notificationId);
 
-    return NextResponse.json({
-      success: true,
-      message: "Notification deleted successfully",
-    });
+      return NextResponse.json({
+        success: true,
+        message: "Notification deleted successfully",
+      });
+    }
+
+    return NextResponse.json(
+      { success: false, error: "Invalid delete action" },
+      { status: 400 }
+    );
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json(formatAuthError(error), { status: error.statusCode });

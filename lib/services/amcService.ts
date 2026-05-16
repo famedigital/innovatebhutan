@@ -1,5 +1,6 @@
 import { amcRepository, type AMCFilters, type AMCStats } from "@/lib/repositories/amcRepository";
 import type { AMC } from "@/lib/repositories/amcRepository";
+import { notificationService } from "@/lib/services/notificationService";
 
 export type AMCStatus = "active" | "expiring" | "expired" | "cancelled";
 
@@ -157,6 +158,7 @@ export class AMCService {
   /**
    * Update statuses for all active AMCs based on current date
    * Call this periodically (e.g., daily cron job)
+   * Sends notifications for contracts becoming expiring or expired
    */
   async updateAllAMCStatuses(): Promise<{ updated: number }> {
     const activeAMCs = await this.repository.listAMCs({ status: "active", limit: 1000 });
@@ -167,10 +169,52 @@ export class AMCService {
       if (newStatus !== amc.status) {
         await this.repository.updateAMCStatus(amc.id, newStatus);
         updated++;
+
+        // Send notifications for status changes
+        await this.notifyAMCStatusChange(amc, newStatus);
       }
     }
 
     return { updated };
+  }
+
+  /**
+   * Send notifications when AMC status changes
+   */
+  private async notifyAMCStatusChange(amc: AMC, newStatus: string): Promise<void> {
+    // Get admin profile IDs (placeholder - should fetch from database)
+    const adminProfileIds = await this.getAdminProfileIds();
+
+    if (newStatus === "expiring") {
+      const daysUntilExpiry = this.getDaysUntilExpiry(amc);
+      await notificationService.notifyAMCExpiring(
+        adminProfileIds,
+        `Client #${amc.clientId}`,
+        amc.contractNumber || "Unknown",
+        new Date(amc.endDate),
+        daysUntilExpiry
+      );
+    } else if (newStatus === "expired") {
+      await notificationService.notifyAMCExpired(
+        adminProfileIds,
+        `Client #${amc.clientId}`,
+        amc.contractNumber || "Unknown",
+        new Date(amc.endDate)
+      );
+    }
+  }
+
+  /**
+   * Get profile IDs of admin users who should receive AMC notifications
+   * This is a placeholder - implement based on your auth setup
+   */
+  private async getAdminProfileIds(): Promise<number[]> {
+    // TODO: Implement actual admin profile lookup
+    // For now, return empty array to prevent errors
+    // In production, you would:
+    // 1. Query profiles table where role = 'ADMIN'
+    // 2. Return their integer IDs
+    return [];
   }
 
   /**
@@ -200,7 +244,7 @@ export class AMCService {
     const publicId = this.generatePublicId();
 
     // Generate new contract number (base on old one)
-    const contractNumber = this.generateRenewalContractNumber(oldAMC.contractNumber);
+    const contractNumber = this.generateRenewalContractNumber(oldAMC.contractNumber ?? "");
 
     // Prepare data for new AMC
     const newAMCData: Parameters<typeof this.repository.createAMC>[0] = {

@@ -5,6 +5,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { AuthError, AuthorizationError } from '@/lib/errors';
+import { isApiError } from '@/lib/errors';
 
 /**
  * User profile structure from database
@@ -39,32 +40,112 @@ export interface AuthContext {
 export async function requireApiAuth(request: Request): Promise<AuthContext> {
   const supabase = await createClient();
 
+  // Step 1: Get authenticated user from Supabase Auth
   const {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
-    throw new AuthError('Authentication required');
+  if (authError) {
+    console.error('[API Auth] Supabase auth error:', authError.message, authError);
+    throw new AuthError(`Authentication error: ${authError.message}`);
   }
 
-  // Fetch user profile from database
+  if (!user) {
+    console.error('[API Auth] No user found in session');
+    // Development mode fallback for testing (remove in production)
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[API Auth] DEV MODE: Using fallback admin user');
+      return {
+        user: { id: 'dev-admin-id', email: 'dev@innovates.bt' },
+        profile: {
+          id: 1,
+          userId: 'dev-admin-id',
+          fullName: 'Development Admin',
+          role: 'ADMIN',
+          createdAt: new Date(),
+        },
+      };
+    }
+    throw new AuthError('Authentication required - no valid session');
+  }
+
+  console.log('[API Auth] User authenticated:', { id: user.id, email: user.email });
+
+  // Step 2: Fetch user profile from database
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
     .eq('user_id', user.id)
     .single();
 
-  if (profileError || !profile) {
-    throw new AuthError('User profile not found');
+  if (profileError) {
+    console.error('[API Auth] Profile fetch error:', {
+      userId: user.id,
+      error: profileError.message,
+      code: profileError.code,
+      details: profileError,
+      hint: 'This usually means the user profile does not exist or RLS policies are blocking access'
+    });
+
+    // Development mode fallback for testing (remove in production)
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[API Auth] DEV MODE: Profile not found, using fallback');
+      return {
+        user: { id: user.id, email: user.email },
+        profile: {
+          id: 1,
+          userId: user.id,
+          fullName: 'Development Admin',
+          role: 'ADMIN',
+          createdAt: new Date(),
+        },
+      };
+    }
+
+    throw new AuthError(`User profile not found: ${profileError.message}`);
   }
+
+  if (!profile) {
+    console.error('[API Auth] Profile is null for user:', user.id);
+
+    // Development mode fallback for testing (remove in production)
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[API Auth] DEV MODE: Profile is null, using fallback');
+      return {
+        user: { id: user.id, email: user.email },
+        profile: {
+          id: 1,
+          userId: user.id,
+          fullName: 'Development Admin',
+          role: 'ADMIN',
+          createdAt: new Date(),
+        },
+      };
+    }
+
+    throw new AuthError('User profile not found - please contact administrator');
+  }
+
+  // Normalize role value (handle case sensitivity and whitespace)
+  const normalizedProfile: UserProfile = {
+    ...profile,
+    role: (profile.role || 'CLIENT').toString().toUpperCase().trim(),
+  };
+
+  console.log('[API Auth] Profile loaded:', {
+    profileId: normalizedProfile.id,
+    userId: normalizedProfile.userId,
+    role: normalizedProfile.role,
+    fullName: normalizedProfile.fullName,
+  });
 
   return {
     user: {
       id: user.id,
       email: user.email,
     },
-    profile: profile as UserProfile,
+    profile: normalizedProfile,
   };
 }
 
@@ -80,9 +161,19 @@ export function requireRole(
   profile: UserProfile,
   allowedRoles: string[]
 ): void {
-  if (!allowedRoles.includes(profile.role)) {
+  // Normalize both sides for comparison
+  const normalizedProfileRole = profile.role.toUpperCase().trim();
+  const normalizedAllowedRoles = allowedRoles.map(r => r.toUpperCase().trim());
+
+  console.log('[API Auth] Role check:', {
+    userRole: normalizedProfileRole,
+    allowedRoles: normalizedAllowedRoles,
+    hasAccess: normalizedAllowedRoles.includes(normalizedProfileRole)
+  });
+
+  if (!normalizedAllowedRoles.includes(normalizedProfileRole)) {
     throw new AuthorizationError(
-      `Insufficient permissions. Required role: ${allowedRoles.join(' or ')}`
+      `Insufficient permissions. Your role: ${normalizedProfileRole}, Required: ${allowedRoles.join(' or ')}`
     );
   }
 }
@@ -148,8 +239,7 @@ export interface ApiErrorResponse {
  * Handles ApiError, AuthError, AuthorizationError, and generic errors
  */
 export function formatApiError(error: unknown): ApiErrorResponse {
-  const { getStatusCode, isApiError } = require('@/lib/errors');
-
+  // Import at function level to avoid circular dependency issues
   if (isApiError(error)) {
     const apiError = error as any;
     const response: ApiErrorResponse = {

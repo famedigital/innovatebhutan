@@ -16,11 +16,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
+    console.log("[API /api/payroll/[id]] Fetching payslip by ID");
+
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    console.log("[API /api/payroll/[id]] Auth verified for user:", authContext.profile.userId);
+
     const { id } = await params;
     const payslipId = validateId(id, "payslip ID");
 
+    console.log("[API /api/payroll/[id]] Fetching payslip:", payslipId);
     const payslip = await payrollService.getPayslipById(payslipId);
 
     if (!payslip) {
@@ -34,7 +39,7 @@ export async function GET(
   } catch (error) {
     const errorResponse = formatApiError(error);
     const statusCode = isApiError(error) ? (error as any).statusCode : 500;
-    console.error("Payslip fetch error:", error);
+    console.error("[API /api/payroll/[id]] Payslip fetch error:", error);
     return NextResponse.json(errorResponse, { status: statusCode });
   }
 }
@@ -45,6 +50,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log("[API /api/payroll/[id]] Updating payslip");
+
     // Rate limiting
     const clientIp = getClientIp(req);
     const rateLimitResult = checkRateLimit(
@@ -57,8 +64,10 @@ export async function PATCH(
       throw new RateLimitError(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000));
     }
 
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    console.log("[API /api/payroll/[id]] Auth verified for user:", authContext.profile.userId);
+
     const { id } = await params;
     const payslipId = validateId(id, "payslip ID");
 
@@ -73,11 +82,14 @@ export async function PATCH(
       throw new NotFoundError("Payslip");
     }
 
+    console.log("[API /api/payroll/[id]] Updating payslip:", payslipId, "with data:", validatedData);
+
     // Note: Full update functionality will be available after schema migration
     // For now, status transitions are supported
     let updatedPayslip;
-    if (validationResult.data.status) {
-      updatedPayslip = await payrollService.transitionPayslipStatus(payslipId, validationResult.data.status);
+    if (validatedData.status) {
+      updatedPayslip = await payrollService.transitionPayslipStatus(payslipId, validatedData.status);
+      console.log("[API /api/payroll/[id]] Status transitioned to:", validatedData.status);
     } else {
       updatedPayslip = existing;
     }
@@ -89,8 +101,8 @@ export async function PATCH(
         action: "UPDATE",
         entity_type: "PAYSLIP",
         entity_id: payslipId,
-        operator_id: profile.userId,
-        details: validationResult.data,
+        operator_id: authContext.profile.userId,
+        details: validatedData,
       },
     ]);
 
@@ -100,14 +112,10 @@ export async function PATCH(
       data: updatedPayslip,
     });
   } catch (error) {
-    if (isApiError(error)) {
-      return NextResponse.json(formatAuthError(error), { status: (error as any).statusCode });
-    }
-    console.error("Payslip update error:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to update payslip" },
-      { status: 500 }
-    );
+    const errorResponse = formatApiError(error);
+    const statusCode = isApiError(error) ? (error as any).statusCode : 500;
+    console.error("[API /api/payroll/[id]] Payslip update error:", error);
+    return NextResponse.json(errorResponse, { status: statusCode });
   }
 }
 
@@ -117,6 +125,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log("[API /api/payroll/[id]] Deleting/cancelling payslip");
+
     // Rate limiting
     const clientIp = getClientIp(req);
     const rateLimitResult = checkRateLimit(
@@ -129,8 +139,10 @@ export async function DELETE(
       throw new RateLimitError(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000));
     }
 
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    console.log("[API /api/payroll/[id]] Auth verified for user:", authContext.profile.userId);
+
     const { id } = await params;
     const payslipId = validateId(id, "payslip ID");
 
@@ -140,16 +152,20 @@ export async function DELETE(
       throw new NotFoundError("Payslip");
     }
 
+    console.log("[API /api/payroll/[id]] Payslip status:", existing.status);
+
     // Only draft payslips can be deleted, others must be cancelled
     if (existing.status === "draft") {
       // TODO: Implement delete after migration
       // await payrollRepository.deletePayslip(payslipId);
+      console.log("[API /api/payroll/[id]] Delete functionality pending migration");
       return NextResponse.json(
         { success: false, error: "Delete functionality pending migration" },
         { status: 501 }
       );
     } else {
       // Cancel instead
+      console.log("[API /api/payroll/[id]] Cancelling payslip:", payslipId);
       const cancelled = await payrollService.cancelPayslip(payslipId);
 
       // Log to audit
@@ -159,7 +175,7 @@ export async function DELETE(
           action: "DELETE",
           entity_type: "PAYSLIP",
           entity_id: payslipId,
-          operator_id: profile.userId,
+          operator_id: authContext.profile.userId,
           details: { cancelled: true, previous_status: existing.status },
         },
       ]);
@@ -171,13 +187,9 @@ export async function DELETE(
       });
     }
   } catch (error) {
-    if (isApiError(error)) {
-      return NextResponse.json(formatAuthError(error), { status: (error as any).statusCode });
-    }
-    console.error("Payslip delete error:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to delete payslip" },
-      { status: 500 }
-    );
+    const errorResponse = formatApiError(error);
+    const statusCode = isApiError(error) ? (error as any).statusCode : 500;
+    console.error("[API /api/payroll/[id]] Payslip delete error:", error);
+    return NextResponse.json(errorResponse, { status: statusCode });
   }
 }

@@ -148,7 +148,7 @@ export function Navigation() {
                         onMouseEnter={() => handleSubmenuEnter(link.name)}
                         onMouseLeave={handleSubmenuLeave}
                       >
-                        {link.submenu.map((subLink) => (
+                        {link.submenu?.map((subLink) => (
                           subLink.external ? (
                             <a
                               key={subLink.name}
@@ -267,7 +267,7 @@ export function Navigation() {
                           exit={{ opacity: 0, height: 0 }}
                           className="pl-4 space-y-1 mt-1"
                         >
-                          {link.submenu.map((subLink) => (
+                          {link.submenu?.map((subLink) => (
                             subLink.external ? (
                               <a
                                 key={subLink.name}

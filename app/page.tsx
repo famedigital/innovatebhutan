@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Navigation } from "@/components/navigation";
+import { NavigationDynamic } from "@/components/navigation-dynamic";
 import { TopMarquee } from "@/components/top-marquee";
-import { HeroSection } from "@/components/hero-section";
-import { ServiceDirectory } from "@/components/service-directory";
-import { StatsSection } from "@/components/stats-section";
-import { ContactSection } from "@/components/contact-section";
-import { FooterSection } from "@/components/footer-section";
+import { HeroSection } from "@/components/hero-section-dynamic";
+import { ServiceDirectoryDynamic } from "@/components/service-directory-dynamic";
+import { StatsSectionDynamic } from "@/components/stats-section-dynamic";
+import { ContactSectionDynamic } from "@/components/contact-section-dynamic";
+import { FooterSectionDynamic } from "@/components/footer-section-dynamic";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 
 export default function HomePage() {
@@ -16,7 +16,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground selection:bg-[#10B981] selection:text-white dark:selection:bg-primary dark:selection:text-black transition-colors duration-500">
-      <Navigation />
+      <NavigationDynamic />
       <TopMarquee />
 
       {/* Hero Section */}
@@ -32,12 +32,25 @@ export default function HomePage() {
       {/* Analytics Column Flow - Compact Stats Only */}
       <section className="py-6 sm:py-12 bg-background border-b border-border transition-colors">
         <div className="max-w-[1300px] mx-auto px-5">
-           <StatsSection />
+           <StatsSectionDynamic />
         </div>
       </section>
 
-      <ContactSection />
-      <FooterSection />
+      {/* Services Section */}
+      <section className="py-16 bg-background">
+        <div className="max-w-[1600px] mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Our Services</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Comprehensive technology solutions tailored for your business needs
+            </p>
+          </div>
+          <ServiceDirectoryDynamic />
+        </div>
+      </section>
+
+      <ContactSectionDynamic />
+      <FooterSectionDynamic />
       <WhatsAppButton />
     </main>
   );

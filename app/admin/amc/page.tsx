@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   FileText, Plus, Search, Calendar, DollarSign, User, RefreshCw,
-  AlertCircle, CheckCircle, Clock, X, Trash2, Eye, RotateCcw
+  AlertCircle, CheckCircle, Clock, X, Trash2, Eye, RotateCcw, BarChart3, Wifi
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,16 +43,20 @@ interface Service {
   category: string;
 }
 
+type LoadingState = 'idle' | 'loading' | 'success' | 'error';
+
 export default function AMCPage() {
   const [amcs, setAMCs] = useState<AMC[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingState, setLoadingState] = useState<LoadingState>('loading');
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showCreate, setShowCreate] = useState(false);
   const [showRenew, setShowRenew] = useState(false);
   const [selectedAMC, setSelectedAMC] = useState<AMC | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newAMC, setNewAMC] = useState({
     clientId: "",
     serviceId: "",
@@ -70,13 +75,12 @@ export default function AMCPage() {
     notes: ""
   });
 
-  useEffect(() => {
-    fetchData();
-  }, [statusFilter]);
-
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = useCallback(async () => {
+    setLoadingState('loading');
+    setError(null);
     try {
+      console.log('[AMC Page] Fetching data...');
+
       // Fetch AMCs with filters
       const params = new URLSearchParams();
       if (statusFilter) params.append("status", statusFilter);
@@ -88,26 +92,62 @@ export default function AMCPage() {
         fetch("/api/services")
       ]);
 
+      // Check AMCs response
+      if (!amcsRes.ok) {
+        const errorData = await amcsRes.json().catch(() => ({}));
+        console.error('[AMC Page] AMCs API error:', amcsRes.status, errorData);
+        throw new Error(errorData.error || `Failed to load AMCs (${amcsRes.status})`);
+      }
+
+      // Check clients response
+      if (!clientsRes.ok) {
+        const errorData = await clientsRes.json().catch(() => ({}));
+        console.warn('[AMC Page] Clients API error:', clientsRes.status, errorData);
+        setClients([]);
+      }
+
+      // Check services response
+      if (!servicesRes.ok) {
+        const errorData = await servicesRes.json().catch(() => ({}));
+        console.warn('[AMC Page] Services API error:', servicesRes.status, errorData);
+        setServices([]);
+      }
+
       const amcsData = await amcsRes.json();
-      const clientsData = await clientsRes.json();
-      const servicesData = await servicesRes.json();
+      const clientsData = clientsRes.ok ? await clientsRes.json() : { success: true, data: [] };
+      const servicesData = servicesRes.ok ? await servicesRes.json() : { success: true, data: [] };
+
+      console.log('[AMC Page] Data loaded:', {
+        amcs: amcsData.data?.length || 0,
+        clients: clientsData.data?.length || 0,
+        services: servicesData.data?.length || 0
+      });
 
       if (amcsData.success) {
-        setAMCs(amcsData.data);
+        setAMCs(amcsData.data || []);
+        setLoadingState('success');
+      } else {
+        throw new Error(amcsData.error || 'Failed to load AMCs');
       }
-      if (clientsData.success) {
+
+      if (clientsData.success && clientsData.data) {
         setClients(clientsData.data);
       }
-      if (servicesData.success) {
+
+      if (servicesData.success && servicesData.data) {
         setServices(servicesData.data);
       }
-    } catch (err) {
-      console.error("Fetch error:", err);
-      toast.error("Failed to load data");
-    } finally {
-      setLoading(false);
+    } catch (err: any) {
+      console.error('[AMC Page] Fetch error:', err);
+      setError(err.message || 'Failed to load data');
+      setLoadingState('error');
+      toast.error(err.message || 'Failed to load data');
     }
-  };
+  }, [statusFilter]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const createAMC = async () => {
     if (!newAMC.clientId || !newAMC.amount) {
@@ -115,7 +155,10 @@ export default function AMCPage() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
+      console.log('[AMC Page] Creating AMC...');
+
       const response = await fetch("/api/amc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -133,16 +176,24 @@ export default function AMCPage() {
 
       const data = await response.json();
 
+      if (!response.ok) {
+        console.error('[AMC Page] Create AMC error:', response.status, data);
+        throw new Error(data.error || `Failed to create AMC (${response.status})`);
+      }
+
       if (data.success) {
         toast.success("AMC Contract created!");
         setShowCreate(false);
         resetForm();
         fetchData();
       } else {
-        toast.error(data.error || "Failed to create AMC");
+        throw new Error(data.error || "Failed to create AMC");
       }
     } catch (err: any) {
-      toast.error("Failed: " + err.message);
+      console.error('[AMC Page] Create AMC error:', err);
+      toast.error(err.message || "Failed to create AMC");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -168,7 +219,10 @@ export default function AMCPage() {
   const renewAMC = async () => {
     if (!selectedAMC) return;
 
+    setIsSubmitting(true);
     try {
+      console.log('[AMC Page] Renewing AMC:', selectedAMC.id);
+
       const response = await fetch(`/api/amc/${selectedAMC.id}/renew`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -177,39 +231,61 @@ export default function AMCPage() {
 
       const data = await response.json();
 
+      if (!response.ok) {
+        console.error('[AMC Page] Renew AMC error:', response.status, data);
+        throw new Error(data.error || `Failed to renew AMC (${response.status})`);
+      }
+
       if (data.success) {
         toast.success("AMC renewed successfully!");
         setShowRenew(false);
         setSelectedAMC(null);
         fetchData();
       } else {
-        toast.error(data.error || "Failed to renew AMC");
+        throw new Error(data.error || "Failed to renew AMC");
       }
     } catch (err: any) {
-      toast.error("Failed: " + err.message);
+      console.error('[AMC Page] Renew AMC error:', err);
+      toast.error(err.message || "Failed to renew AMC");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const deleteAMC = async (id: number) => {
     if (!confirm("Delete this AMC contract?")) return;
 
+    setIsSubmitting(true);
     try {
+      console.log('[AMC Page] Deleting AMC:', id);
+
       const response = await fetch(`/api/amc/${id}`, { method: "DELETE" });
       const data = await response.json();
 
+      if (!response.ok) {
+        console.error('[AMC Page] Delete AMC error:', response.status, data);
+        throw new Error(data.error || `Failed to delete AMC (${response.status})`);
+      }
+
       if (data.success) {
-        toast.success("Deleted");
+        toast.success("AMC deleted successfully");
         fetchData();
       } else {
-        toast.error(data.error || "Failed to delete");
+        throw new Error(data.error || "Failed to delete AMC");
       }
     } catch (err: any) {
-      toast.error("Failed: " + err.message);
+      console.error('[AMC Page] Delete AMC error:', err);
+      toast.error(err.message || "Failed to delete AMC");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const updateStatus = async (id: number, status: string) => {
+    setIsSubmitting(true);
     try {
+      console.log('[AMC Page] Updating AMC status:', id, 'to', status);
+
       const response = await fetch(`/api/amc/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -218,14 +294,22 @@ export default function AMCPage() {
 
       const data = await response.json();
 
+      if (!response.ok) {
+        console.error('[AMC Page] Update status error:', response.status, data);
+        throw new Error(data.error || `Failed to update status (${response.status})`);
+      }
+
       if (data.success) {
-        toast.success("Status updated");
+        toast.success("Status updated successfully");
         fetchData();
       } else {
-        toast.error(data.error || "Failed to update status");
+        throw new Error(data.error || "Failed to update status");
       }
     } catch (err: any) {
-      toast.error("Failed: " + err.message);
+      console.error('[AMC Page] Update status error:', err);
+      toast.error(err.message || "Failed to update status");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -270,8 +354,31 @@ export default function AMCPage() {
   const expiringSoon = amcs.filter(a => a.status === 'expiring').length;
   const totalValue = amcs.filter(a => a.status === 'active').reduce((sum, a) => sum + (parseFloat(a.amount || '0') || 0), 0);
 
-  if (loading) {
-    return <div className="p-6 flex items-center justify-center"><RefreshCw className="w-6 h-6 animate-spin text-[#3ECF8E]" /></div>;
+  // Loading state
+  if (loadingState === 'loading') {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center space-y-4">
+        <RefreshCw className="w-8 h-8 animate-spin text-[#3ECF8E]" />
+        <p className="text-[#717171]">Loading AMC contracts...</p>
+      </div>
+    );
+  }
+
+  // Error state
+  if (loadingState === 'error') {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center space-y-4">
+        <AlertCircle className="w-12 h-12 text-red-500" />
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-[#1A1A1A]">Failed to load AMC contracts</h2>
+          <p className="text-[#717171] mt-1">{error}</p>
+        </div>
+        <Button onClick={fetchData} className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -281,10 +388,22 @@ export default function AMCPage() {
           <h1 className="text-2xl font-bold text-[#1A1A1A]">AMC Contracts</h1>
           <p className="text-sm text-[#717171]">Manage Annual Maintenance Contracts with clients</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white">
-          <Plus className="w-4 h-4 mr-2" />
-          New AMC
-        </Button>
+        <div className="flex gap-2">
+          <Link href="/admin/amc/reports">
+            <Button variant="outline">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Reports
+            </Button>
+          </Link>
+          <Button
+            onClick={() => setShowCreate(true)}
+            className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white"
+            disabled={clients.length === 0}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New AMC
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -314,6 +433,51 @@ export default function AMCPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Expiring Soon Alert Section */}
+      {expiringSoon > 0 && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2 text-orange-800">
+              <AlertCircle className="w-4 h-4" />
+              {expiringSoon} Contract{expiringSoon > 1 ? "s" : ""} Expiring Soon
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="bg-white border-orange-200 text-orange-700 hover:bg-orange-100"
+                onClick={() => setStatusFilter("expiring")}
+              >
+                View Expiring
+              </Button>
+              <Link href="/admin/amc/reports">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="bg-white border-orange-200 text-orange-700 hover:bg-orange-100"
+                >
+                  Full Report
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Clients loading warning */}
+      {clients.length === 0 && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 text-yellow-800">
+              <AlertCircle className="w-4 h-4" />
+              <p className="text-sm">No clients available. Please create a client first to create AMC contracts.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Search & Filter */}
       <div className="flex items-center gap-4">
@@ -388,14 +552,20 @@ export default function AMCPage() {
                           variant="ghost"
                           title="Renew Contract"
                           onClick={() => openRenewModal(amc)}
+                          disabled={isSubmitting}
                         >
                           <RotateCcw className="w-3 h-3 text-blue-500" />
                         </Button>
                       )}
-                      <Button size="sm" variant="ghost" title="Create Invoice">
+                      <Button size="sm" variant="ghost" title="Create Invoice" disabled={isSubmitting}>
                         <DollarSign className="w-3 h-3" />
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => deleteAMC(amc.id)}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => deleteAMC(amc.id)}
+                        disabled={isSubmitting}
+                      >
                         <Trash2 className="w-3 h-3 text-red-500" />
                       </Button>
                     </div>
@@ -413,36 +583,46 @@ export default function AMCPage() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
             <div className="flex items-center justify-between p-4 border-b border-[#E5E5E1]">
               <h3 className="font-semibold">Create New AMC Contract</h3>
-              <Button variant="ghost" size="icon" onClick={() => setShowCreate(false)}>×</Button>
+              <Button variant="ghost" size="icon" onClick={() => setShowCreate(false)} disabled={isSubmitting}>×</Button>
             </div>
 
             <div className="p-4 space-y-4">
               <div className="space-y-2">
                 <label className="text-xs text-[#717171]">Client *</label>
-                <Select value={newAMC.clientId} onValueChange={(v) => setNewAMC({ ...newAMC, clientId: v })}>
-                  <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
-                    <SelectValue placeholder="Select client" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-[#E5E5E1]">
-                    {clients.map(client => (
-                      <SelectItem key={client.id} value={client.id.toString()}>{client.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {clients.length === 0 ? (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                    No clients available. Please create a client first.
+                  </div>
+                ) : (
+                  <Select value={newAMC.clientId} onValueChange={(v) => setNewAMC({ ...newAMC, clientId: v })} disabled={isSubmitting}>
+                    <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
+                      <SelectValue placeholder="Select client" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-[#E5E5E1]">
+                      {clients.map(client => (
+                        <SelectItem key={client.id} value={client.id.toString()}>{client.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div className="space-y-2">
                 <label className="text-xs text-[#717171]">Service</label>
-                <Select value={newAMC.serviceId} onValueChange={(v) => setNewAMC({ ...newAMC, serviceId: v })}>
-                  <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
-                    <SelectValue placeholder="Select service (optional)" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-[#E5E5E1]">
-                    {services.map(service => (
-                      <SelectItem key={service.id} value={service.id.toString()}>{service.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {services.length === 0 ? (
+                  <div className="text-sm text-[#717171] italic">No services available (optional)</div>
+                ) : (
+                  <Select value={newAMC.serviceId} onValueChange={(v) => setNewAMC({ ...newAMC, serviceId: v })} disabled={isSubmitting}>
+                    <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
+                      <SelectValue placeholder="Select service (optional)" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-[#E5E5E1]">
+                      {services.map(service => (
+                        <SelectItem key={service.id} value={service.id.toString()}>{service.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -451,6 +631,7 @@ export default function AMCPage() {
                   value={newAMC.contractNumber}
                   onChange={(e) => setNewAMC({ ...newAMC, contractNumber: e.target.value })}
                   className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -462,6 +643,7 @@ export default function AMCPage() {
                     value={newAMC.startDate}
                     onChange={(e) => setNewAMC({ ...newAMC, startDate: e.target.value })}
                     className="bg-[#F3F3F1] border-[#E5E5E1]"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div className="space-y-2">
@@ -471,6 +653,7 @@ export default function AMCPage() {
                     value={newAMC.endDate}
                     onChange={(e) => setNewAMC({ ...newAMC, endDate: e.target.value })}
                     className="bg-[#F3F3F1] border-[#E5E5E1]"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -483,6 +666,7 @@ export default function AMCPage() {
                   value={newAMC.amount}
                   onChange={(e) => setNewAMC({ ...newAMC, amount: e.target.value })}
                   className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -493,10 +677,23 @@ export default function AMCPage() {
             </div>
 
             <div className="p-4 border-t border-[#E5E5E1] flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
-              <Button className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white" onClick={createAMC}>
-                <FileText className="w-4 h-4 mr-2" />
-                Create Contract
+              <Button variant="outline" onClick={() => setShowCreate(false)} disabled={isSubmitting}>Cancel</Button>
+              <Button
+                className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white"
+                onClick={createAMC}
+                disabled={isSubmitting || !newAMC.clientId || !newAMC.amount}
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Create Contract
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -509,7 +706,7 @@ export default function AMCPage() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
             <div className="flex items-center justify-between p-4 border-b border-[#E5E5E1]">
               <h3 className="font-semibold">Renew AMC Contract</h3>
-              <Button variant="ghost" size="icon" onClick={() => setShowRenew(false)}>×</Button>
+              <Button variant="ghost" size="icon" onClick={() => setShowRenew(false)} disabled={isSubmitting}>×</Button>
             </div>
 
             <div className="p-4 space-y-4">
@@ -526,6 +723,7 @@ export default function AMCPage() {
                     value={renewalData.startDate}
                     onChange={(e) => setRenewalData({ ...renewalData, startDate: e.target.value })}
                     className="bg-[#F3F3F1] border-[#E5E5E1]"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div className="space-y-2">
@@ -535,6 +733,7 @@ export default function AMCPage() {
                     value={renewalData.endDate}
                     onChange={(e) => setRenewalData({ ...renewalData, endDate: e.target.value })}
                     className="bg-[#F3F3F1] border-[#E5E5E1]"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -547,6 +746,7 @@ export default function AMCPage() {
                   value={renewalData.amount}
                   onChange={(e) => setRenewalData({ ...renewalData, amount: e.target.value })}
                   className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -557,15 +757,29 @@ export default function AMCPage() {
                   value={renewalData.notes}
                   onChange={(e) => setRenewalData({ ...renewalData, notes: e.target.value })}
                   className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
 
             <div className="p-4 border-t border-[#E5E5E1] flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowRenew(false)}>Cancel</Button>
-              <Button className="bg-blue-500 hover:bg-blue-600 text-white" onClick={renewAMC}>
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Renew Contract
+              <Button variant="outline" onClick={() => setShowRenew(false)} disabled={isSubmitting}>Cancel</Button>
+              <Button
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+                onClick={renewAMC}
+                disabled={isSubmitting || !renewalData.amount}
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Renewing...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Renew Contract
+                  </>
+                )}
               </Button>
             </div>
           </div>

@@ -22,10 +22,7 @@ export async function POST(
     const orderId = validateId(id, "Order ID");
 
     const body = await req.json();
-    const { status } = validateRequest(
-      orderStatusSchema.pick({ status: true }).required(),
-      body
-    );
+    const status = validateRequest(orderStatusSchema, body.status);
 
     const order = await orderService.transitionOrderStatus(orderId, status);
 

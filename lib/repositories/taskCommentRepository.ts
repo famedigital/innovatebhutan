@@ -2,8 +2,8 @@ import { db } from "@/db";
 import { taskComments, profiles } from "@/db/schema";
 import { eq, and, desc, isNull } from "drizzle-orm";
 
-type TaskComment = typeof taskComments.$inferSelect;
-type NewTaskComment = typeof taskComments.$inferInsert;
+export type TaskComment = typeof taskComments.$inferSelect;
+export type NewTaskComment = typeof taskComments.$inferInsert;
 
 export interface TaskCommentWithProfile extends TaskComment {
   profileName?: string;

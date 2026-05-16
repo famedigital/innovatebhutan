@@ -1123,7 +1123,7 @@ html {
 
 /* Smooth transitions for theme changes */
 * {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, filter, backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
@@ -1131,6 +1131,21 @@ html {
 /* Exclude specific elements from transitions for better performance */
 button, a, input, textarea, select {
   transition-duration: 200ms;
+}
+
+/* Exclude Radix UI animated elements from global transitions to prevent fly-in effects */
+[data-radix-popper-content-wrapper],
+[data-state="open"][data-radix-dropdown-menu-content],
+[data-state="open"][data-radix-select-content],
+[data-state="open"][data-radix-popover-content],
+[data-state="open"][data-radix-tooltip-content],
+[data-state="open"][data-radix-dialog-content],
+[data-radix-dropdown-menu-content],
+[data-radix-select-content],
+[data-radix-popover-content],
+[data-radix-tooltip-content],
+[data-radix-dialog-content] {
+  transition: none !important;
 }
 
 /* High contrast mode support */

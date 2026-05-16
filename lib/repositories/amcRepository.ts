@@ -1,8 +1,9 @@
 import { db } from "@/db";
 import { amcs, clients, services } from "@/db/schema";
-import { eq, and, desc, sql, count, gte, lte, isNotNull } from "drizzle-orm";
+import { eq, and, desc, sql, count, gte, lte, isNotNull, or } from "drizzle-orm";
+import { dashboardCache, withCache, CacheTTL, hashFilters, listCache } from "@/lib/cache/repository-cache";
 
-type AMC = typeof amcs.$inferSelect;
+export type AMC = typeof amcs.$inferSelect;
 type NewAMC = typeof amcs.$inferInsert;
 
 export interface AMCFilters {
@@ -111,6 +112,18 @@ export class AMCRepository {
   }
 
   async listAMCsWithDetails(filters: AMCFilters = {}) {
+    // Don't cache lists with search (too many permutations)
+    const cacheKey = filters.search
+      ? null
+      : `amcs:list:${hashFilters(filters)}`;
+
+    if (cacheKey) {
+      const cached = listCache.get<{ amcs: any[]; total: number }>(cacheKey, 5000); // 5 seconds
+      if (cached) {
+        return cached;
+      }
+    }
+
     const conditions = [];
 
     if (filters.clientId) {
@@ -130,48 +143,56 @@ export class AMCRepository {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const amcsData = await this.db
-      .select({
-        id: amcs.id,
-        publicId: amcs.publicId,
-        clientId: amcs.clientId,
-        serviceId: amcs.serviceId,
-        contractNumber: amcs.contractNumber,
-        startDate: amcs.startDate,
-        endDate: amcs.endDate,
-        amount: amcs.amount,
-        hardwareDetails: amcs.hardwareDetails,
-        servicesIncluded: amcs.servicesIncluded,
-        renewedFrom: amcs.renewedFrom,
-        renewedTo: amcs.renewedTo,
-        status: amcs.status,
-        notes: amcs.notes,
-        createdAt: amcs.createdAt,
-        updatedAt: amcs.updatedAt,
-        clientName: clients.name,
-        clientLogo: clients.logoUrl,
-        clientWhatsapp: clients.whatsapp,
-        serviceName: services.name,
-        serviceCategory: services.category,
-      })
-      .from(amcs)
-      .leftJoin(clients, eq(amcs.clientId, clients.id))
-      .leftJoin(services, eq(amcs.serviceId, services.id))
-      .where(whereClause)
-      .orderBy(desc(amcs.createdAt))
-      .limit(filters.limit || 50)
-      .offset(filters.offset || 0);
+    // Run both queries in parallel
+    const [amcsData, totalResult] = await Promise.all([
+      this.db
+        .select({
+          id: amcs.id,
+          publicId: amcs.publicId,
+          clientId: amcs.clientId,
+          serviceId: amcs.serviceId,
+          contractNumber: amcs.contractNumber,
+          startDate: amcs.startDate,
+          endDate: amcs.endDate,
+          amount: amcs.amount,
+          hardwareDetails: amcs.hardwareDetails,
+          servicesIncluded: amcs.servicesIncluded,
+          renewedFrom: amcs.renewedFrom,
+          renewedTo: amcs.renewedTo,
+          status: amcs.status,
+          notes: amcs.notes,
+          createdAt: amcs.createdAt,
+          updatedAt: amcs.updatedAt,
+          clientName: clients.name,
+          clientLogo: clients.logoUrl,
+          clientWhatsapp: clients.whatsapp,
+          serviceName: services.name,
+          serviceCategory: services.category,
+        })
+        .from(amcs)
+        .leftJoin(clients, eq(amcs.clientId, clients.id))
+        .leftJoin(services, eq(amcs.serviceId, services.id))
+        .where(whereClause)
+        .orderBy(desc(amcs.createdAt))
+        .limit(filters.limit || 50)
+        .offset(filters.offset || 0),
 
-    // Get total count
-    const totalResult = await this.db
-      .select({ count: count() })
-      .from(amcs)
-      .where(whereClause);
+      this.db
+        .select({ count: count() })
+        .from(amcs)
+        .where(whereClause),
+    ]);
 
-    return {
+    const result = {
       amcs: amcsData,
-      total: totalResult[0]?.count || 0,
+      total: Number(totalResult[0]?.count || 0),
     };
+
+    if (cacheKey) {
+      listCache.set(cacheKey, result);
+    }
+
+    return result;
   }
 
   // ==================== EXPIRY MANAGEMENT ====================
@@ -227,45 +248,53 @@ export class AMCRepository {
 
   // ==================== RENEWAL MANAGEMENT ====================
 
+  /**
+   * Get renewal chain using optimized batch queries
+   * Reduces N queries to 2 queries total instead of N+1
+   */
   async getRenewalChain(amcId: number): Promise<AMC[]> {
-    // First, find the root of the renewal chain
-    const rootAMC = await this.findRenewalRoot(amcId);
-    if (!rootAMC) {
+    // First, get all AMCs that could be in this chain (by client)
+    const startAMC = await this.getAMCById(amcId);
+    if (!startAMC) {
       return [];
     }
 
-    // Get all AMCs in the chain
-    const chain: AMC[] = [rootAMC];
-    let currentId = rootAMC.id;
+    // Get all AMCs for this client - much smaller set than all AMCs
+    // Then build chain in memory - eliminates N+1 query pattern
+    const clientAMCs = await this.db
+      .select()
+      .from(amcs)
+      .where(eq(amcs.clientId, startAMC.clientId));
 
-    while (currentId) {
-      const [next] = await this.db
-        .select()
-        .from(amcs)
-        .where(eq(amcs.renewedFrom, currentId))
-        .limit(1);
+    // Build chain in memory
+    const amcMap = new Map(clientAMCs.map(a => [a.id, a]));
+    const chain: AMC[] = [];
 
-      if (next) {
-        chain.push(next);
-        currentId = next.id;
-      } else {
-        break;
-      }
-    }
-
-    return chain;
-  }
-
-  private async findRenewalRoot(amcId: number): Promise<AMC | null> {
-    let current = await this.getAMCById(amcId);
+    // Find root (traverse backwards)
+    let current = amcMap.get(amcId);
     const visited = new Set<number>();
 
     while (current && current.renewedFrom && !visited.has(current.renewedFrom)) {
       visited.add(current.id);
-      current = await this.getAMCById(current.renewedFrom);
+      current = amcMap.get(current.renewedFrom);
     }
 
-    return current;
+    if (current) {
+      chain.push(current);
+
+      // Follow forward links
+      while (current && current.renewedTo) {
+        const next = amcMap.get(current.renewedTo);
+        if (next) {
+          chain.push(next);
+          current = next;
+        } else {
+          break;
+        }
+      }
+    }
+
+    return chain;
   }
 
   /**
@@ -296,35 +325,45 @@ export class AMCRepository {
 
   // ==================== DASHBOARD STATS ====================
 
+  /**
+   * Get dashboard stats with caching (30 second TTL)
+   * These stats are expensive to compute and don't change frequently
+   */
   async getDashboardStats(): Promise<AMCStats> {
+    return withCache(
+      'amc:dashboard',
+      () => this.computeDashboardStats(),
+      dashboardCache,
+      30000 // 30 seconds
+    );
+  }
+
+  /**
+   * Internal method to compute dashboard stats
+   * Separated to allow caching wrapper
+   */
+  private async computeDashboardStats(): Promise<AMCStats> {
     const today = new Date();
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(today.getDate() + 30);
 
-    const [totalResult, activeResult, expiredResult, expiringResult] = await Promise.all([
-      this.db.select({ count: count() }).from(amcs),
-      this.db.select({ count: count(), totalValue: sql<number>`COALESCE(SUM(${amcs.amount}), 0)` }).from(amcs).where(eq(amcs.status, "active")),
-      this.db.select({ count: count() }).from(amcs).where(eq(amcs.status, "expired")),
-      this.db.select({ count: count() }).from(amcs).where(
-        and(
-          eq(amcs.status, "active"),
-          gte(amcs.endDate, today),
-          lte(amcs.endDate, thirtyDaysFromNow)
-        )
-      ),
-    ]);
-
-    const total = totalResult[0]?.count || 0;
-    const activeData = activeResult[0] || { count: 0, totalValue: "0" };
-    const expired = expiredResult[0]?.count || 0;
-    const expiring = expiringResult[0]?.count || 0;
+    // Single aggregation query instead of multiple parallel queries
+    const [statsResult] = await this.db
+      .select({
+        total: count(),
+        active: count(sql`CASE WHEN ${amcs.status} = 'active' THEN 1 END`),
+        expired: count(sql`CASE WHEN ${amcs.status} = 'expired' THEN 1 END`),
+        expiring: count(sql`CASE WHEN ${amcs.status} = 'active' AND ${amcs.endDate} >= ${today} AND ${amcs.endDate} <= ${thirtyDaysFromNow} THEN 1 END`),
+        totalValue: sql<number>`COALESCE(SUM(CASE WHEN ${amcs.status} = 'active' THEN ${amcs.amount} ELSE 0 END), 0)`,
+      })
+      .from(amcs);
 
     return {
-      total: Number(total),
-      active: Number(activeData.count),
-      expiring,
-      expired,
-      totalValue: Number(activeData.totalValue) || 0,
+      total: Number(statsResult.total),
+      active: Number(statsResult.active),
+      expiring: Number(statsResult.expiring),
+      expired: Number(statsResult.expired),
+      totalValue: Number(statsResult.totalValue) || 0,
     };
   }
 

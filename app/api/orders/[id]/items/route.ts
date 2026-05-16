@@ -62,7 +62,7 @@ export async function POST(
     const item = await orderService.addOrderItem(
       orderId,
       validatedData.serviceId,
-      validatedData.quantity,
+      validatedData.quantity ?? 1,
       validatedData.unitPrice
     );
 

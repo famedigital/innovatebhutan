@@ -1,7 +1,10 @@
-import { taskCommentRepository, type TaskCommentWithProfile } from "@/lib/repositories/taskCommentRepository";
+import { taskCommentRepository, type TaskCommentWithProfile, type TaskComment } from "@/lib/repositories/taskCommentRepository";
 import { projectRepository } from "@/lib/repositories/projectRepository";
 import { projectMemberService } from "@/lib/services/projectMemberService";
 import { AuthorizationError } from "@/lib/errors/auth-error";
+import { db } from "@/db";
+import { projectMembers, projectTasks, taskComments } from "@/db/schema";
+import { eq, inArray, desc } from "drizzle-orm";
 
 export interface CreateCommentDTO {
   taskId: number;
@@ -153,10 +156,41 @@ export class TaskCommentService {
    * Useful for notification purposes
    */
   async getRecentCommentsForUser(userId: string, limit: number = 20): Promise<TaskComment[]> {
-    const taskIds = await this.projectRepo.getTasksByProjectId;
+    // Get projects where user is a member
+    const memberProjects = await db
+      .select()
+      .from(projectMembers)
+      .where(eq(projectMembers.userId, userId))
+      .limit(100);
 
-    // This is a simplified version - in production, you'd want to optimize this query
-    return [];
+    const projectIds = [...new Set(memberProjects.map(pm => pm.projectId))];
+
+    if (projectIds.length === 0) {
+      return [];
+    }
+
+    // Get all tasks for these projects
+    const tasks = await db
+      .select({ id: projectTasks.id })
+      .from(projectTasks)
+      .where(inArray(projectTasks.projectId, projectIds))
+      .limit(500);
+
+    const taskIds = tasks.map(t => t.id);
+
+    if (taskIds.length === 0) {
+      return [];
+    }
+
+    // Get recent comments for these tasks
+    const comments = await db
+      .select()
+      .from(taskComments)
+      .where(inArray(taskComments.taskId, taskIds))
+      .orderBy(desc(taskComments.createdAt))
+      .limit(limit);
+
+    return comments;
   }
 }
 

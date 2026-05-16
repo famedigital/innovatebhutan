@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 
 interface Slide {
   id: string;
@@ -11,11 +11,19 @@ interface Slide {
   description: string;
 }
 
+interface PremiumHeroSliderProps {
+  heading?: string;
+  description?: string;
+  ctaText?: string;
+  ctaLink?: string;
+  onContact?: () => void;
+}
+
 /**
  * Premium Apple-style Hero Slider with your actual Cloudinary images
  * Auto-scanned from innovatebhutan/slider folder
  */
-export function PremiumHeroSlider() {
+export function PremiumHeroSlider({ heading, description: descProp, ctaText, ctaLink, onContact }: PremiumHeroSliderProps = {}) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -134,11 +142,20 @@ export function PremiumHeroSlider() {
               className="max-w-2xl"
             >
               <h2 className="text-white text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3 tracking-tight">
-                {currentSlide.title}
+                {heading || currentSlide.title}
               </h2>
-              <p className="text-white/80 text-sm sm:text-base md:text-lg line-clamp-2">
-                {currentSlide.description}
+              <p className="text-white/80 text-sm sm:text-base md:text-lg line-clamp-2 mb-4">
+                {descProp || currentSlide.description}
               </p>
+              {ctaText && onContact && (
+                <button
+                  onClick={onContact}
+                  className="inline-flex items-center gap-2 bg-[#3ECF8E] hover:bg-[#34b27b] text-white px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
+                >
+                  {ctaText}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
             </motion.div>
           </div>
         </motion.div>

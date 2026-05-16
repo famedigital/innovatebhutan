@@ -23,6 +23,11 @@ import {
   MessageSquare,
   Brain,
   File,
+  Bell,
+  Package,
+  Wrench,
+  Building,
+  Calculator,
 } from "lucide-react";
 
 export type UserRole = "ADMIN" | "STAFF" | "CLIENT";
@@ -64,6 +69,16 @@ export const navigationConfig: NavGroup[] = [
       { title: "Invoices", href: "/admin/invoice", icon: FileText },
       { title: "Expenses", href: "/admin/expenses", icon: Receipt },
       { title: "Transactions", href: "/admin/transactions", icon: ArrowUpDown },
+      { title: "Accounts", href: "/admin/accounts", icon: Calculator },
+    ],
+  },
+  {
+    title: "Inventory & Assets",
+    roles: ["ADMIN", "STAFF"],
+    items: [
+      { title: "Inventory", href: "/admin/inventory", icon: Package },
+      { title: "Procurement", href: "/admin/procurement", icon: ShoppingCart },
+      { title: "Fixed Assets", href: "/admin/assets", icon: Building },
     ],
   },
   {
@@ -89,6 +104,7 @@ export const navigationConfig: NavGroup[] = [
     title: "System",
     roles: ["ADMIN"],
     items: [
+      { title: "Notifications", href: "/admin/notifications", icon: Bell },
       { title: "Audit Logs", href: "/admin/audit", icon: ScrollText },
       { title: "Settings", href: "/admin/settings", icon: Settings },
     ],

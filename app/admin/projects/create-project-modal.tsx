@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectContent,
@@ -13,14 +15,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { CreateClientModal, ClientData } from "@/app/admin/clients/create-client-modal";
 
 export function CreateProjectModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const [showAddClient, setShowAddClient] = useState(false);
   const [clients, setClients] = useState<Array<{ id: number; name: string }>>([]);
   const [services, setServices] = useState<Array<{ id: number; name: string }>>([]);
   const [leads, setLeads] = useState<Array<{ id: string; name: string }>>([]);
-  const [newClientName, setNewClientName] = useState("");
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -34,30 +38,64 @@ export function CreateProjectModal({ onClose, onCreated }: { onClose: () => void
   });
 
   useEffect(() => {
-    // Fetch clients
-    fetch("/api/clients")
-      .then(r => r.json())
-      .then(result => {
-        if (result.success) setClients(result.data || []);
-      });
+    const initializeData = async () => {
+      try {
+        setInitializing(true);
+        setFetchError(null);
 
-    // Fetch services
-    fetch("/api/services")
-      .then(r => r.json())
-      .then(result => {
-        if (result.success) setServices(result.data || []);
-      });
+        // Fetch all dropdown data in parallel
+        const [clientsRes, servicesRes, leadsRes] = await Promise.all([
+          fetch("/api/clients"),
+          fetch("/api/services"),
+          fetch("/api/profiles?role=ADMIN,STAFF"),
+        ]);
 
-    // Fetch leads (profiles with STAFF or ADMIN role) - use userId as value
-    fetch("/api/profiles?role=ADMIN,STAFF")
-      .then(r => r.json())
-      .then(result => {
-        if (result.success) {
-          // Map to use userId as value and fullName as label
-          setLeads(result.data?.map((p: any) => ({ id: p.userId, name: p.fullName || p.userId })) || []);
+        const [clientsResult, servicesResult, leadsResult] = await Promise.all([
+          clientsRes.json(),
+          servicesRes.json(),
+          leadsRes.json(),
+        ]);
+
+        // Check for errors and set data
+        if (clientsResult.success) {
+          setClients(clientsResult.data || []);
+        } else {
+          console.error("[CreateProjectModal] Clients fetch error:", clientsResult.error);
         }
-      });
+
+        if (servicesResult.success) {
+          setServices(servicesResult.data || []);
+        } else {
+          console.error("[CreateProjectModal] Services fetch error:", servicesResult.error);
+        }
+
+        if (leadsResult.success) {
+          // Map to use userId as value and fullName as label
+          setLeads(leadsResult.data?.map((p: any) => ({ id: p.userId, name: p.fullName || p.userId })) || []);
+        } else {
+          console.error("[CreateProjectModal] Leads fetch error:", leadsResult.error);
+        }
+
+        // If all failed, show error
+        if (!clientsResult.success && !servicesResult.success && !leadsResult.success) {
+          setFetchError("Failed to load required data. Please refresh and try again.");
+        }
+      } catch (err) {
+        console.error("[CreateProjectModal] Initialization error:", err);
+        setFetchError("Network error: Could not load required data. Please check your connection.");
+      } finally {
+        setInitializing(false);
+      }
+    };
+
+    initializeData();
   }, []);
+
+  const handleClientCreated = (client: ClientData) => {
+    setClients([...clients, { id: client.id!, name: client.name }]);
+    setFormData({ ...formData, clientId: client.id!.toString() });
+    setShowAddClient(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,8 +136,8 @@ export function CreateProjectModal({ onClose, onCreated }: { onClose: () => void
         toast.error(result.error || "Failed to create project");
       }
     } catch (err) {
-      console.error("Create error:", err);
-      toast.error("Failed to create project");
+      console.error("[CreateProjectModal] Submit error:", err);
+      toast.error("Network error: Could not create project. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -153,52 +191,15 @@ export function CreateProjectModal({ onClose, onCreated }: { onClose: () => void
                 )}
               </div>
 
-              {showAddClient ? (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="New client name"
-                    className="bg-[#F3F3F1] border-[#E5E5E1]"
-                    value={newClientName}
-                    onChange={(e) => setNewClientName(e.target.value)}
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white"
-                    onClick={async () => {
-                      if (!newClientName.trim()) return;
-                      try {
-                        const res = await fetch("/api/clients", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ name: newClientName }),
-                        });
-                        const result = await res.json();
-                        if (result.success) {
-                          setClients([...clients, result.data]);
-                          setFormData({ ...formData, clientId: result.data.id.toString() });
-                          setNewClientName("");
-                          setShowAddClient(false);
-                          toast.success("Client added");
-                        }
-                      } catch {
-                        toast.error("Failed to add client");
-                      }
-                    }}
-                  >
-                    Add
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setShowAddClient(false)}
-                  >
-                    ✕
-                  </Button>
+              {initializing ? (
+                <Skeleton className="h-9 w-full bg-[#F3F3F1]" />
+              ) : fetchError ? (
+                <div className="flex items-center gap-2 p-2 text-sm text-red-500 bg-red-50 rounded">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>Failed to load clients</span>
                 </div>
               ) : (
-                <Select value={formData.clientId} onValueChange={(v) => setFormData({ ...formData, clientId: v })} required>
+                <Select value={formData.clientId} onValueChange={(v) => setFormData({ ...formData, clientId: v })} required disabled={loading}>
                   <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
                     <SelectValue placeholder={clients.length === 0 ? "No clients - add one" : "Select client"} />
                   </SelectTrigger>
@@ -219,36 +220,48 @@ export function CreateProjectModal({ onClose, onCreated }: { onClose: () => void
 
             <div className="space-y-2">
               <label className="text-xs font-medium text-[#717171]">Service</label>
-              <Select value={formData.serviceId} onValueChange={(v) => setFormData({ ...formData, serviceId: v })}>
-                <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
-                  <SelectValue placeholder="Optional" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-[#E5E5E1]">
-                  {services.map((s) => (
-                    <SelectItem key={s.id} value={s.id.toString()}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {initializing ? (
+                <Skeleton className="h-9 w-full bg-[#F3F3F1]" />
+              ) : (
+                <Select value={formData.serviceId} onValueChange={(v) => setFormData({ ...formData, serviceId: v })} disabled={loading}>
+                  <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
+                    <SelectValue placeholder="Optional" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-[#E5E5E1]">
+                    {services.map((s) => (
+                      <SelectItem key={s.id} value={s.id.toString()}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-medium text-[#717171]">Project Lead</label>
-              <Select value={formData.leadId} onValueChange={(v) => setFormData({ ...formData, leadId: v })}>
-                <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
-                  <SelectValue placeholder="Optional" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-[#E5E5E1]">
-                  {leads.map((l) => (
-                    <SelectItem key={l.id} value={l.id}>
-                      {l.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {initializing ? (
+                <Skeleton className="h-9 w-full bg-[#F3F3F1]" />
+              ) : (
+                <Select value={formData.leadId} onValueChange={(v) => setFormData({ ...formData, leadId: v })} disabled={loading}>
+                  <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
+                    <SelectValue placeholder="Optional" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-[#E5E5E1]">
+                    {leads.length === 0 ? (
+                      <div className="p-2 text-sm text-gray-500">No team members available</div>
+                    ) : (
+                      leads.map((l) => (
+                        <SelectItem key={l.id} value={l.id}>
+                          {l.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -300,15 +313,22 @@ export function CreateProjectModal({ onClose, onCreated }: { onClose: () => void
           </div>
 
           <div className="flex gap-2 pt-2">
-            <Button type="button" variant="outline" className="flex-1 border-[#E5E5E1]" onClick={onClose}>
+            <Button type="button" variant="outline" className="flex-1 border-[#E5E5E1]" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1 bg-[#3ECF8E] hover:bg-[#34b27b] text-white" disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            <Button type="submit" className="flex-1 bg-[#3ECF8E] hover:bg-[#34b27b] text-white" disabled={loading || initializing}>
+              {loading || initializing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Create Project
             </Button>
           </div>
         </form>
+
+        {/* Client Creation Modal */}
+        <CreateClientModal
+          open={showAddClient}
+          onOpenChange={setShowAddClient}
+          onClientCreated={handleClientCreated}
+        />
       </div>
     </div>
   );

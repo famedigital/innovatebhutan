@@ -327,7 +327,7 @@ export default function DirectoryPage() {
                           {result.type === "business" ? (
                             <>
                               <Image
-                                src={result.logo}
+                                src={"logo" in result ? result.logo : ""}
                                 alt={result.name}
                                 width={40}
                                 height={40}
@@ -335,18 +335,18 @@ export default function DirectoryPage() {
                               />
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{result.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{result.tagline}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{"tagline" in result ? result.tagline : ""}</p>
                               </div>
                               <Star className="w-4 h-4 text-yellow-500" />
                             </>
                           ) : (
                             <>
                               <div className="w-10 h-10 bg-gray-100 dark:bg-[#2c2c2e] rounded-xl flex items-center justify-center">
-                                {result.icon && <result.icon className="w-5 h-5 text-gray-600 dark:text-gray-400" />}
+                                {"icon" in result && result.icon && <result.icon className="w-5 h-5 text-gray-600 dark:text-gray-400" />}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">{result.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{result.category}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{"category" in result ? result.category : ""}</p>
                               </div>
                               <ChevronRight className="w-4 h-4 text-gray-400" />
                             </>

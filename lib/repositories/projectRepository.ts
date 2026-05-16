@@ -1,12 +1,13 @@
 import { db } from "@/db";
-import { projects, projectTasks, clients, profiles, services } from "@/db/schema";
+import { projects, projectTasks, clients, profiles, services, projectMembers } from "@/db/schema";
 import { eq, and, desc, sql, count, isNotNull, isNull } from "drizzle-orm";
 import { getCachedProgress, setCachedProgress, invalidateProgress } from "@/lib/cache/project-cache";
+import { dashboardCache, withCache, hashFilters, listCache } from "@/lib/cache/repository-cache";
 
-type Project = typeof projects.$inferSelect;
-type NewProject = typeof projects.$inferInsert;
-type ProjectTask = typeof projectTasks.$inferSelect;
-type NewProjectTask = typeof projectTasks.$inferInsert;
+export type Project = typeof projects.$inferSelect;
+export type NewProject = typeof projects.$inferInsert;
+export type ProjectTask = typeof projectTasks.$inferSelect;
+export type NewProjectTask = typeof projectTasks.$inferInsert;
 
 export interface ProjectFilters {
   clientId?: number;
@@ -35,6 +36,64 @@ export class ProjectRepository {
   async createProject(data: NewProject): Promise<Project> {
     const [project] = await this.db.insert(projects).values(data).returning();
     return project;
+  }
+
+  /**
+   * Create a project with an owner in a single atomic transaction
+   * This ensures the project always has an owner - no orphaned projects
+   */
+  async createProjectWithOwner(
+    data: NewProject,
+    ownerUserId: string
+  ): Promise<Project> {
+    return await this.db.transaction(async (tx) => {
+      // Create the project
+      const [project] = await tx.insert(projects).values(data).returning();
+
+      // Add the creator as the project owner
+      await tx.insert(projectMembers).values({
+        projectId: project.id,
+        userId: ownerUserId,
+        role: 'owner',
+        joinedAt: new Date(),
+      });
+
+      return project;
+    });
+  }
+
+  /**
+   * Create multiple tasks in a single atomic transaction
+   * Either all tasks are created or none are
+   */
+  async bulkCreateTasks(projectId: number, tasks: Array<NewProjectTask>): Promise<ProjectTask[]> {
+    return await this.db.transaction(async (tx) => {
+      // Insert all tasks
+      const createdTasks = await tx
+        .insert(projectTasks)
+        .values(tasks.map(task => ({ ...task, projectId })))
+        .returning();
+
+      // Update project progress
+      const stats = await tx
+        .select({
+          total: count(),
+          completed: count(sql`CASE WHEN ${projectTasks.status} = 'done' THEN 1 END`),
+        })
+        .from(projectTasks)
+        .where(and(eq(projectTasks.projectId, projectId), isNull(projectTasks.deletedAt)));
+
+      const progress = stats[0]?.total > 0
+        ? Math.round((stats[0].completed / stats[0].total) * 100)
+        : 0;
+
+      await tx
+        .update(projects)
+        .set({ progress, updatedAt: new Date() })
+        .where(eq(projects.id, projectId));
+
+      return createdTasks;
+    });
   }
 
   async getProjectById(id: number): Promise<Project | null> {
@@ -114,6 +173,18 @@ export class ProjectRepository {
   }
 
   async listProjectsWithDetails(filters: ProjectFilters = {}) {
+    // Don't cache lists with search (too many permutations)
+    const cacheKey = filters.search
+      ? null
+      : `projects:list:${hashFilters(filters)}`;
+
+    if (cacheKey) {
+      const cached = listCache.get<{ projects: any[]; total: number }>(cacheKey, 5000); // 5 seconds
+      if (cached) {
+        return cached;
+      }
+    }
+
     const conditions = [isNull(projects.deletedAt)]; // Exclude soft-deleted
 
     if (filters.clientId) {
@@ -139,43 +210,51 @@ export class ProjectRepository {
 
     const whereClause = and(...conditions);
 
-    const projectsData = await this.db
-      .select({
-        id: projects.id,
-        publicId: projects.publicId,
-        name: projects.name,
-        description: projects.description,
-        status: projects.status,
-        budget: projects.budget,
-        progress: projects.progress,
-        startDate: projects.startDate,
-        endDate: projects.endDate,
-        createdAt: projects.createdAt,
-        updatedAt: projects.updatedAt,
-        clientName: clients.name,
-        clientLogo: clients.logoUrl,
-        leadName: profiles.fullName,
-        serviceName: services.name,
-      })
-      .from(projects)
-      .leftJoin(clients, eq(projects.clientId, clients.id))
-      .leftJoin(profiles, eq(projects.leadId, profiles.userId)) // leadId is text, matches profiles.userId
-      .leftJoin(services, eq(projects.serviceId, services.id))
-      .where(whereClause)
-      .orderBy(desc(projects.createdAt))
-      .limit(filters.limit || 50)
-      .offset(filters.offset || 0);
+    // Run both queries in parallel
+    const [projectsData, totalResult] = await Promise.all([
+      this.db
+        .select({
+          id: projects.id,
+          publicId: projects.publicId,
+          name: projects.name,
+          description: projects.description,
+          status: projects.status,
+          budget: projects.budget,
+          progress: projects.progress,
+          startDate: projects.startDate,
+          endDate: projects.endDate,
+          createdAt: projects.createdAt,
+          updatedAt: projects.updatedAt,
+          clientName: clients.name,
+          clientLogo: clients.logoUrl,
+          leadName: profiles.fullName,
+          serviceName: services.name,
+        })
+        .from(projects)
+        .leftJoin(clients, eq(projects.clientId, clients.id))
+        .leftJoin(profiles, eq(projects.leadId, profiles.userId)) // leadId is text, matches profiles.userId
+        .leftJoin(services, eq(projects.serviceId, services.id))
+        .where(whereClause)
+        .orderBy(desc(projects.createdAt))
+        .limit(filters.limit || 50)
+        .offset(filters.offset || 0),
 
-    // Get total count
-    const totalResult = await this.db
-      .select({ count: count() })
-      .from(projects)
-      .where(whereClause);
+      this.db
+        .select({ count: count() })
+        .from(projects)
+        .where(whereClause),
+    ]);
 
-    return {
+    const result = {
       projects: projectsData,
-      total: totalResult[0]?.count || 0,
+      total: Number(totalResult[0]?.count || 0),
     };
+
+    if (cacheKey) {
+      listCache.set(cacheKey, result);
+    }
+
+    return result;
   }
 
   // ==================== TASK CRUD ====================
@@ -523,34 +602,57 @@ export class ProjectRepository {
 
   // ==================== DASHBOARD STATS ====================
 
+  /**
+   * Get dashboard stats with caching (30 second TTL)
+   * Single aggregation query instead of 3 parallel queries
+   */
   async getDashboardStats() {
-    const [statusStats, totalProjects, activeTasks] = await Promise.all([
+    return withCache(
+      'projects:dashboard',
+      () => this.computeDashboardStats(),
+      dashboardCache,
+      30000 // 30 seconds
+    );
+  }
+
+  /**
+   * Internal method to compute dashboard stats
+   * Uses aggregation for better performance
+   */
+  private async computeDashboardStats() {
+    const [statusStats, summaryStats] = await Promise.all([
       this.db
         .select({
           status: projects.status,
           count: count(),
         })
         .from(projects)
+        .where(isNull(projects.deletedAt))
         .groupBy(projects.status),
 
-      this.db.select({ count: count() }).from(projects),
-
+      // Single query for both total projects and active tasks
       this.db
-        .select({ count: count() })
-        .from(projectTasks)
-        .where(eq(projectTasks.status, 'in_progress')),
+        .select({
+          totalProjects: count(sql`CASE WHEN ${projects.deletedAt} IS NULL THEN 1 END`),
+          activeTasks: sql<number>`(
+            SELECT COUNT(*) FROM ${projectTasks}
+            WHERE ${projectTasks.status} = 'in_progress'
+            AND ${projectTasks.deletedAt} IS NULL
+          )`,
+        })
+        .from(projects),
     ]);
 
-    const totalProjectsCount = totalProjects[0]?.count || 0;
-    const activeTasksCount = activeTasks[0]?.count || 0;
+    const totalProjectsCount = Number(summaryStats[0]?.totalProjects) || 0;
+    const activeTasksCount = Number(summaryStats[0]?.activeTasks) || 0;
 
     return {
       byStatus: statusStats.reduce((acc, item) => {
         acc[item.status || 'unknown'] = Number(item.count);
         return acc;
       }, {} as Record<string, number>),
-      totalProjects: Number(totalProjectsCount),
-      activeTasks: Number(activeTasksCount),
+      totalProjects: totalProjectsCount,
+      activeTasks: activeTasksCount,
     };
   }
 

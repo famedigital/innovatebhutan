@@ -13,6 +13,8 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 // POST /api/payroll/batch - Generate payroll for multiple employees
 export async function POST(req: NextRequest) {
   try {
+    console.log("[API /api/payroll/batch] Starting batch payroll generation");
+
     // Rate limiting - stricter for batch operations
     const clientIp = getClientIp(req);
     const rateLimitResult = checkRateLimit(
@@ -25,8 +27,9 @@ export async function POST(req: NextRequest) {
       throw new RateLimitError(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000));
     }
 
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    console.log("[API /api/payroll/batch] Auth verified for user:", authContext.profile.userId);
 
     const body = await req.json();
 
@@ -34,10 +37,18 @@ export async function POST(req: NextRequest) {
     const validatedData = validateRequest(batchPayrollSchema, body);
 
     const { month, year, employeeIds, generateForAll, skipExisting } = validatedData;
+    console.log("[API /api/payroll/batch] Generating payroll for period:", { month, year, employeeIds });
 
     // Generate batch payroll
     const result = await payrollService.generateBatchPayroll(month, year, employeeIds, {
       // Default options for batch generation
+    });
+
+    console.log("[API /api/payroll/batch] Batch payroll completed:", {
+      totalRequested: result.summary.totalRequested,
+      totalGenerated: result.summary.totalGenerated,
+      failed: result.failed.length,
+      skipped: result.skipped.length
     });
 
     // Log to audit
@@ -46,7 +57,7 @@ export async function POST(req: NextRequest) {
       {
         action: "BATCH_CREATE",
         entity_type: "PAYSLIP",
-        operator_id: profile.userId,
+        operator_id: authContext.profile.userId,
         details: {
           month,
           year,
@@ -70,7 +81,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const errorResponse = formatApiError(error);
     const statusCode = isApiError(error) ? (error as any).statusCode : 500;
-    console.error("Batch payroll generation error:", error);
+    console.error("[API /api/payroll/batch] Batch payroll generation error:", error);
     return NextResponse.json(errorResponse, { status: statusCode });
   }
 }
@@ -78,8 +89,12 @@ export async function POST(req: NextRequest) {
 // GET /api/payroll/batch - Get payroll period summary
 export async function GET(req: NextRequest) {
   try {
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
+    console.log("[API /api/payroll/batch] Fetching payroll period summary");
+
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    console.log("[API /api/payroll/batch] Auth verified for user:", authContext.profile.userId);
+
     const searchParams = req.nextUrl.searchParams;
     const month = parseInt(searchParams.get("month") || "");
     const year = parseInt(searchParams.get("year") || "");
@@ -92,20 +107,18 @@ export async function GET(req: NextRequest) {
       throw new Error("Invalid year.");
     }
 
+    console.log("[API /api/payroll/batch] Fetching summary for period:", { month, year });
     const summary = await payrollService.getPeriodSummary(month, year);
+    console.log("[API /api/payroll/batch] Summary fetched:", summary);
 
     return NextResponse.json({
       success: true,
       data: summary,
     });
   } catch (error) {
-    if (isApiError(error)) {
-      return NextResponse.json(formatAuthError(error), { status: (error as any).statusCode });
-    }
-    console.error("Payroll summary fetch error:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to fetch payroll summary" },
-      { status: 500 }
-    );
+    const errorResponse = formatApiError(error);
+    const statusCode = isApiError(error) ? (error as any).statusCode : 500;
+    console.error("[API /api/payroll/batch] Payroll summary fetch error:", error);
+    return NextResponse.json(errorResponse, { status: statusCode });
   }
 }

@@ -113,7 +113,7 @@ function ServiceSpotlight({ service, mousePosition }: { service: any; mousePosit
 
   return (
     <motion.div
-      ref={ref}
+      ref={ref as any}
       style={style}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}

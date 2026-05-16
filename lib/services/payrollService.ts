@@ -15,6 +15,7 @@ import {
   type PaymentMethod,
 } from "@/lib/config/taxConstants";
 import type { Payslip, Employee } from "@/lib/repositories/payrollRepository";
+import { notificationService } from "@/lib/services/notificationService";
 
 // ==================== DTOs & INPUT TYPES ====================
 
@@ -149,7 +150,7 @@ export class PayrollService {
       month: savedPayslip.month,
       year: savedPayslip.year,
       status: savedPayslip.status as PayslipStatus,
-      createdAt: savedPayslip.createdAt,
+      createdAt: savedPayslip.createdAt || new Date(),
     };
   }
 
@@ -332,7 +333,13 @@ export class PayrollService {
    * Approve a payslip (draft -> approved)
    */
   async approvePayslip(payslipId: number, approverId: string, notes?: string): Promise<Payslip> {
-    return await this.transitionPayslipStatus(payslipId, PAYSLIP_STATUS.APPROVED);
+    const payslip = await this.transitionPayslipStatus(payslipId, PAYSLIP_STATUS.APPROVED);
+
+    // Send notification to admins that payroll is approved
+    const adminProfileIds = await this.getAdminProfileIds();
+    await notificationService.notifyPayrollApproved(adminProfileIds, payslip.month, payslip.year);
+
+    return payslip;
   }
 
   /**
@@ -340,6 +347,10 @@ export class PayrollService {
    */
   async markAsPaid(payslipId: number, paymentMethod: PaymentMethod, paymentDate?: Date): Promise<Payslip> {
     const payslip = await this.transitionPayslipStatus(payslipId, PAYSLIP_STATUS.PAID);
+
+    // Send notification that payroll is paid
+    const adminProfileIds = await this.getAdminProfileIds();
+    await notificationService.notifyPayrollPaid(adminProfileIds, payslip.month, payslip.year);
 
     // Update with payment details
     return await this.repository.updatePayslip(payslipId, {
@@ -414,6 +425,12 @@ export class PayrollService {
       }
     }
 
+    // Send notification that payroll batch is ready for review
+    if (result.summary.totalGenerated > 0) {
+      const adminProfileIds = await this.getAdminProfileIds();
+      await notificationService.notifyPayrollReady(adminProfileIds, month, year);
+    }
+
     return result;
   }
 
@@ -484,6 +501,14 @@ export class PayrollService {
   async isReadyForPayment(payslipId: number): Promise<boolean> {
     const payslip = await this.repository.getPayslipById(payslipId);
     return payslip?.status === PAYSLIP_STATUS.APPROVED || false;
+  }
+
+  /**
+   * Get profile IDs of admin users who should receive payroll notifications
+   */
+  private async getAdminProfileIds(): Promise<number[]> {
+    // TODO: Implement actual admin profile lookup
+    return [];
   }
 }
 

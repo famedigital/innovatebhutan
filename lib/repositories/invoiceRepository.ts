@@ -1,9 +1,10 @@
 import { db } from "@/db";
 import { invoices, clients, orders } from "@/db/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
+import { dashboardCache, withCache, hashFilters, listCache } from "@/lib/cache/repository-cache";
 
-type Invoice = typeof invoices.$inferSelect;
-type NewInvoice = typeof invoices.$inferInsert;
+export type Invoice = typeof invoices.$inferSelect;
+export type NewInvoice = typeof invoices.$inferInsert;
 
 export interface InvoiceFilters {
   clientId?: number;
@@ -106,6 +107,18 @@ export class InvoiceRepository {
   }
 
   async listInvoicesWithDetails(filters: InvoiceFilters = {}) {
+    // Don't cache lists with search (too many permutations)
+    const cacheKey = filters.search
+      ? null
+      : `invoices:list:${hashFilters(filters)}`;
+
+    if (cacheKey) {
+      const cached = listCache.get<{ invoices: any[]; total: number }>(cacheKey, 5000); // 5 seconds
+      if (cached) {
+        return cached;
+      }
+    }
+
     const conditions = [];
 
     if (filters.clientId) {
@@ -122,73 +135,93 @@ export class InvoiceRepository {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const invoicesData = await this.db
-      .select({
-        id: invoices.id,
-        invoiceNumber: invoices.invoiceNumber,
-        clientId: invoices.clientId,
-        orderId: invoices.orderId,
-        issueDate: invoices.issueDate,
-        dueDate: invoices.dueDate,
-        total: invoices.total,
-        status: invoices.status,
-        items: invoices.items,
-        notes: invoices.notes,
-        createdAt: invoices.createdAt,
-        updatedAt: invoices.updatedAt,
-        clientName: clients.name,
-        clientLogo: clients.logoUrl,
-        clientWhatsapp: clients.whatsapp,
-      })
-      .from(invoices)
-      .leftJoin(clients, eq(invoices.clientId, clients.id))
-      .where(whereClause)
-      .orderBy(desc(invoices.createdAt))
-      .limit(filters.limit || 50)
-      .offset(filters.offset || 0);
+    // Run both queries in parallel
+    const [invoicesData, totalResult] = await Promise.all([
+      this.db
+        .select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          clientId: invoices.clientId,
+          orderId: invoices.orderId,
+          issueDate: invoices.issueDate,
+          dueDate: invoices.dueDate,
+          total: invoices.total,
+          status: invoices.status,
+          items: invoices.items,
+          notes: invoices.notes,
+          createdAt: invoices.createdAt,
+          updatedAt: invoices.updatedAt,
+          clientName: clients.name,
+          clientLogo: clients.logoUrl,
+          clientWhatsapp: clients.whatsapp,
+        })
+        .from(invoices)
+        .leftJoin(clients, eq(invoices.clientId, clients.id))
+        .where(whereClause)
+        .orderBy(desc(invoices.createdAt))
+        .limit(filters.limit || 50)
+        .offset(filters.offset || 0),
 
-    // Get total count
-    const totalResult = await this.db
-      .select({ count: count() })
-      .from(invoices)
-      .where(whereClause);
+      this.db
+        .select({ count: count() })
+        .from(invoices)
+        .where(whereClause),
+    ]);
 
-    return {
+    const result = {
       invoices: invoicesData,
-      total: totalResult[0]?.count || 0,
+      total: Number(totalResult[0]?.count || 0),
     };
+
+    if (cacheKey) {
+      listCache.set(cacheKey, result);
+    }
+
+    return result;
   }
 
   // ==================== DASHBOARD STATS ====================
 
+  /**
+   * Get dashboard stats with caching (30 second TTL)
+   * Single aggregation query instead of 4 parallel queries
+   */
   async getDashboardStats(): Promise<InvoiceStats> {
-    const [totalResult, paidResult, overdueResult, sentResult] = await Promise.all([
-      this.db
-        .select({ count: count(), totalAmount: sql<number>`COALESCE(SUM(${invoices.total}), 0)` })
-        .from(invoices),
-      this.db
-        .select({ count: count(), totalAmount: sql<number>`COALESCE(SUM(${invoices.total}), 0)` })
-        .from(invoices)
-        .where(eq(invoices.status, 'paid')),
-      this.db
-        .select({ count: count(), totalAmount: sql<number>`COALESCE(SUM(${invoices.total}), 0)` })
-        .from(invoices)
-        .where(eq(invoices.status, 'overdue')),
-      this.db
-        .select({ count: count(), totalAmount: sql<number>`COALESCE(SUM(${invoices.total}), 0)` })
-        .from(invoices)
-        .where(eq(invoices.status, 'sent')),
-    ]);
+    return withCache(
+      'invoice:dashboard',
+      () => this.computeDashboardStats(),
+      dashboardCache,
+      30000 // 30 seconds
+    );
+  }
+
+  /**
+   * Internal method to compute dashboard stats
+   * Uses single aggregation query for better performance
+   */
+  private async computeDashboardStats(): Promise<InvoiceStats> {
+    const [statsResult] = await this.db
+      .select({
+        total: count(),
+        totalAmount: sql<number>`COALESCE(SUM(${invoices.total}), 0)`,
+        paidCount: count(sql`CASE WHEN ${invoices.status} = 'paid' THEN 1 END`),
+        paidAmount: sql<number>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'paid' THEN ${invoices.total} ELSE 0 END), 0)`,
+        overdueCount: count(sql`CASE WHEN ${invoices.status} = 'overdue' THEN 1 END`),
+        overdueAmount: sql<number>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'overdue' THEN ${invoices.total} ELSE 0 END), 0)`,
+        sentCount: count(sql`CASE WHEN ${invoices.status} = 'sent' THEN 1 END`),
+        sentAmount: sql<number>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'sent' THEN ${invoices.total} ELSE 0 END), 0)`,
+      })
+      .from(invoices);
 
     return {
-      total: Number(totalResult[0]?.count || 0),
-      totalAmount: Number(totalResult[0]?.totalAmount || 0),
-      paidCount: Number(paidResult[0]?.count || 0),
-      paidAmount: Number(paidResult[0]?.totalAmount || 0),
-      overdueCount: Number(overdueResult[0]?.count || 0),
-      overdueAmount: Number(overdueResult[0]?.totalAmount || 0),
-      sentCount: Number(sentResult[0]?.count || 0),
-      sentAmount: Number(sentResult[0]?.totalAmount || 0),
+      total: Number(statsResult.total),
+      totalAmount: Number(statsResult.totalAmount || 0),
+      paidCount: Number(statsResult.paidCount),
+      paidAmount: Number(statsResult.paidAmount || 0),
+      overdueCount: Number(statsResult.overdueCount),
+      overdueAmount: Number(statsResult.overdueAmount || 0),
+      sentCount: Number(statsResult.sentCount),
+      sentAmount: Number(statsResult.sentAmount || 0),
     };
   }
 
@@ -221,33 +254,24 @@ export class InvoiceRepository {
 
   /**
    * Update all sent invoices that are past due date to overdue status
-   * Uses a transaction for atomicity
+   * Optimized: Single bulk UPDATE instead of loop
    */
   async markOverdueInvoices(): Promise<Invoice[]> {
-    return await this.db.transaction(async (tx) => {
-      const now = new Date();
+    const now = new Date();
 
-      const overdueInvoices = await tx
-        .select()
-        .from(invoices)
-        .where(
-          and(
-            sql`${invoices.dueDate} < ${now}`,
-            eq(invoices.status, 'sent')
-          )
-        );
+    // Single bulk UPDATE - much faster than looping
+    const updated = await this.db
+      .update(invoices)
+      .set({ status: 'overdue', updatedAt: now })
+      .where(
+        and(
+          sql`${invoices.dueDate} < ${now}`,
+          eq(invoices.status, 'sent')
+        )
+      )
+      .returning();
 
-      const updated: Invoice[] = [];
-      for (const invoice of overdueInvoices) {
-        const [updatedInvoice] = await tx.update(invoices)
-          .set({ status: 'overdue', updatedAt: new Date() })
-          .where(eq(invoices.id, invoice.id))
-          .returning();
-        updated.push(updatedInvoice);
-      }
-
-      return updated;
-    });
+    return updated;
   }
 }
 

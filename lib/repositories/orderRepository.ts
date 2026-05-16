@@ -177,7 +177,7 @@ export class OrderRepository {
   }
 
   async getOrderItemsByOrderId(orderId: number): Promise<Array<OrderItem & { serviceName?: string }>> {
-    return await this.db
+    const result = await this.db
       .select({
         id: orderItems.id,
         orderId: orderItems.orderId,
@@ -189,6 +189,11 @@ export class OrderRepository {
       .from(orderItems)
       .leftJoin(services, eq(orderItems.serviceId, services.id))
       .where(eq(orderItems.orderId, orderId));
+
+    return result.map(item => ({
+      ...item,
+      serviceName: item.serviceName ?? undefined,
+    }));
   }
 
   async updateOrderItem(id: number, data: Partial<NewOrderItem>): Promise<OrderItem> {

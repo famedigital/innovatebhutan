@@ -86,7 +86,6 @@ const allServices = [
     name: "ERP Development",
     shortName: "ERP",
     subtitle: "Enterprise Resource Planning",
-    shortName: "ERP",
     icon: LayoutGrid,
     gradient: "linear-gradient(145deg, #6366F1, #2563EB, #1D4ED8)",
     category: "Web/SaaS",
@@ -1051,8 +1050,8 @@ function ServiceDetailPanel({
   hideAddButton = false
 }: {
   service: typeof allServices[0];
-  onAddToCart: (subService?: string) => void;
-  isInCart: (subService?: string) => boolean;
+  onAddToCart: (subService?: SubService | null) => void;
+  isInCart: (subService?: SubService | null) => boolean;
   hideAddButton?: boolean;
 }) {
   const Icon = service.icon;
@@ -1105,7 +1104,7 @@ function ServiceDetailPanel({
 
         <div className="flex-1 min-w-0">
           <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-tight mb-1">{service.name}</h2>
-          <p className="text-sm text-primary font-medium mb-1">{"subtitle" in service ? (service as any).subtitle : service.category}</p>
+          <p className="text-sm text-primary font-medium mb-1">{"subtitle" in service ? (service as any).subtitle : (service as any).category}</p>
           <p className="text-xs text-foreground/50 mb-2">{service.category}</p>
 
           {/* App Store Style Rating */}
@@ -1552,7 +1551,6 @@ export function ServiceBrowser() {
   const [selectedSubService, setSelectedSubService] = useState<SubService | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedItem[]>([]);
   const [compareItems, setCompareItems] = useState<CompareItem[]>([]);
@@ -1567,11 +1565,6 @@ export function ServiceBrowser() {
     }
   }, [searchParams]);
 
-  // Simulate loading state
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Load recently viewed from localStorage
   useEffect(() => {
@@ -1656,7 +1649,7 @@ export function ServiceBrowser() {
     return true;
   }, [activeCategory, searchQuery]);
 
-  const addToCart = (subService?: SubService) => {
+  const addToCart = (subService?: SubService | null) => {
     if (!selectedService) return;
 
     // Check if already exists
@@ -1667,7 +1660,7 @@ export function ServiceBrowser() {
     );
 
     if (!exists) {
-      setCart([...cart, { service: selectedService, subService }]);
+      setCart([...cart, { service: selectedService, subService: subService || undefined }]);
     }
   };
 
@@ -1679,7 +1672,7 @@ export function ServiceBrowser() {
     setCart([]);
   };
 
-  const isInCart = (subService?: SubService) => {
+  const isInCart = (subService?: SubService | null) => {
     return cart.some(
       item => item.service.id === selectedService?.id &&
       (item.subService?.id === subService?.id) &&
@@ -1994,22 +1987,17 @@ export function ServiceBrowser() {
             transition={{ duration: 0.2 }}
             className="max-w-[1400px] mx-auto px-6 pt-24 pb-8 sm:px-8 sm:pt-12 sm:pb-12 lg:px-12 lg:pt-16"
           >
-            {/* Loading State */}
-            {isLoading ? (
-              <ServicesLoadingState />
+            {/* Search empty state */}
+            {searchQuery && filteredServices.length === 0 ? (
+              <SearchEmptyState searchQuery={searchQuery} onClear={() => setSearchQuery("")} />
             ) : (
               <>
-                {/* Search empty state */}
-                {searchQuery && filteredServices.length === 0 ? (
-                  <SearchEmptyState searchQuery={searchQuery} onClear={() => setSearchQuery("")} />
-                ) : (
-                  <>
-                    {/* Recently Viewed Services */}
-                    <RecentlyViewedServices
-                      recentlyViewed={recentlyViewed}
-                      services={allServices}
-                      onSelectService={handleServiceClick}
-                    />
+                {/* Recently Viewed Services */}
+                <RecentlyViewedServices
+                  recentlyViewed={recentlyViewed}
+                  services={allServices}
+                  onSelectService={handleServiceClick}
+                />
             {/* iOS App Store Style Featured Banner */}
             <div className="mb-10 sm:mb-12">
               <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-transparent dark:from-primary/20 dark:via-primary/10 border border-primary/10">
@@ -2101,8 +2089,6 @@ export function ServiceBrowser() {
               ))}
               </div>
             </div>
-                  </>
-                )}
               </>
             )}
           </motion.div>

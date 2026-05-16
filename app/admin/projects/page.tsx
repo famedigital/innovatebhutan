@@ -1,4 +1,4 @@
-import { ProjectHub } from "./project-hub";
+import { ProjectHubWithErrorBoundary } from "./project-hub-with-boundary";
 
 export default function ProjectsPage() {
   return (
@@ -10,7 +10,7 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      <ProjectHub />
+      <ProjectHubWithErrorBoundary />
     </div>
   );
 }

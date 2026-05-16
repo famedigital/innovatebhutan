@@ -10,22 +10,36 @@ import { validateRequest, validateQueryParams } from "@/lib/validations/validati
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-// GET /api/invoices - List invoices with filters
+/**
+ * GET /api/invoices - List invoices with filters
+ * @description Fetches invoices with pagination and optional filtering by client, status, or search term
+ * @requires ADMIN or STAFF role
+ */
 export async function GET(req: NextRequest) {
   try {
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
+    console.log('[API /api/invoices] GET request received');
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    console.log('[API /api/invoices] Auth check passed for user:', authContext.user.id, 'role:', authContext.profile.role);
+
     const searchParams = req.nextUrl.searchParams;
 
     // Parse and validate query parameters
-    const { page, limit, ...filters } = validateQueryParams(invoiceQuerySchema, searchParams);
+    const queryParams = validateQueryParams(invoiceQuerySchema, searchParams);
+    const page = queryParams.page ?? 1;
+    const limit = queryParams.limit ?? 20;
+    const { page: _, limit: __, ...filters } = queryParams;
     const offset = (page - 1) * limit;
+
+    console.log('[API /api/invoices] Fetching invoices with filters:', { page, limit, filters });
 
     const result = await invoiceService.listInvoices({
       ...filters,
       limit,
       offset,
     });
+
+    console.log('[API /api/invoices] Successfully fetched invoices:', result.invoices.length, 'total:', result.total);
 
     return NextResponse.json({
       success: true,
@@ -40,15 +54,24 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     const errorResponse = formatApiError(error);
     const statusCode = isApiError(error) ? (error as any).statusCode : 500;
-    console.error("Invoices fetch error:", error);
+    console.error('[API /api/invoices] GET error:', {
+      error,
+      statusCode,
+      response: errorResponse
+    });
     return NextResponse.json(errorResponse, { status: statusCode });
   }
 }
 
-// POST /api/invoices - Create a new invoice
+/**
+ * POST /api/invoices - Create a new invoice
+ * @description Creates a new invoice with auto-generated invoice number (INV-YYYYMMDD-XXXX)
+ * @requires ADMIN or STAFF role
+ * @rateLimit Standard rate limits apply
+ */
 export async function POST(req: NextRequest) {
   try {
-    // Rate limiting
+    console.log('[API /api/invoices] POST request received');
     const clientIp = getClientIp(req);
     const rateLimitResult = checkRateLimit(
       clientIp,
@@ -57,18 +80,29 @@ export async function POST(req: NextRequest) {
     );
 
     if (!rateLimitResult.allowed) {
+      console.log('[API /api/invoices] Rate limit exceeded for IP:', clientIp);
       throw new RateLimitError(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000));
     }
 
-    const { profile } = await requireApiAuth(req);
-    requireStaffOrAdmin(profile);
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+    console.log('[API /api/invoices] Auth check passed for user:', authContext.user.id, 'role:', authContext.profile.role);
 
     const body = await req.json();
 
     // Validate request body
     const validatedData = validateRequest(createInvoiceSchema, body);
+    console.log('[API /api/invoices] Validated invoice data:', { clientId: validatedData.clientId, itemCount: validatedData.items?.length });
 
-    const invoice = await invoiceService.generateInvoice(validatedData);
+    // Ensure issueDate is defined (has a default in schema but type inference doesn't account for it)
+    const invoiceData = {
+      ...validatedData,
+      issueDate: validatedData.issueDate ?? new Date(),
+    };
+
+    const invoice = await invoiceService.generateInvoice(invoiceData);
+
+    console.log('[API /api/invoices] Invoice created successfully:', { id: invoice.id, invoiceNumber: invoice.invoiceNumber });
 
     // Log to audit
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -77,7 +111,7 @@ export async function POST(req: NextRequest) {
         action: "CREATE",
         entity_type: "INVOICE",
         entity_id: invoice.id,
-        operator_id: profile.userId,
+        operator_id: authContext.profile.userId,
         details: { invoice_number: invoice.invoiceNumber, client_id: invoice.clientId },
       },
     ]);
@@ -91,13 +125,13 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    if (isApiError(error)) {
-      return NextResponse.json(formatAuthError(error), { status: (error as any).statusCode });
-    }
-    console.error("Invoice creation error:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to create invoice" },
-      { status: 500 }
-    );
+    const errorResponse = formatApiError(error);
+    const statusCode = isApiError(error) ? (error as any).statusCode : 500;
+    console.error('[API /api/invoices] POST error:', {
+      error,
+      statusCode,
+      response: errorResponse
+    });
+    return NextResponse.json(errorResponse, { status: statusCode });
   }
 }

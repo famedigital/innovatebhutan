@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
         website: businesses.website,
         address: businesses.address,
         logoUrl: businesses.logoUrl,
-        coverImageUrl: businesses.coverImageUrlUrl,
+        coverImageUrl: businesses.coverImageUrl,
         rating: businesses.rating,
         reviewCount: businesses.reviewCount,
         isVerified: businesses.isVerified,

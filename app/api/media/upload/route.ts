@@ -1,13 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from "@/lib/auth/api-auth";
+
+/**
+ * POST /api/media/upload - Upload media file
+ *
+ * Uploads a file to Cloudinary (if configured) or Supabase Storage.
+ * Supports images, videos, and documents.
+ *
+ * SECURITY: Requires authenticated user with STAFF or ADMIN role
+ * - File size limited to 10MB
+ * - Only specific file types allowed
+ * - Rate limiting recommended
+ */
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'application/pdf',
+  'video/mp4',
+  'video/mpeg',
+];
 
 export async function POST(req: NextRequest) {
   try {
+    // Authenticate and authorize
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+
     const formData = await req.formData();
     const file = formData.get("file") as File;
 
     if (!file) {
-      return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "No file provided" },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `File size exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024}MB`
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `File type not allowed. Allowed types: ${ALLOWED_TYPES.join(', ')}`
+        },
+        { status: 400 }
+      );
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -21,7 +74,9 @@ export async function POST(req: NextRequest) {
       .in('key', ['cloudinary_name', 'cloudinary_key', 'cloudinary_secret']);
 
     const settingsMap: Record<string, string> = {};
-    settings?.forEach((s: any) => { settingsMap[s.key] = s.value; });
+    settings?.forEach((s: any) => {
+      settingsMap[s.key] = s.value;
+    });
 
     const cloudName = settingsMap.cloudinary_name;
     const apiKey = settingsMap.cloudinary_key;
@@ -31,7 +86,7 @@ export async function POST(req: NextRequest) {
     if (cloudName && apiKey) {
       const buffer = Buffer.from(await file.arrayBuffer());
       const base64 = buffer.toString('base64');
-      
+
       // Upload to Cloudinary
       const cloudResp = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
@@ -51,7 +106,7 @@ export async function POST(req: NextRequest) {
       );
 
       const cloudData = await cloudResp.json();
-      
+
       if (cloudData.secure_url) {
         // Save to database
         await supabase.from('media').insert({
@@ -59,7 +114,10 @@ export async function POST(req: NextRequest) {
           url: cloudData.secure_url,
           type: file.type.split('/')[0],
           size: file.size,
+          uploadedBy: authContext.profile.userId,
         });
+
+        console.log('[API /api/media/upload] Uploaded to Cloudinary:', cloudData.secure_url);
 
         return NextResponse.json({
           success: true,
@@ -72,7 +130,7 @@ export async function POST(req: NextRequest) {
     // Fallback: Upload to Supabase Storage
     const fileExt = file.name.split(".").pop();
     const fileName = `uploads/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-    
+
     const { error: uploadError } = await supabase.storage
       .from("media")
       .upload(fileName, file);
@@ -91,22 +149,30 @@ export async function POST(req: NextRequest) {
       url: publicUrl,
       type: file.type.split('/')[0],
       size: file.size,
+      uploadedBy: authContext.profile.userId,
     });
+
+    console.log('[API /api/media/upload] Uploaded to Supabase:', publicUrl);
 
     return NextResponse.json({
       success: true,
       url: publicUrl,
       source: 'supabase'
     });
-  } catch (error: any) {
-    console.error("Media upload error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    console.error("[API /api/media/upload] Error:", error);
+
+    return NextResponse.json(formatApiError(error), {
+      status: error instanceof Error && "statusCode" in error
+        ? (error as any).statusCode
+        : 500
+    });
   }
 }
 
 export async function GET() {
-  return NextResponse.json({ 
-    success: true, 
-    message: "Media upload endpoint. POST with file form data." 
+  return NextResponse.json({
+    success: true,
+    message: "Media upload endpoint. POST with file form data. Requires STAFF or ADMIN role."
   });
 }

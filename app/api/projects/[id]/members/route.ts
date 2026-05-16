@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { projectMemberService } from "@/lib/services/projectMemberService";
 import { requireApiAuth, formatApiError } from "@/lib/auth/api-auth";
-import { isApiError, ForbiddenError } from "@/lib/errors";
+import { isApiError, ForbiddenError, BadRequestError } from "@/lib/errors";
 import { validateRequest, validateId } from "@/lib/validations/validation";
 import { z } from "zod";
 
