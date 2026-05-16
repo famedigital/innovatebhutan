@@ -295,7 +295,7 @@ export function NavigationDynamic() {
       </header>
 
       {/* Mobile Bottom Navigation - App Style */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex md:hidden bg-white/95 dark:bg-black/95 backdrop-blur-xl border-t border-slate-200 dark:border-white/10 safe-area-inset-bottom">
+      <div className="fixed bottom-0 left-0 right-0 z-[100] flex md:hidden bg-white/95 dark:bg-black/95 backdrop-blur-xl border-t border-slate-200 dark:border-white/10 safe-area-inset-bottom shadow-2xl">
         <div className="w-full flex items-center justify-around py-3 px-2">
           {/* Home */}
           <a
