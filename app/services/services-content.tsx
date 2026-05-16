@@ -1237,7 +1237,7 @@ function CartPanel({
   };
 
   return (
-    <div className="sticky top-6 flex flex-col">
+    <div className="sticky top-24 lg:top-28 flex flex-col">
       {/* Premium Compact Cart Card - Apple Store Style */}
       <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl border border-zinc-200/60 dark:border-zinc-700/60 shadow-xl shadow-zinc-200/30 dark:shadow-black/30 overflow-hidden">
         {/* Header */}
@@ -1734,7 +1734,7 @@ export function ServiceBrowser() {
   return (
     <div className="min-h-screen bg-background">
       {/* Premium Dynamic Header */}
-      <div className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border-b border-zinc-200/30 dark:border-zinc-800/30 sticky top-12 lg:top-12 service-detail-sticky-header z-20 transition-all duration-300 ease-in-out">
+      <div className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border-b border-zinc-200/30 dark:border-zinc-800/30 sticky top-16 lg:top-20 service-detail-sticky-header z-20 transition-all duration-300 ease-in-out">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           {selectedService ? (
             // Detail View Header - Apple Style Breadcrumb
@@ -2234,7 +2234,7 @@ export function ServiceBrowser() {
                 style={{ maxHeight: 'calc(100vh - 140px)' }}
               >
                 {/* Grid Layout: 4 rows × 3 columns */}
-                <div className="space-y-3 sticky top-0 pt-4">
+                <div className="space-y-3 sticky top-24 lg:top-28 pt-4">
                   {(selectedService ? allServices : filteredServices).map((service) => {
                     const Icon = service.icon;
                     const hasSubs = service.subs && service.subs.length > 0;
@@ -2390,7 +2390,7 @@ export function ServiceBrowser() {
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="hidden lg:block lg:col-span-3 sticky top-0"
+                className="hidden lg:block lg:col-span-3 sticky top-24 lg:top-28"
               >
                 <CartPanel
                   cart={cart}
