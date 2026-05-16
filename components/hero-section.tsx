@@ -1026,87 +1026,94 @@ export function HeroSection() {
   };
 
   return (
-    <div className="relative flex flex-col max-w-[1300px] mx-auto pt-4 sm:pt-6 lg:pt-10 pb-16 sm:pb-20 lg:pb-24 px-4 sm:px-5 transition-colors rounded-[32px] overflow-visible">
+    <div className="relative w-full h-screen flex items-center">
 
-      {/* Title - full width with Typewriter Effect */}
-      <motion.h1
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-[26px] sm:text-[32px] lg:text-[44px] font-bold text-foreground leading-[1.2] mb-6 sm:mb-8 transition-colors text-center sm:text-left"
-      >
-        Innovating today for{" "}
-        <span className="relative text-primary">
-          {typewriterText}
-          <motion.span
-            animate={{
-              opacity: [1, 0, 1],
-            }}
-            transition={{
-              duration: 0.8,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            className="absolute -right-1 top-0 h-full w-0.5 bg-primary"
-          />
-        </span>
-      </motion.h1>
-
-      {/* Two columns - same height, aligned */}
-      <div className="flex flex-col lg:flex-row gap-6 sm:gap-10 lg:gap-[50px]">
-
-      {/* 🏙️ LEFT SIDE: SERVICES - iOS App Store Grid - 2 columns mobile, 3 desktop */}
-      <div className="flex-1 w-full">
-        <div className="bg-white dark:bg-[#050505] border border-[#ebebeb] dark:border-white/10 rounded-[16px] p-4 sm:p-6 shadow-[0_10px_30px_rgba(0,0,0,0.04)] dark:shadow-none transition-all h-full flex flex-col">
-          <div className="mb-4 sm:mb-5">
-            <h2 className="text-[13px] sm:text-[14px] lg:text-[16px] text-foreground/50 text-center sm:text-left">Select Your Industry Solution</h2>
-          </div>
-
-          {/* App Store Grid - 2 columns mobile, 3 desktop */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-3 sm:gap-x-6 sm:gap-y-6 justify-items-stretch content-start flex-grow">
-            {mainServices.map((service, i) => (
-              <motion.div
-                key={service.name}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{
-                  delay: i * 0.04,
-                  type: "spring",
-                  stiffness: 200,
-                  damping: 20
-                }}
-              >
-                <MorphingBlobCard
-                  service={service}
-                  index={i}
-                  onClick={() => {
-                    router.push(`/services?category=${encodeURIComponent((service as any).category)}`);
-                  }}
-                  onHover={(name) => setHoveredService(name)}
-                  onLeave={() => setHoveredService(null)}
-                />
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 🖼️ RIGHT SIDE: PREMIUM HERO SLIDER */}
-      <div className="flex-1 w-full">
+      {/* Fullscreen Background Slider */}
+      <div className="absolute inset-0 z-0">
         <PremiumHeroSlider />
       </div>
 
-      {/* Close two-column flex container */}
+      {/* Dark overlay for readability - Left side stronger */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-black/30 z-10" />
+
+      {/* Content Container - Two columns */}
+      <div className="relative z-20 w-full h-full flex items-center px-4 sm:px-6 lg:px-12 max-w-[1600px] mx-auto">
+
+        {/* Left Side - Service Icons */}
+        <div className="w-full lg:w-1/2 xl:w-2/5">
+          <div className="flex flex-col gap-6 sm:gap-8">
+
+            {/* Title - Typewriter */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[26px] sm:text-[32px] lg:text-[44px] font-bold text-white leading-[1.2]"
+            >
+              Innovating today for{" "}
+              <span className="relative text-primary">
+                {typewriterText}
+                <motion.span
+                  animate={{
+                    opacity: [1, 0, 1],
+                  }}
+                  transition={{
+                    duration: 0.8,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                  className="absolute -right-1 top-0 h-full w-0.5 bg-primary"
+                />
+              </span>
+            </motion.h1>
+
+            {/* Service Icons - Vertical list */}
+            <div className="bg-white/10 dark:bg-black/30 backdrop-blur-xl border border-white/20 rounded-[16px] p-4 sm:p-6 shadow-2xl">
+              <div className="mb-4 sm:mb-5">
+                <h2 className="text-[13px] sm:text-[14px] lg:text-[16px] text-white/80">Select Your Industry Solution</h2>
+              </div>
+
+              {/* Service List - Vertical layout */}
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                {mainServices.map((service, i) => (
+                  <motion.div
+                    key={service.name}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{
+                      delay: i * 0.05,
+                      type: "spring",
+                      stiffness: 200,
+                      damping: 20
+                    }}
+                  >
+                    <MorphingBlobCard
+                      service={service}
+                      index={i}
+                      onClick={() => {
+                        router.push(`/services?category=${encodeURIComponent((service as any).category)}`);
+                      }}
+                      onHover={(name) => setHoveredService(name)}
+                      onLeave={() => setHoveredService(null)}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Right Side - Empty space for hero background */}
+        <div className="hidden lg:block lg:w-1/2 xl:w-3/5" />
+
       </div>
 
-      {/* Mobile spacer for marquee */}
-      <div className="h-12 sm:h-0 flex-shrink-0" />
-
       {/* 🛡️ TRUST MARQUEE — LED NEON HIGHLIGHT */}
-      <div className="absolute bottom-0 left-0 w-full overflow-hidden">
+      <div className="absolute bottom-0 left-0 w-full overflow-hidden z-30">
         {/* flickering top border */}
         <div className="animate-border-flicker w-full h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent" />
 
-        <div className="relative bg-gradient-to-r from-black/95 via-slate-950/98 to-black/95 dark:from-black dark:via-[#030712] dark:to-black backdrop-blur-md py-4">
+        <div className="relative bg-gradient-to-r from-black/95 via-slate-950/98 to-black/95 backdrop-blur-md py-4">
           {/* ⚡ Electric pulse beam sweeping L→R */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div
@@ -1118,7 +1125,7 @@ export function HeroSection() {
             />
           </div>
 
-          <div className="max-w-[1300px] mx-auto px-5">
+          <div className="max-w-[1600px] mx-auto px-5">
              {/* Header row - Trusted By */}
              <div className="flex items-center justify-center gap-2 mb-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_10px_var(--primary)]" />
@@ -1153,8 +1160,6 @@ export function HeroSection() {
                      );
                    })}
                 </div>
-                <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-black/95 to-transparent z-10" />
-                <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-black/95 to-transparent z-10" />
              </div>
           </div>
         </div>
