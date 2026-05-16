@@ -73,7 +73,7 @@ function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
 
   return (
     <div
-      className="group flex flex-col items-center gap-3 p-3 rounded-xl hover:bg-black/60 dark:hover:bg-black/70 backdrop-blur-sm transition-all duration-300 cursor-pointer"
+      className="group flex flex-col items-center gap-3 p-3 rounded-xl hover:bg-black/60 dark:hover:bg-black/70 transition-all duration-300 cursor-pointer"
       onClick={onClick}
       onMouseEnter={() => {
         setIsHovered(true);
@@ -1037,7 +1037,7 @@ export function HeroSection() {
       <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10" />
 
       {/* Content Container - Two columns */}
-      <div className="relative z-20 w-full h-full flex items-start px-4 sm:px-6 lg:px-12 max-w-[1600px] mx-auto -mt-4 sm:-mt-6 lg:-mt-8 pt-16 sm:pt-20 lg:pt-24">
+      <div className="relative z-20 w-full h-full flex items-start px-4 sm:px-6 lg:px-12 max-w-[1600px] mx-auto -mt-0 sm:-mt-4 lg:-mt-8 pt-20 sm:pt-20 lg:pt-24">
 
         {/* Left Side - Title and Service Icons */}
         <div className="w-full lg:w-2/5 xl:w-1/3 order-1 lg:order-1 flex flex-col justify-start">
@@ -1045,23 +1045,29 @@ export function HeroSection() {
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-[22px] sm:text-[30px] lg:text-[42px] xl:text-[48px] font-bold text-white leading-[1.1] whitespace-nowrap mb-6 sm:mb-8 lg:mb-10"
+            className="text-[32px] sm:text-[40px] lg:text-[52px] xl:text-[60px] font-black text-white leading-[1.2] mb-8 sm:mb-10 lg:mb-12"
           >
-            Innovating today for{" "}
-            <span className="relative" style={{ color: '#39FF14', textShadow: '0 0 20px rgba(57,255,20,0.8), 0 0 40px rgba(57,255,20,0.4)' }}>
-              {typewriterText}
-              <motion.span
-                animate={{
-                  opacity: [1, 0, 1],
-                }}
-                transition={{
-                  duration: 0.8,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-                className="absolute -right-1 top-0 h-full w-0.5"
-                style={{ background: '#39FF14', boxShadow: '0 0 10px #39FF14' }}
-              />
+            <span className="block">Innovating today</span>
+            <span className="block">for{" "}
+              <span className="relative" style={{
+                color: '#39FF14',
+                textShadow: '0 0 30px rgba(57,255,20,1), 0 0 60px rgba(57,255,20,0.6), 0 0 90px rgba(57,255,20,0.4)',
+                fontWeight: '900'
+              }}>
+                {typewriterText}
+                <motion.span
+                  animate={{
+                    opacity: [1, 0, 1],
+                  }}
+                  transition={{
+                    duration: 0.8,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                  className="absolute -right-1 top-0 h-full w-1"
+                  style={{ background: '#39FF14', boxShadow: '0 0 15px #39FF14, 0 0 30px rgba(57,255,20,0.8)' }}
+                />
+              </span>
             </span>
           </motion.h1>
 

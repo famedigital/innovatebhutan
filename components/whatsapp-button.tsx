@@ -22,7 +22,7 @@ export function WhatsAppButton() {
       transition={{ delay: 0.5, duration: 0.4 }}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 bg-[#14532D] text-white rounded-full shadow-lg shadow-[#14532D]/30 hover:bg-[#166534] transition-colors"
+      className="hidden md:flex fixed bottom-6 right-6 z-40 items-center gap-3 px-5 py-3 bg-[#14532D] text-white rounded-full shadow-lg shadow-[#14532D]/30 hover:bg-[#166534] transition-colors"
     >
       {/* Pulse Ring */}
       <span className="absolute inset-0 rounded-full pulse-ring" />
