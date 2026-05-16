@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { Navigation } from '@/components/navigation'
 import { ServicesContent } from './services-content'
 
 export const metadata: Metadata = {
@@ -11,7 +10,6 @@ export const metadata: Metadata = {
 export default function ServicesPage() {
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-black transition-colors">
-      <Navigation />
       <ServicesContent />
     </main>
   )

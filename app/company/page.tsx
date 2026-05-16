@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { Navigation } from '@/components/navigation'
 import { FooterSection } from '@/components/footer-section'
 import { WhatsAppButton } from '@/components/whatsapp-button'
 import { CompanyContent } from './company-content'
@@ -13,7 +12,6 @@ export const metadata: Metadata = {
 export default function CompanyPage() {
   return (
     <main className="min-h-screen bg-background text-foreground transition-colors duration-500">
-      <Navigation />
       <CompanyContent />
       <FooterSection />
       <WhatsAppButton />

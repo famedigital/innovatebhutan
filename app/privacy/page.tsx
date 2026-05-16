@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import { Navigation } from "@/components/navigation";
 import { FooterSection } from "@/components/footer-section";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { Shield } from "lucide-react";
@@ -12,7 +11,6 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <main className="min-h-screen bg-[#020617] selection:bg-primary/30">
-      <Navigation />
       
       {/* Header */}
       <section className="pt-32 pb-16 bg-[#020617] border-b border-white/5 relative overflow-hidden">

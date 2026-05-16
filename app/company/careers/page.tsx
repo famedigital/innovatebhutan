@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { Briefcase, MapPin, DollarSign, Clock, Calendar, Award, Users, Zap, Heart, ArrowRight, Building2, Sparkles, Target, Shield, X, CheckCircle } from "lucide-react";
-import { Navigation } from "@/components/navigation";
 import { FooterSection } from "@/components/footer-section";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { useState } from "react";
@@ -496,7 +495,6 @@ function CareersContent() {
 export default function CareersPage() {
   return (
     <>
-      <Navigation />
       <CareersContent />
       <FooterSection />
       <WhatsAppButton />
