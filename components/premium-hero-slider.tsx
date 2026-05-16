@@ -164,20 +164,20 @@ export function PremiumHeroSlider({ heading, description: descProp, ctaText, cta
       </AnimatePresence>
 
       {/* Navigation Arrows - Premium Enhanced Style */}
-      <div className="absolute inset-y-0 left-0 flex items-center z-40">
+      <div className="absolute inset-y-0 left-0 flex items-center z-[60] pointer-events-none">
         <button
           onClick={goToPrevious}
-          className="ml-4 sm:ml-6 p-3 sm:p-4 rounded-full bg-white/15 hover:bg-white/30 backdrop-blur-md border-2 border-white/30 hover:border-white/50 transition-all duration-300 group shadow-2xl hover:shadow-white/20 cursor-pointer"
+          className="ml-4 sm:ml-6 p-3 sm:p-4 rounded-full bg-white/15 hover:bg-white/30 backdrop-blur-md border-2 border-white/30 hover:border-white/50 transition-all duration-300 group shadow-2xl hover:shadow-white/20 cursor-pointer pointer-events-auto"
           aria-label="Previous slide"
         >
           <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7 text-white group-hover:scale-125 transition-transform" />
         </button>
       </div>
 
-      <div className="absolute inset-y-0 right-0 flex items-center z-40">
+      <div className="absolute inset-y-0 right-0 flex items-center z-[60] pointer-events-none">
         <button
           onClick={goToNext}
-          className="mr-4 sm:mr-6 p-3 sm:p-4 rounded-full bg-white/15 hover:bg-white/30 backdrop-blur-md border-2 border-white/30 hover:border-white/50 transition-all duration-300 group shadow-2xl hover:shadow-white/20 cursor-pointer"
+          className="mr-4 sm:mr-6 p-3 sm:p-4 rounded-full bg-white/15 hover:bg-white/30 backdrop-blur-md border-2 border-white/30 hover:border-white/50 transition-all duration-300 group shadow-2xl hover:shadow-white/20 cursor-pointer pointer-events-auto"
           aria-label="Next slide"
         >
           <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7 text-white group-hover:scale-125 transition-transform" />
@@ -185,12 +185,12 @@ export function PremiumHeroSlider({ heading, description: descProp, ctaText, cta
       </div>
 
       {/* Dots Indicator - Premium Style */}
-      <div className="absolute bottom-6 sm:bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2.5 z-40">
+      <div className="absolute bottom-6 sm:bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2.5 z-[60] pointer-events-none">
         {slides.map((slide, index) => (
           <button
             key={slide.id}
             onClick={() => goToSlide(index)}
-            className={`h-1.5 sm:h-2 rounded-full transition-all duration-300 ${
+            className={`h-1.5 sm:h-2 rounded-full transition-all duration-300 pointer-events-auto ${
               index === currentIndex
                 ? "bg-white w-10 sm:w-12 shadow-lg shadow-white/30"
                 : "bg-white/50 hover:bg-white/70 w-2 sm:w-3"

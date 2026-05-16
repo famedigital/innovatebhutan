@@ -13,6 +13,9 @@ import {
   StarOff,
   MoreVertical,
   Loader2,
+  X,
+  ImageIcon,
+  Upload,
 } from "lucide-react";
 import {
   Table,
@@ -184,6 +187,7 @@ export function ServicesEditor() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<ServiceFormData>(defaultFormData);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const fetchServices = useCallback(async () => {
     try {
@@ -374,6 +378,50 @@ export function ServicesEditor() {
       console.error("Toggle error:", err);
       toast.error("Failed to update service");
     }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      setUploadingImage(true);
+      const currentGallery = formData.galleryImages || [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("folder", "services");
+
+        const response = await fetch("/api/media/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.data?.url) {
+          currentGallery.push(result.data.url);
+        } else {
+          toast.error(`Failed to upload ${file.name}`);
+        }
+      }
+
+      setFormData({ ...formData, galleryImages: currentGallery });
+      toast.success("Images uploaded successfully");
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error("Failed to upload images");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const currentGallery = formData.galleryImages || [];
+    const newGallery = currentGallery.filter((_, i) => i !== index);
+    setFormData({ ...formData, galleryImages: newGallery });
   };
 
   // Filter services based on search
@@ -841,6 +889,63 @@ export function ServicesEditor() {
                 }
                 placeholder="https://youtube.com/watch?v=..."
               />
+            </div>
+
+            {/* Gallery Images */}
+            <div className="space-y-2">
+              <Label>Service Images/Gallery</Label>
+              <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-4">
+                {/* Upload Button */}
+                <div className="flex items-center justify-center mb-4">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                    />
+                    <div className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors">
+                      <Upload className="w-4 h-4" />
+                      <span className="text-sm font-medium">
+                        {uploadingImage ? "Uploading..." : "Upload Images"}
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Image Preview Grid */}
+                {(formData.galleryImages || []).length > 0 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {(formData.galleryImages || []).map((imageUrl, index) => (
+                      <div key={index} className="relative group aspect-square">
+                        <img
+                          src={imageUrl}
+                          alt={`Service image ${index + 1}`}
+                          className="w-full h-full object-cover rounded-lg border border-zinc-200 dark:border-zinc-700"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {(!formData.galleryImages || formData.galleryImages.length === 0) && (
+                  <div className="text-center py-8 text-zinc-500">
+                    <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No images uploaded yet</p>
+                    <p className="text-xs">Upload service screenshots, photos, etc.</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Toggles */}
