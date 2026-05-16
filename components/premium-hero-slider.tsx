@@ -84,7 +84,7 @@ export function PremiumHeroSlider({ heading, description: descProp, ctaText, cta
     if (!isPaused) {
       const interval = setInterval(() => {
         setCurrentIndex((prev) => (prev + 1) % slides.length);
-      }, 5000); // Change slide every 5 seconds
+      }, 25000); // Change slide every 25 seconds (ultra slow)
 
       return () => clearInterval(interval);
     }
@@ -106,7 +106,7 @@ export function PremiumHeroSlider({ heading, description: descProp, ctaText, cta
 
   return (
     <div
-      className="relative w-full aspect-square sm:aspect-auto sm:h-[550px] overflow-hidden bg-black"
+      className="relative w-full h-screen overflow-hidden bg-black"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
@@ -117,7 +117,7 @@ export function PremiumHeroSlider({ heading, description: descProp, ctaText, cta
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -100 }}
           transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
-          className="absolute inset-0"
+          className="absolute inset-0 pointer-events-none"
         >
           {/* Slide Image */}
           <div className="absolute inset-0">
@@ -130,8 +130,8 @@ export function PremiumHeroSlider({ heading, description: descProp, ctaText, cta
           </div>
 
           {/* Gradient Overlay for text readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent pointer-events-none" />
 
           {/* Slide Content */}
           <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 md:p-10">
@@ -139,59 +139,61 @@ export function PremiumHeroSlider({ heading, description: descProp, ctaText, cta
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
-              className="max-w-2xl"
+              className="max-w-2xl ml-auto"
             >
-              <h2 className="text-white text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3 tracking-tight">
+              <h2 className="text-white text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3 tracking-tight text-right">
                 {heading || currentSlide.title}
               </h2>
-              <p className="text-white/80 text-sm sm:text-base md:text-lg line-clamp-2 mb-4">
+              <p className="text-white/80 text-sm sm:text-base md:text-lg line-clamp-2 mb-4 text-right">
                 {descProp || currentSlide.description}
               </p>
               {ctaText && onContact && (
-                <button
-                  onClick={onContact}
-                  className="inline-flex items-center gap-2 bg-[#3ECF8E] hover:bg-[#34b27b] text-white px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
-                >
-                  {ctaText}
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                <div className="flex justify-end">
+                  <button
+                    onClick={onContact}
+                    className="inline-flex items-center gap-2 bg-[#3ECF8E] hover:bg-[#34b27b] text-white px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
+                  >
+                    {ctaText}
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
               )}
             </motion.div>
           </div>
         </motion.div>
       </AnimatePresence>
 
-      {/* Navigation Arrows - Sharp Apple Style */}
-      <div className="absolute inset-y-0 left-0 flex items-center">
+      {/* Navigation Arrows - Premium Enhanced Style */}
+      <div className="absolute inset-y-0 left-0 flex items-center z-40">
         <button
           onClick={goToPrevious}
-          className="ml-2 sm:ml-4 p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 transition-all duration-300 group"
+          className="ml-4 sm:ml-6 p-3 sm:p-4 rounded-full bg-white/15 hover:bg-white/30 backdrop-blur-md border-2 border-white/30 hover:border-white/50 transition-all duration-300 group shadow-2xl hover:shadow-white/20 cursor-pointer"
           aria-label="Previous slide"
         >
-          <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:scale-110 transition-transform" />
+          <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7 text-white group-hover:scale-125 transition-transform" />
         </button>
       </div>
 
-      <div className="absolute inset-y-0 right-0 flex items-center">
+      <div className="absolute inset-y-0 right-0 flex items-center z-40">
         <button
           onClick={goToNext}
-          className="mr-2 sm:mr-4 p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 transition-all duration-300 group"
+          className="mr-4 sm:mr-6 p-3 sm:p-4 rounded-full bg-white/15 hover:bg-white/30 backdrop-blur-md border-2 border-white/30 hover:border-white/50 transition-all duration-300 group shadow-2xl hover:shadow-white/20 cursor-pointer"
           aria-label="Next slide"
         >
-          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:scale-110 transition-transform" />
+          <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7 text-white group-hover:scale-125 transition-transform" />
         </button>
       </div>
 
       {/* Dots Indicator - Premium Style */}
-      <div className="absolute bottom-4 sm:bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2">
+      <div className="absolute bottom-6 sm:bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2.5 z-40">
         {slides.map((slide, index) => (
           <button
             key={slide.id}
             onClick={() => goToSlide(index)}
-            className={`h-1 sm:h-1.5 rounded-full transition-all duration-300 ${
+            className={`h-1.5 sm:h-2 rounded-full transition-all duration-300 ${
               index === currentIndex
-                ? "bg-white w-8 sm:w-10"
-                : "bg-white/40 hover:bg-white/60 w-2 sm:w-3"
+                ? "bg-white w-10 sm:w-12 shadow-lg shadow-white/30"
+                : "bg-white/50 hover:bg-white/70 w-2 sm:w-3"
             }`}
             aria-label={`Go to slide ${index + 1}`}
           />

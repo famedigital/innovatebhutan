@@ -74,6 +74,20 @@ export function NavigationDynamic() {
   const [isOpen, setIsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Scroll detection for sticky navbar styling (client-only)
+  useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   const [mobileOpenSubmenu, setMobileOpenSubmenu] = useState<string | null>(null);
   const [submenuTimeout, setSubmenuTimeout] = useState<NodeJS.Timeout | null>(null);
   const [navLinks, setNavLinks] = useState<NavLink[]>([]);
@@ -152,9 +166,9 @@ export function NavigationDynamic() {
 
   if (loading) {
     return (
-      <header className="fixed top-0 left-0 right-0 z-50">
-        <nav className="relative z-50 bg-white/90 dark:bg-black/80 backdrop-blur-xl border-b border-slate-100 dark:border-white/10">
-          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+      <header className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-4">
+        <nav className="relative z-50 max-w-4xl mx-auto w-full bg-white/90 dark:bg-black/80 backdrop-blur-xl border border-slate-100 dark:border-white/10 rounded-2xl shadow-lg">
+          <div className="px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-12">
               <ModernLogo />
               <div className="w-32 h-4 bg-slate-100 dark:bg-white/5 rounded animate-pulse" />
@@ -166,9 +180,9 @@ export function NavigationDynamic() {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out">
-      {/* Main Nav */}
-      <nav className="relative z-50 bg-white/90 dark:bg-black/80 backdrop-blur-xl border-b border-slate-100 dark:border-white/10 transition-colors">
+    <header className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-4 transition-all duration-300">
+      {/* Main Nav - Floating Centered */}
+      <nav className={`relative z-50 max-w-4xl mx-auto w-full backdrop-blur-xl border border-slate-100 dark:border-white/10 rounded-2xl transition-all duration-300 ${isScrolled ? 'bg-white/95 dark:bg-black/95 shadow-xl' : 'bg-white/90 dark:bg-black/80 shadow-lg'}`}>
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-12">
             {/* Modern Logo Animation - positioned left */}
@@ -177,7 +191,7 @@ export function NavigationDynamic() {
             </a>
 
             {/* Desktop Nav */}
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden md:flex items-center gap-0.5">
               {displayLinks.map((link) => {
                 const children = getChildren(link.id);
                 const hasChildren = children.length > 0;
@@ -190,7 +204,7 @@ export function NavigationDynamic() {
                     onMouseEnter={() => handleSubmenuEnter(link.label)}
                     onMouseLeave={handleSubmenuLeave}
                   >
-                    <button className="px-4 py-2 text-[11px] uppercase tracking-widest font-bold text-slate-500 dark:text-white/50 hover:text-primary dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-full transition-all duration-300 flex items-center gap-1">
+                    <button className="px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-white/50 hover:text-primary dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-full transition-all duration-300 flex items-center gap-1">
                       {link.label}
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -232,7 +246,7 @@ export function NavigationDynamic() {
                     href={link.url}
                     target={link.open_in_new_tab ? "_blank" : undefined}
                     rel={link.open_in_new_tab ? "noopener noreferrer" : undefined}
-                    className="px-4 py-2 text-[11px] uppercase tracking-widest font-bold text-slate-500 dark:text-white/50 hover:text-primary dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-full transition-all duration-300 flex items-center gap-1"
+                    className="px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-white/50 hover:text-primary dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-full transition-all duration-300 flex items-center gap-1"
                   >
                     {link.label}
                     {link.badge && (
@@ -246,34 +260,32 @@ export function NavigationDynamic() {
             </div>
 
             {/* Action Area */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {/* Login Button */}
               <a
                 href="/login"
-                className="inline-flex items-center gap-2 px-4 py-2 border border-[#E5E5E1] dark:border-white/10 text-[11px] uppercase tracking-widest font-bold text-[#1A1A1A] dark:text-white rounded-full hover:bg-[#3ECF8E] hover:border-[#3ECF8E] hover:text-black transition-all"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 border border-[#E5E5E1] dark:border-white/10 text-[10px] uppercase tracking-wider font-bold text-[#1A1A1A] dark:text-white rounded-full hover:bg-[#3ECF8E] hover:border-[#3ECF8E] hover:text-black transition-all"
               >
                 <LogIn className="w-3 h-3" />
-                Login
+                <span className="hidden md:inline">Login</span>
               </a>
 
               {/* Apple-Style Theme Toggle */}
               <button
                 onClick={toggleTheme}
-                className="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-primary hover:scale-110 active:scale-95 transition-all outline-none dark:shadow-[0_0_15px_rgba(57,255,20,0.2)]"
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-primary hover:scale-110 active:scale-95 transition-all outline-none dark:shadow-[0_0_15px_rgba(57,255,20,0.2)]"
               >
-                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
               </button>
 
-              <div className="hidden md:flex items-center gap-2">
-                <a
-                  href="https://wa.me/97517268753"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground dark:text-black text-[11px] uppercase tracking-tighter font-black rounded-full hover:bg-opacity-90 dark:shadow-[0_0_20px_rgba(57,255,20,0.3)] transition-all"
-                >
-                  Connect
-                </a>
-              </div>
+              <a
+                href="https://wa.me/97517268753"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden md:inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground dark:text-black text-[10px] uppercase tracking-wider font-black rounded-full hover:bg-opacity-90 dark:shadow-[0_0_20px_rgba(57,255,20,0.3)] transition-all"
+              >
+                Connect
+              </a>
 
               {/* Mobile Menu Button */}
               <button
