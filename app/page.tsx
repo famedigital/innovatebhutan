@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { NavigationDynamic } from "@/components/navigation-dynamic";
 import { TopMarquee } from "@/components/top-marquee";
-import { HeroSection } from "@/components/hero-section-dynamic";
+import { HeroSection } from "@/components/hero-section";
 import { ServiceDirectoryDynamic } from "@/components/service-directory-dynamic";
 import { StatsSectionDynamic } from "@/components/stats-section-dynamic";
 import { ContactSectionDynamic } from "@/components/contact-section-dynamic";
