@@ -1040,12 +1040,54 @@ export function HeroSection() {
       <div className="relative z-20 w-full h-full flex items-start px-4 sm:px-6 lg:px-12 max-w-[1600px] mx-auto -mt-0 sm:-mt-4 lg:-mt-8 pt-20 sm:pt-20 lg:pt-24">
 
         {/* Left Side - Title and Service Icons */}
-        <div className="w-full lg:w-2/5 xl:w-1/3 order-1 lg:order-1 flex flex-col justify-start">
+        <div className="w-full lg:w-2/5 xl:w-1/3 order-1 lg:order-1 flex flex-col justify-start relative">
+          {/* Diagonal Geometry Background - 80% Opaque */}
+          <div
+            className="absolute inset-0 z-0 opacity-80 rounded-2xl overflow-hidden"
+            style={{
+              background: `
+                linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.7) 100%),
+                repeating-linear-gradient(
+                  45deg,
+                  transparent,
+                  transparent 10px,
+                  rgba(57,255,20,0.03) 10px,
+                  rgba(57,255,20,0.03) 11px
+                ),
+                repeating-linear-gradient(
+                  -45deg,
+                  transparent,
+                  transparent 10px,
+                  rgba(57,255,20,0.02) 10px,
+                  rgba(57,255,20,0.02) 11px
+                )
+              `,
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(57,255,20,0.1)',
+              boxShadow: '0 0 40px rgba(57,255,20,0.05), inset 0 0 60px rgba(0,0,0,0.3)'
+            }}
+          >
+            {/* Decorative diagonal lines */}
+            <svg className="absolute inset-0 w-full h-full opacity-20" preserveAspectRatio="none">
+              <defs>
+                <pattern id="diagonal-lines" patternUnits="userSpaceOnUse" width="40" height="40" patternTransform="rotate(45)">
+                  <line x1="0" y1="0" x2="0" y2="40" stroke="rgba(57,255,20,0.3)" strokeWidth="1"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#diagonal-lines)"/>
+            </svg>
+
+            {/* Floating geometric shapes */}
+            <div className="absolute top-10 left-5 w-32 h-32 border border-primary/10 rounded-full opacity-30 animate-pulse"/>
+            <div className="absolute bottom-20 right-10 w-24 h-24 border border-primary/10 rounded-lg opacity-30 animate-pulse" style={{animationDelay: '1s'}}/>
+            <div className="absolute top-1/3 right-5 w-16 h-16 bg-gradient-to-br from-primary/5 to-transparent rounded-lg opacity-40"/>
+          </div>
+
           {/* Title - Typewriter (Top Left) */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-[32px] sm:text-[40px] lg:text-[52px] xl:text-[60px] font-black text-white leading-[1.2] mb-8 sm:mb-10 lg:mb-12"
+            className="text-[32px] sm:text-[40px] lg:text-[52px] xl:text-[60px] font-black text-white leading-[1.2] mb-8 sm:mb-10 lg:mb-12 relative z-10"
           >
             <span className="md:hidden block">Innovating today</span>
             <span className="md:hidden block">for{" "}
@@ -1094,7 +1136,7 @@ export function HeroSection() {
           </motion.h1>
 
           {/* Service Icons - 4×3 Grid without background box */}
-          <div className="grid grid-cols-4 gap-x-3 gap-y-3 sm:gap-x-4 sm:gap-y-3 lg:gap-x-5 lg:gap-y-4">
+          <div className="grid grid-cols-4 gap-x-3 gap-y-3 sm:gap-x-4 sm:gap-y-3 lg:gap-x-5 lg:gap-y-4 relative z-10 p-4">
             {mainServices.slice(0, 12).map((service, i) => (
               <motion.div
                 key={service.name}
