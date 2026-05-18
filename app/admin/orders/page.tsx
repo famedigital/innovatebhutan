@@ -77,11 +77,12 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [editOrder, setEditOrder] = useState<Order | null>(null);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (currentPage?: number) => {
     setLoading(true);
     try {
+      const page = currentPage || pagination.page;
       const params = new URLSearchParams({
-        page: pagination.page.toString(),
+        page: page.toString(),
         limit: pagination.limit.toString(),
       });
 
@@ -104,16 +105,15 @@ export default function OrdersPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, [pagination.page, statusFilter]);
+  }, [pagination.page, statusFilter, search]);
 
   const handleSearch = () => {
-    setPagination({ ...pagination, page: 1 });
-    fetchOrders();
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const handleStatusChange = (value: string) => {
     setStatusFilter(value);
-    setPagination({ ...pagination, page: 1 });
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const deleteOrder = async (id: number) => {

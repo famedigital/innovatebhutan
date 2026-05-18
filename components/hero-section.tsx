@@ -1,103 +1,39 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Store, Hotel, Code, Wrench, LayoutGrid, Shield, Zap, Smartphone, FileText, Users, Database } from "lucide-react";
+import { Store, Hotel, Shield, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { getMediaUrl } from "@/lib/cloudinary";
 import { PremiumHeroSlider } from "@/components/premium-hero-slider";
 
-// Typewriter Hook
-function useTypewriter(phrases: string[], typingSpeed = 80, deletingSpeed = 40, pauseDuration = 2000) {
-  const [phraseIndex, setPhraseIndex] = useState(0);
-  const [text, setText] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-
-  useEffect(() => {
-    const currentPhrase = phrases[phraseIndex];
-
-    if (isPaused) {
-      const pauseTimer = setTimeout(() => {
-        setIsPaused(false);
-        setIsDeleting(true);
-      }, pauseDuration);
-      return () => clearTimeout(pauseTimer);
-    }
-
-    if (isDeleting) {
-      if (text.length > 0) {
-        const deleteTimer = setTimeout(() => {
-          setText(text.slice(0, -1));
-        }, deletingSpeed);
-        return () => clearTimeout(deleteTimer);
-      } else {
-        setIsDeleting(false);
-        setPhraseIndex((prev) => (prev + 1) % phrases.length);
-      }
-    } else {
-      if (text.length < currentPhrase.length) {
-        const typeTimer = setTimeout(() => {
-          setText(currentPhrase.slice(0, text.length + 1));
-        }, typingSpeed);
-        return () => clearTimeout(typeTimer);
-      } else {
-        setIsPaused(true);
-      }
-    }
-  }, [text, isDeleting, isPaused, phraseIndex, phrases, typingSpeed, deletingSpeed, pauseDuration]);
-
-  return { text, isDeleting, isPaused };
-}
-
-// iOS App Store Style Service Card
-function MorphingBlobCard({ service, onClick, index, onHover, onLeave }: {
-  service: any;
-  onClick: () => void;
-  index: number;
-  onHover?: (name: string) => void;
-  onLeave?: () => void;
-}) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isPressed, setIsPressed] = useState(false);
-  const [showSubs, setShowSubs] = useState(false);
-  const Icon = service.icon;
-  const hasSubs = (service as any).subs;
-  const subCount = hasSubs ? (service as any).subs.length : 0;
-
-  // Extract first color from gradient
-  const gradient = service.gradient || 'linear-gradient(145deg, #10B981, #059669)';
-  const colorMatch = gradient.match(/#[A-F0-9]{6}/gi);
-  const primaryColor = colorMatch?.[0] || '#10B981';
-
-  return (
-    <div
-      className="group flex flex-col items-center gap-3 p-3 rounded-xl hover:bg-black/60 dark:hover:bg-black/70 transition-all duration-300 cursor-pointer"
-      onClick={onClick}
-      onMouseEnter={() => {
-        setIsHovered(true);
-        onHover?.(service.name);
-        if (hasSubs) setShowSubs(true);
-      }}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        onLeave?.();
-        setShowSubs(false);
-      }}
-      onMouseDown={() => setIsPressed(true)}
-      onMouseUp={() => setIsPressed(false)}
-    >
-      {/* App Icon - On top */}
-      <div
-        className="relative flex-shrink-0"
-        style={{ width: '56px', height: '56px' }}
-      >
-        {/* Outer glow on hover */}
-        {isHovered && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 0.5, scale: 1 }}
+// Core Service Pillars for Premium Enterprise Design
+const coreServices = [
+  {
+    id: 'pos',
+    name: 'POS Systems',
+    label: 'POS Systems',
+    icon: Store,
+    description: 'Enterprise point-of-sale systems for modern retail operations',
+    image: 'https://res.cloudinary.com/dr9a371tx/image/upload/v1777964123/INNOVATES1_1_ewtzh1.png'
+  },
+  {
+    id: 'hotel',
+    name: 'Hotel Management',
+    label: 'Hotel Management',
+    icon: Hotel,
+    description: 'Complete property management solutions for hospitality',
+    image: 'https://res.cloudinary.com/dr9a371tx/image/upload/v1777964294/INNOVATES1_2_tttgan.png'
+  },
+  {
+    id: 'security',
+    name: 'Security Systems',
+    label: 'Security Systems',
+    icon: Shield,
+    description: 'Advanced surveillance and access control',
+    image: 'https://res.cloudinary.com/dr9a371tx/image/upload/v1777964337/INNOVATES1_3_jpz8dy.png'
+  }
+];
             className="absolute inset-0 rounded-3xl blur-xl"
             style={{ background: gradient }}
           />
@@ -1034,60 +970,52 @@ export function HeroSection() {
       </div>
 
       {/* Dark overlay for readability - Stronger on left, lighter on right */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10">
+        {/* Diagonal Geometry Pattern to blend dark and transparent areas */}
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{
+            background: `
+              repeating-linear-gradient(
+                135deg,
+                transparent,
+                transparent 20px,
+                rgba(57,255,20,0.02) 20px,
+                rgba(57,255,20,0.02) 21px
+              ),
+              repeating-linear-gradient(
+                -135deg,
+                transparent,
+                transparent 25px,
+                rgba(57,255,20,0.015) 25px,
+                rgba(57,255,20,0.015) 26px
+              )
+            `
+          }}
+        />
+        {/* Large diagonal wave */}
+        <svg className="absolute inset-0 w-full h-full opacity-10" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="diagonal-blend" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="rgba(0,0,0,0.3)"/>
+              <stop offset="50%" stopColor="rgba(57,255,20,0.1)"/>
+              <stop offset="100%" stopColor="rgba(0,0,0,0)"/>
+            </linearGradient>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#diagonal-blend)"/>
+        </svg>
+      </div>
 
       {/* Content Container - Two columns */}
       <div className="relative z-20 w-full h-full flex items-start px-4 sm:px-6 lg:px-12 max-w-[1600px] mx-auto -mt-0 sm:-mt-4 lg:-mt-8 pt-20 sm:pt-20 lg:pt-24">
 
         {/* Left Side - Title and Service Icons */}
-        <div className="w-full lg:w-2/5 xl:w-1/3 order-1 lg:order-1 flex flex-col justify-start relative">
-          {/* Diagonal Geometry Background - 80% Opaque */}
-          <div
-            className="absolute inset-0 z-0 opacity-80 rounded-2xl overflow-hidden"
-            style={{
-              background: `
-                linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.7) 100%),
-                repeating-linear-gradient(
-                  45deg,
-                  transparent,
-                  transparent 10px,
-                  rgba(57,255,20,0.03) 10px,
-                  rgba(57,255,20,0.03) 11px
-                ),
-                repeating-linear-gradient(
-                  -45deg,
-                  transparent,
-                  transparent 10px,
-                  rgba(57,255,20,0.02) 10px,
-                  rgba(57,255,20,0.02) 11px
-                )
-              `,
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(57,255,20,0.1)',
-              boxShadow: '0 0 40px rgba(57,255,20,0.05), inset 0 0 60px rgba(0,0,0,0.3)'
-            }}
-          >
-            {/* Decorative diagonal lines */}
-            <svg className="absolute inset-0 w-full h-full opacity-20" preserveAspectRatio="none">
-              <defs>
-                <pattern id="diagonal-lines" patternUnits="userSpaceOnUse" width="40" height="40" patternTransform="rotate(45)">
-                  <line x1="0" y1="0" x2="0" y2="40" stroke="rgba(57,255,20,0.3)" strokeWidth="1"/>
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#diagonal-lines)"/>
-            </svg>
-
-            {/* Floating geometric shapes */}
-            <div className="absolute top-10 left-5 w-32 h-32 border border-primary/10 rounded-full opacity-30 animate-pulse"/>
-            <div className="absolute bottom-20 right-10 w-24 h-24 border border-primary/10 rounded-lg opacity-30 animate-pulse" style={{animationDelay: '1s'}}/>
-            <div className="absolute top-1/3 right-5 w-16 h-16 bg-gradient-to-br from-primary/5 to-transparent rounded-lg opacity-40"/>
-          </div>
-
+        <div className="w-full lg:w-2/5 xl:w-1/3 order-1 lg:order-1 flex flex-col justify-start">
           {/* Title - Typewriter (Top Left) */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-[32px] sm:text-[40px] lg:text-[52px] xl:text-[60px] font-black text-white leading-[1.2] mb-8 sm:mb-10 lg:mb-12 relative z-10"
+            className="text-[32px] sm:text-[40px] lg:text-[52px] xl:text-[60px] font-black text-white leading-[1.2] mb-8 sm:mb-10 lg:mb-12"
           >
             <span className="md:hidden block">Innovating today</span>
             <span className="md:hidden block">for{" "}

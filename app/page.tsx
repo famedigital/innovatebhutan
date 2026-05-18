@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { TopMarquee } from "@/components/top-marquee";
-import { HeroSectionPremium } from "@/components/hero-section-premium";
+import { AdaptiveHero } from "@/components/adaptive-hero/adaptive-hero";
 import { StatsSection } from "@/components/stats-section";
 import { ServiceDirectoryDynamic } from "@/components/service-directory-dynamic";
 import { ContactSectionDynamic } from "@/components/contact-section-dynamic";
@@ -17,9 +17,15 @@ export default function HomePage() {
     <main className="min-h-screen bg-background text-foreground selection:bg-[#10B981] selection:text-white dark:selection:bg-primary dark:selection:text-black transition-colors duration-500">
       <TopMarquee />
 
-      {/* Hero Section - Fullscreen behind nav */}
+      {/* Hero Section - Fullscreen adaptive experience */}
       <section className="relative min-h-screen transition-colors duration-500">
-        <HeroSectionPremium />
+        <AdaptiveHero
+          heading="WE BUILD DIGITAL WORLDS"
+          description="Premium IT solutions for the Himalayan region"
+          ctaText="Explore Our Services"
+          ctaLink="/services"
+          showPerformanceInfo={false}
+        />
       </section>
 
       {/* Trusted Section - Stats */}
