@@ -44,12 +44,12 @@ export function TabletHero({
   // Enhanced mountain background for tablet
   const renderMountainBackground = () => (
     <motion.div
-      className="absolute inset-0 bg-gradient-to-b from-slate-900 via-blue-900 to-slate-900"
+      className="absolute inset-0 bg-gradient-to-b from-blue-900 via-purple-900 to-blue-900"
       animate={{
         background: [
-          "linear-gradient(to bottom, #0f172a, #1e293b, #0f172a)",
-          "linear-gradient(to bottom, #1e293b, #334155, #1e293b)",
-          "linear-gradient(to bottom, #0f172a, #1e293b, #0f172a)"
+          "linear-gradient(to bottom, #1e3a8a, #581c87, #1e3a8a)",
+          "linear-gradient(to bottom, #3730a3, #6b21a8, #3730a3)",
+          "linear-gradient(to bottom, #1e3a8a, #581c87, #1e3a8a)"
         ]
       }}
       transition={{
@@ -169,7 +169,7 @@ export function TabletHero({
 
       {/* Content */}
       <div className="relative z-10 px-6 py-32 text-center max-w-5xl mx-auto">
-        {/* Bot Animated Heading - Road/Map Edition */}
+        {/* Cyberpunk Animated Text Heading */}
         <motion.div
           className="mb-6"
           initial={{ opacity: 0, y: 30 }}
@@ -185,20 +185,27 @@ export function TabletHero({
           />
         </motion.div>
 
-        {/* Animated description - Catchy sales copy */}
-        <motion.div
-          className="mb-8"
+        {/* Simple, direct subheadline */}
+        <motion.h2
+          className="text-2xl font-bold mb-6"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mb-3">
-            Empowering Your Digital Evolution
-          </h2>
-          <p className="text-lg text-white/90 max-w-3xl mx-auto leading-relaxed">
-            Transform your business with cutting-edge technology solutions that drive growth and innovation.
-          </p>
-        </motion.div>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-400 drop-shadow-lg">
+            I Design. You Grow.
+          </span>
+        </motion.h2>
+
+        {/* Simple, direct description */}
+        <motion.p
+          className="text-xl text-white font-semibold mb-10 max-w-3xl mx-auto"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.5 }}
+        >
+          Smart business tools. Built by experts. Ready to use.
+        </motion.p>
 
         {/* Trust indicators with enhanced styling */}
         <motion.div

@@ -46,12 +46,12 @@ export function DesktopHero({
   const renderPremiumBackground = () => (
     <motion.div
       ref={containerRef}
-      className="absolute inset-0 bg-gradient-to-b from-slate-900 via-blue-900 to-slate-900"
+      className="absolute inset-0 bg-gradient-to-b from-blue-900 via-purple-900 to-blue-900"
       animate={{
         background: [
-          "linear-gradient(to bottom, #0f172a, #1e293b, #0f172a)",
-          "linear-gradient(to bottom, #1e293b, #334155, #1e293b)",
-          "linear-gradient(to bottom, #0f172a, #1e293b, #0f172a)"
+          "linear-gradient(to bottom, #1e3a8a, #581c87, #1e3a8a)",
+          "linear-gradient(to bottom, #3730a3, #6b21a8, #3730a3)",
+          "linear-gradient(to bottom, #1e3a8a, #581c87, #1e3a8a)"
         ]
       }}
       transition={{
@@ -256,10 +256,28 @@ export function DesktopHero({
       />
 
       {/* Content */}
-      <div className="relative z-10 px-8 py-32 text-center max-w-6xl mx-auto">
-        {/* Bot Animated Heading - Road/Map Edition */}
+      <div className="relative z-10 px-8 py-32 text-center max-w-6xl mx-auto min-h-screen flex flex-col justify-center">
+        {/* Fixed CTA Button - Clean and Simple */}
+        <div className="fixed bottom-8 left-0 right-0 z-50 flex justify-center">
+          <motion.button
+            onClick={handleCTAClick}
+            className="px-12 py-4 bg-white text-blue-900 font-bold text-xl rounded-lg shadow-xl hover:shadow-2xl hover:bg-gray-100 transition-all duration-300"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <span className="flex items-center gap-3">
+              {ctaText}
+              <ArrowRight className="w-6 h-6" />
+            </span>
+          </motion.button>
+        </div>
+
+        {/* Cyberpunk Animated Text Heading */}
         <motion.div
-          className="mb-8"
+          className="mb-6"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
@@ -273,20 +291,27 @@ export function DesktopHero({
           />
         </motion.div>
 
-        {/* Animated description - Catchy sales copy */}
-        <motion.div
-          className="mb-12"
+        {/* Simple, direct subheadline */}
+        <motion.h2
+          className="text-3xl font-bold mb-6"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mb-4">
-            Empowering Your Digital Evolution
-          </h2>
-          <p className="text-xl text-white/90 max-w-4xl mx-auto leading-relaxed">
-            Transform your business with cutting-edge technology solutions that drive growth, innovation, and success in the digital age.
-          </p>
-        </motion.div>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-400 drop-shadow-lg">
+            I Design. You Grow.
+          </span>
+        </motion.h2>
+
+        {/* Simple, direct description */}
+        <motion.p
+          className="text-2xl text-white font-semibold mb-8 max-w-3xl mx-auto"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.5 }}
+        >
+          Smart business tools. Built by experts. Ready to use.
+        </motion.p>
 
         {/* Premium trust indicators */}
         <motion.div
@@ -341,29 +366,6 @@ export function DesktopHero({
             cursor="|"
           />
         </motion.div>
-
-        {/* Premium CTA Button */}
-        <motion.button
-          onClick={handleCTAClick}
-          className="relative px-12 py-6 bg-gradient-to-r from-green-500 to-blue-600 text-white font-semibold text-lg rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 overflow-hidden group"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1.0 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <span className="relative z-10 flex items-center gap-3">
-            {ctaText}
-            <motion.div
-              animate={{ x: [0, 8, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            >
-              <ArrowRight className="w-6 h-6" />
-            </motion.div>
-          </span>
-          <div className="absolute inset-0 bg-gradient-to-r from-green-600/20 to-blue-700/20" />
-          <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        </motion.button>
 
         {/* Premium services showcase */}
         <motion.div

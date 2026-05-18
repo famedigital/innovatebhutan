@@ -131,7 +131,7 @@ export function MobileHero({
 
       {/* Content */}
       <div className="relative z-10 px-4 sm:px-6 py-20 sm:py-32 text-center max-w-4xl mx-auto">
-        {/* Bot Animated Heading - Road/Map Edition */}
+        {/* Cyberpunk Animated Text Heading */}
         <motion.div
           className="mb-6"
           initial={{ opacity: 0, y: 30 }}
@@ -147,20 +147,27 @@ export function MobileHero({
           />
         </motion.div>
 
-        {/* Animated description - Catchy sales copy */}
-        <motion.div
-          className="mb-8"
+        {/* Simple, direct subheadline */}
+        <motion.h2
+          className="text-xl font-bold mb-4"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mb-2">
-            Empowering Your Digital Evolution
-          </h2>
-          <p className="text-base text-white/90 max-w-2xl mx-auto leading-relaxed">
-            Transform your business with cutting-edge technology solutions that drive growth and innovation.
-          </p>
-        </motion.div>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-400 drop-shadow-lg">
+            I Design. You Grow.
+          </span>
+        </motion.h2>
+
+        {/* Simple, direct description */}
+        <motion.p
+          className="text-lg text-white font-semibold mb-8 max-w-2xl mx-auto"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.5 }}
+        >
+          Smart business tools. Built by experts. Ready to use.
+        </motion.p>
 
         {/* Trust indicators */}
         <motion.div
