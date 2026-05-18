@@ -1230,3 +1230,143 @@ button, a, input, textarea, select {
 .scrollbar-track-transparent {
   --scrollbar-track: transparent;
 }
+
+/* ========================================
+   🚀 3D ENGINEERING SLIDER PERFORMANCE OPTIMIZATIONS
+   Spectacular 3D isometric scenes - GPU accelerated for 60fps
+   ======================================== */
+
+/* GPU acceleration for all 3D elements */
+.isometric-scene,
+.building-3d-container,
+.floating-element-3d,
+.particle-3d,
+.particle-field-3d,
+.grid-3d-floor,
+.engineering-3d-slider {
+  will-change: transform, opacity;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Optimize 3D transforms for GPU rendering */
+@supports (transform: translate3d(0, 0, 0)) {
+  .isometric-scene,
+  .building-3d-container,
+  .floating-element-3d,
+  .particle-3d {
+    transform: translateZ(0);
+  }
+}
+
+/* Smooth 3D perspective with hardware acceleration */
+@media (prefers-reduced-motion: no-preference) {
+  .isometric-scene {
+    animation: scene-perspective 0.3s ease-out;
+  }
+
+  @keyframes scene-perspective {
+    from {
+      opacity: 0;
+      transform: scale(0.95) rotateX(50deg) rotateY(-40deg);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) rotateX(55deg) rotateY(-45deg);
+    }
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .isometric-scene,
+  .building-3d-container,
+  .floating-element-3d,
+  .particle-3d,
+  .animate-marquee,
+  .animate-electric-pulse,
+  .animate-border-flicker {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Optimize building windows animation */
+.building-window {
+  will-change: opacity, box-shadow;
+  backface-visibility: hidden;
+}
+
+/* Smooth particle rendering */
+.particle-3d,
+.ambient-particle {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* Performance optimization for floating elements */
+.floating-element-3d {
+  contain: layout style paint;
+  transform: translateZ(0);
+}
+
+/* Optimize data flow lines */
+.data-flow-line {
+  will-change: pathLength, opacity;
+}
+
+/* Smooth transitions for all 3D elements */
+.floating-element-3d,
+.building-window,
+.service-dot,
+.nav-arrow {
+  transition-property: transform, opacity, background, box-shadow, width;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Optimize animations for mobile devices */
+@media (max-width: 768px) {
+  .particle-field-3d {
+    display: none; /* Reduce particles on mobile for performance */
+  }
+
+  .floating-element-3d {
+    animation-duration: 4s !important; /* Slower animations on mobile */
+  }
+}
+
+/* Enhanced contrast for 3D elements */
+.isometric-scene * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent layout shift during 3D animations */
+.engineering-3d-slider {
+  contain: layout style paint;
+}
+
+/* Optimize glassmorphism effects for 3D scenes */
+.isometric-scene .scene-lighting {
+  pointer-events: none;
+  will-change: opacity;
+}
+
+/* Performance optimization for complex 3D scenes */
+@media (max-width: 1024px) {
+  .building-3d-container {
+    max-width: 150px; /* Smaller buildings on tablets */
+  }
+}
+
+@media (max-width: 768px) {
+  .building-3d-container {
+    max-width: 120px; /* Even smaller on mobile */
+  }
+
+  .floating-element-3d {
+    transform: translateZ(20px) translate(-50%, -50%) scale(0.8); /* Scale down floating elements */
+  }
+}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { TopMarquee } from "@/components/top-marquee";
-import { HeroSection } from "@/components/hero-section";
+import { HeroSectionPremium } from "@/components/hero-section-premium";
 import { StatsSection } from "@/components/stats-section";
 import { ServiceDirectoryDynamic } from "@/components/service-directory-dynamic";
 import { ContactSectionDynamic } from "@/components/contact-section-dynamic";
@@ -19,7 +19,7 @@ export default function HomePage() {
 
       {/* Hero Section - Fullscreen behind nav */}
       <section className="relative min-h-screen transition-colors duration-500">
-        <HeroSection />
+        <HeroSectionPremium />
       </section>
 
       {/* Trusted Section - Stats */}
