@@ -304,6 +304,25 @@ export function BotAnimatedText({
             </motion.text>
           ))}
         </g>
+
+        {/* Highlight stroke outline around text */}
+        <text
+          x="450"
+          y="70"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontSize="56"
+          fontWeight="bold"
+          fontFamily="system-ui, sans-serif"
+          letterSpacing="0.02em"
+          style={{ textTransform: 'uppercase' }}
+          stroke="url(#cyberpunk-gradient)"
+          strokeWidth="3"
+          fill="none"
+          className="drop-shadow-lg"
+        >
+          {text}
+        </text>
       </svg>
 
       {/* Accessibility fallback */}
