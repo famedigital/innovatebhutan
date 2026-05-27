@@ -3,7 +3,7 @@
  * Secure config file retrieval and delivery from Google Drive
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 import { getDriveClient, downloadFile } from '@/lib/integrations/googleDrive';
 
 /**

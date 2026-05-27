@@ -8,7 +8,11 @@
       "Bash(npx drizzle-kit push:*)",
       "Bash(npx tsx:*)",
       "Bash(findstr:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(vercel env pull:*)",
+      "Bash(vercel login:*)",
+      "Bash(vercel link:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

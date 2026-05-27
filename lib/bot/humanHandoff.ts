@@ -3,7 +3,7 @@
  * Seamless escalation from bot to human support with learning capabilities
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 
 /**
  * Handoff trigger conditions

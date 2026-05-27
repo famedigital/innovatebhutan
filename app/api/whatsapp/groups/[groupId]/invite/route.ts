@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 import { WhatsAppService } from '@/lib/integrations/whatsapp';
 import { logClientAccess } from '@/lib/utils/auditLogger';
 

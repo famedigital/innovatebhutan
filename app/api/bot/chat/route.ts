@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 import { classifyIntent, RequestContext } from '@/lib/bot/intentClassifier';
 import { generateResponse, ResponseContext } from '@/lib/bot/responseGenerator';
 import { processCredentialRequest } from '@/lib/bot/credentialHandler';

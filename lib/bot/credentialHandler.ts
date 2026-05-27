@@ -3,7 +3,7 @@
  * Secure credential retrieval and management - Target: 90% automation
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 import { decrypt } from '@/lib/utils/encryption';
 import { logCredentialAccess } from '@/lib/utils/auditLogger';
 import { IntentType } from './intentClassifier';

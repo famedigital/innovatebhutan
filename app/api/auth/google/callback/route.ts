@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokensFromCode, refreshAccessToken } from '@/lib/integrations/googleDrive';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
