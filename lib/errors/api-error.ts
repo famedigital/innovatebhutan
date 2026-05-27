@@ -143,13 +143,6 @@ export class ServiceUnavailableError extends ApiError {
 }
 
 /**
- * Re-export auth errors for convenience
- * These are defined in auth-error.ts but re-exported here
- * for a single import point
- */
-export { AuthError, AuthorizationError, ValidationError } from './auth-error';
-
-/**
  * Type guard to check if an error is an ApiError
  */
 export function isApiError(error: unknown): error is ApiError {

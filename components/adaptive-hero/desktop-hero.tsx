@@ -2,21 +2,37 @@
 
 import * as React from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-import { ArrowRight, Store, Hotel, Shield, Star, Users, Zap, Cloud, Building } from "lucide-react";
+import { ArrowRight, Store, Hotel, Shield, Star, Users, Zap, Cloud, Building, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { PerformanceTier } from "@/lib/performance-config";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 import { MorphingBlobCard } from "@/components/ui/morphing-blob-card";
 import { BotAnimatedText } from "@/components/ui/bot-animated-text";
+import { getVideoUrl, getVideoPosterUrl } from "@/lib/cloudinary";
+import { progressiveVideoLoader, animationController } from "@/lib/utils/hero-optimization";
 
 interface DesktopHeroProps {
   heading: string;
   description: string;
   ctaText: string;
   ctaLink: string;
+  secondaryCtaText?: string;
+  secondaryCtaLink?: string;
   onContact?: () => void;
   performanceTier: PerformanceTier;
+  heroContent?: {
+    videoCloudinaryId?: string | null;
+    videoPosterImageId?: string | null;
+    enableVideoBackground?: boolean;
+    gradientFrom?: string;
+    gradientTo?: string;
+    overlayOpacity?: number;
+    showTrustIndicators?: boolean;
+    clientCount?: number;
+    yearsInBusiness?: number;
+    featuredProducts?: any;
+  };
 }
 
 /**
@@ -33,25 +49,85 @@ export function DesktopHero({
   description,
   ctaText,
   ctaLink,
+  secondaryCtaText,
+  secondaryCtaLink,
   onContact,
   performanceTier,
+  heroContent,
 }: DesktopHeroProps) {
   const router = useRouter();
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
   const { scrollY } = useScroll();
   const opacity = useTransform(scrollY, [0, 400], [1, 0]);
   const y = useTransform(scrollY, [0, 400], [0, -100]);
+  const [videoLoaded, setVideoLoaded] = React.useState(false);
 
-  // Enhanced mountain background with data flow effects
+  // Move gradient declarations before useEffect to avoid initialization errors
+  const gradientFrom = heroContent?.gradientFrom || "#1e3a8a";
+  const gradientTo = heroContent?.gradientTo || "#581c87";
+  const overlayOpacity = heroContent?.overlayOpacity || 0.7;
+
+  // Enhanced video playback optimization with performance monitoring
+  React.useEffect(() => {
+    if (videoRef.current && heroContent?.enableVideoBackground && heroContent?.videoCloudinaryId) {
+      // Check if video should be loaded based on network conditions
+      if (!progressiveVideoLoader.shouldLoadVideo()) {
+        console.log('Video disabled due to network conditions');
+        return;
+      }
+
+      // Get optimal video quality
+      const optimalQuality = progressiveVideoLoader.getOptimalQuality();
+
+      // Progressive video loading with fallback
+      progressiveVideoLoader.loadVideoWithFallback(videoRef.current, {
+        cloudinaryId: heroContent.videoCloudinaryId,
+        posterId: heroContent.videoPosterImageId || undefined,
+        maxWidth: 1920,
+        quality: optimalQuality,
+        lazy: true,
+        fallbackGradient: `linear-gradient(to bottom, ${gradientFrom}, ${gradientTo})`
+      }).then((success) => {
+        if (success) {
+          setVideoLoaded(true);
+          // Start playback with error handling
+          videoRef.current?.play().catch((error) => {
+            console.log('Autoplay prevented, waiting for user interaction:', error);
+            setVideoLoaded(false);
+          });
+        }
+      });
+
+      // Intersection Observer for playback control
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && videoRef.current) {
+              videoRef.current.play().catch(console.error);
+            } else if (videoRef.current) {
+              videoRef.current.pause();
+            }
+          });
+        },
+        { threshold: 0.25 }
+      );
+
+      observer.observe(videoRef.current);
+      return () => observer.disconnect();
+    }
+  }, [heroContent, gradientFrom, gradientTo]);
+
+  // Enhanced background with video support
   const renderPremiumBackground = () => (
     <motion.div
       ref={containerRef}
       className="absolute inset-0 bg-gradient-to-b from-blue-900 via-purple-900 to-blue-900"
       animate={{
         background: [
-          "linear-gradient(to bottom, #1e3a8a, #581c87, #1e3a8a)",
-          "linear-gradient(to bottom, #3730a3, #6b21a8, #3730a3)",
-          "linear-gradient(to bottom, #1e3a8a, #581c87, #1e3a8a)"
+          `linear-gradient(to bottom, ${gradientFrom}, ${gradientTo}, ${gradientFrom})`,
+          `linear-gradient(to bottom, ${gradientTo}, ${gradientFrom}, ${gradientTo})`,
+          `linear-gradient(to bottom, ${gradientFrom}, ${gradientTo}, ${gradientFrom})`
         ]
       }}
       transition={{
@@ -60,6 +136,33 @@ export function DesktopHero({
         ease: "easeInOut"
       }}
     >
+      {/* Video Background */}
+      {heroContent?.enableVideoBackground && heroContent?.videoCloudinaryId && (
+        <>
+          <video
+            ref={videoRef}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            poster={heroContent.videoPosterImageId ? getVideoPosterUrl(heroContent.videoPosterImageId) : undefined}
+            onLoadedData={() => setVideoLoaded(true)}
+            onLoadStart={() => setVideoLoaded(false)}
+          >
+            <source
+              src={getVideoUrl(heroContent.videoCloudinaryId, { maxWidth: 1920 })}
+              type="video/mp4"
+            />
+          </video>
+
+          {/* Video overlay for text readability */}
+          <div
+            className="absolute inset-0 bg-gradient-to-b from-slate-900/80 to-slate-900/60"
+            style={{ opacity: overlayOpacity }}
+          />
+        </>
+      )}
       {/* Premium stars with twinkling */}
       {[...Array(100)].map((_, i) => (
         <motion.div
@@ -145,9 +248,9 @@ export function DesktopHero({
         </div>
       </div>
 
-      {/* Data flow particles (enhanced for desktop) */}
+      {/* Data flow particles (performance-optimized for desktop) */}
       <AnimatePresence>
-        {[...Array(performanceTier.particleCount)].map((_, i) => (
+        {[...Array(animationController?.getOptimalParticleCount(performanceTier.particleCount) || performanceTier.particleCount)].map((_, i) => (
           <motion.div
             key={i}
             className="absolute w-1 h-1 bg-gradient-to-r from-green-400 to-blue-400 rounded-full"
@@ -163,7 +266,7 @@ export function DesktopHero({
             }}
             exit={{ opacity: 0 }}
             transition={{
-              duration: 3 + Math.random() * 2,
+              duration: animationController?.getOptimalDuration(3 + Math.random() * 2) || 3 + Math.random() * 2,
               repeat: Infinity,
               delay: Math.random() * 5,
               ease: "easeInOut",
@@ -258,7 +361,7 @@ export function DesktopHero({
       {/* Content */}
       <div className="relative z-10 px-8 py-32 text-center max-w-6xl mx-auto min-h-screen flex flex-col justify-center">
         {/* Fixed CTA Button - Clean and Simple */}
-        <div className="fixed bottom-8 left-0 right-0 z-50 flex justify-center">
+        <div className="fixed bottom-8 left-0 right-0 z-50 flex justify-center gap-4">
           <motion.button
             onClick={handleCTAClick}
             className="px-12 py-4 bg-white text-blue-900 font-bold text-xl rounded-lg shadow-xl hover:shadow-2xl hover:bg-gray-100 transition-all duration-300"
@@ -273,6 +376,23 @@ export function DesktopHero({
               <ArrowRight className="w-6 h-6" />
             </span>
           </motion.button>
+
+          {secondaryCtaText && secondaryCtaLink && (
+            <motion.button
+              onClick={() => router.push(secondaryCtaLink)}
+              className="px-12 py-4 bg-transparent border-2 border-white text-white font-bold text-xl rounded-lg shadow-xl hover:bg-white hover:text-blue-900 transition-all duration-300"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.7 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span className="flex items-center gap-3">
+                {secondaryCtaText}
+                <Play className="w-6 h-6" />
+              </span>
+            </motion.button>
+          )}
         </div>
 
         {/* Cyberpunk Animated Text Heading */}
@@ -314,34 +434,36 @@ export function DesktopHero({
         </motion.p>
 
         {/* Premium trust indicators */}
-        <motion.div
-          className="flex flex-wrap justify-center gap-8 mb-16"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-        >
-          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20">
-            <Star className="w-6 h-6 text-yellow-400" />
-            <div>
-              <div className="text-white font-bold text-lg">350+ Clients</div>
-              <div className="text-white/60 text-sm">Trusted enterprises</div>
+        {heroContent?.showTrustIndicators !== false && (
+          <motion.div
+            className="flex flex-wrap justify-center gap-8 mb-16"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+          >
+            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20">
+              <Star className="w-6 h-6 text-yellow-400" />
+              <div>
+                <div className="text-white font-bold text-lg">{heroContent?.clientCount || 350}+ Clients</div>
+                <div className="text-white/60 text-sm">Trusted enterprises</div>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20">
-            <Zap className="w-6 h-6 text-green-400" />
-            <div>
-              <div className="text-white font-bold text-lg">99.9% Uptime</div>
-              <div className="text-white/60 text-sm">Reliable service</div>
+            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20">
+              <Zap className="w-6 h-6 text-green-400" />
+              <div>
+                <div className="text-white font-bold text-lg">99.9% Uptime</div>
+                <div className="text-white/60 text-sm">Reliable service</div>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20">
-            <Users className="w-6 h-6 text-blue-400" />
-            <div>
-              <div className="text-white font-bold text-lg">15+ Years</div>
-              <div className="text-white/60 text-sm">Industry experience</div>
+            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20">
+              <Users className="w-6 h-6 text-blue-400" />
+              <div>
+                <div className="text-white font-bold text-lg">{heroContent?.yearsInBusiness || 15}+ Years</div>
+                <div className="text-white/60 text-sm">Industry experience</div>
+              </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
 
         {/* Typewriter effect with enhanced styling */}
         <motion.div

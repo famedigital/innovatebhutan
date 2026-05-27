@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { ArrowRight, Store, Hotel, Shield, Star, Users, Zap } from "lucide-react";
+import { ArrowRight, Store, Hotel, Shield, Star, Users, Zap, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { PerformanceTier } from "@/lib/performance-config";
@@ -15,8 +15,11 @@ interface MobileHeroProps {
   description: string;
   ctaText: string;
   ctaLink: string;
+  secondaryCtaText?: string;
+  secondaryCtaLink?: string;
   onContact?: () => void;
   performanceTier: PerformanceTier;
+  heroContent?: any;
 }
 
 /**
@@ -33,8 +36,11 @@ export function MobileHero({
   description,
   ctaText,
   ctaLink,
+  secondaryCtaText,
+  secondaryCtaLink,
   onContact,
   performanceTier,
+  heroContent,
 }: MobileHeroProps) {
   const router = useRouter();
   const { scrollY } = useScroll();

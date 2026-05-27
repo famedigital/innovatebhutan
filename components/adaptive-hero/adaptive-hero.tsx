@@ -22,8 +22,11 @@ interface AdaptiveHeroProps {
   description?: string;
   ctaText?: string;
   ctaLink?: string;
+  secondaryCtaText?: string;
+  secondaryCtaLink?: string;
   onContact?: () => void;
   showPerformanceInfo?: boolean;
+  heroContent?: any;
 }
 
 /**
@@ -87,8 +90,11 @@ export function AdaptiveHero({
   description = "Premium IT solutions for the Himalayan region",
   ctaText = "Explore Our Services",
   ctaLink = "/services",
+  secondaryCtaText,
+  secondaryCtaLink,
   onContact,
   showPerformanceInfo = false,
+  heroContent,
 }: AdaptiveHeroProps) {
   const [isLoaded, setIsLoaded] = React.useState(false);
   const [isInitializing, setIsInitializing] = React.useState(true);
@@ -135,8 +141,11 @@ export function AdaptiveHero({
             description={description}
             ctaText={ctaText}
             ctaLink={ctaLink}
+            secondaryCtaText={secondaryCtaText}
+            secondaryCtaLink={secondaryCtaLink}
             onContact={onContact}
             performanceTier={performanceTier}
+            heroContent={heroContent}
           />
         );
       case 'tablet':
@@ -146,8 +155,11 @@ export function AdaptiveHero({
             description={description}
             ctaText={ctaText}
             ctaLink={ctaLink}
+            secondaryCtaText={secondaryCtaText}
+            secondaryCtaLink={secondaryCtaLink}
             onContact={onContact}
             performanceTier={performanceTier}
+            heroContent={heroContent}
           />
         );
       case 'desktop':
@@ -157,8 +169,11 @@ export function AdaptiveHero({
             description={description}
             ctaText={ctaText}
             ctaLink={ctaLink}
+            secondaryCtaText={secondaryCtaText}
+            secondaryCtaLink={secondaryCtaLink}
             onContact={onContact}
             performanceTier={performanceTier}
+            heroContent={heroContent}
           />
         );
       default:
@@ -168,8 +183,11 @@ export function AdaptiveHero({
             description={description}
             ctaText={ctaText}
             ctaLink={ctaLink}
+            secondaryCtaText={secondaryCtaText}
+            secondaryCtaLink={secondaryCtaLink}
             onContact={onContact}
             performanceTier={performanceTier}
+            heroContent={heroContent}
           />
         );
     }

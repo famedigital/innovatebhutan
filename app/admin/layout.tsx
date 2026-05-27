@@ -31,6 +31,7 @@ export default function AdminLayout({
   const [searchOpen, setSearchOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -69,7 +70,7 @@ export default function AdminLayout({
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false} open={sidebarOpen} onOpenChange={setSidebarOpen}>
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-6 bg-background z-20 sticky top-0">
@@ -77,9 +78,9 @@ export default function AdminLayout({
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="font-medium">Innovate Org</span>
+              <span className="font-medium">innovates.bt</span>
               <ChevronRight size={14} />
-              <span className="font-medium">ERP Project</span>
+              <span className="font-medium">Admin Dashboard</span>
             </div>
           </div>
 

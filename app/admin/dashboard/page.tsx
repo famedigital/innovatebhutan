@@ -102,7 +102,7 @@ export default function DashboardPage() {
       if (!data) return;
 
       const rows = [
-        ["Innovate Bhutan ERP - Dashboard Summary", new Date().toLocaleDateString()],
+        ["innovates.bt - Dashboard Summary", new Date().toLocaleDateString()],
         [],
         ["Key Metrics"],
         ["Clients", data.stats.clients.toString()],

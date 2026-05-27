@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Moon, Sun, LogIn, Home, Layers, Building2, Grid3X3, Headphones } from "lucide-react";
 
@@ -71,10 +72,16 @@ function ModernLogo() {
 }
 
 export function NavigationDynamic() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // Hide navigation for admin/backend routes
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   // Scroll detection for sticky navbar styling (client-only)
   useEffect(() => {

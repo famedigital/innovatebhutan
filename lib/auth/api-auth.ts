@@ -4,8 +4,9 @@
  */
 
 import { createClient } from '@/utils/supabase/server';
-import { AuthError, AuthorizationError } from '@/lib/errors';
-import { isApiError } from '@/lib/errors';
+import { AuthError } from '@/lib/errors/auth-error';
+import { AuthorizationError } from '@/lib/errors/auth-error';
+import { isApiError } from '@/lib/errors/api-error';
 
 /**
  * User profile structure from database

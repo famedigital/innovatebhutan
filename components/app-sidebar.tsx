@@ -17,11 +17,13 @@ import { useUserProfile } from "@/hooks/use-user-profile";
 import { navigationConfig, type NavGroup } from "@/lib/config/navigation";
 import { usePathname } from "next/navigation";
 import { Zap } from "lucide-react";
+import { useSidebar } from "@/components/ui/sidebar";
 
 export function AppSidebar() {
   const { profile, loading } = useUserProfile();
   const userRole = profile?.role || "CLIENT";
   const pathname = usePathname();
+  const { open, setOpen } = useSidebar();
 
   // Filter navigation based on user role
   const filteredNav = navigationConfig
@@ -39,17 +41,22 @@ export function AppSidebar() {
     .filter((group) => group.items.length > 0);
 
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#3ECF8E]">
-            <Zap className="h-5 w-5 text-white" />
+    <div
+      className="group/sidebar"
+      onMouseEnter={() => !open && setOpen(true)}
+      onMouseLeave={() => open && setOpen(false)}
+    >
+      <Sidebar collapsible="icon">
+        <SidebarHeader>
+          <div className="flex items-center gap-2 px-2 py-1">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#3ECF8E]">
+              <Zap className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-lg font-semibold tracking-tight">
+              innovates.bt
+            </span>
           </div>
-          <span className="text-lg font-semibold tracking-tight">
-            Innovate ERP
-          </span>
-        </div>
-      </SidebarHeader>
+        </SidebarHeader>
 
       <SidebarContent>
         {filteredNav.map((group) => (
@@ -102,5 +109,6 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+    </div>
   );
 }

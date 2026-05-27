@@ -35,7 +35,31 @@ export const clients = pgTable("clients", {
   address: text("address"),
   city: varchar("city", { length: 100 }),
   country: varchar("country", { length: 100 }).default("Bhutan"),
+
+  // Enhanced fields for next-gen support system
+  industry: varchar("industry", { length: 100 }),
+  companySize: varchar("company_size", { length: 50 }), // small/medium/large
+  tier: varchar("tier", { length: 20 }).default("bronze"), // gold/silver/bronze
+  preferredContactMethod: varchar("preferred_contact_method", { length: 50 }).default("whatsapp"),
+  timezone: varchar("timezone", { length: 50 }).default("Asia/Thimphu"),
+  slaLevel: varchar("sla_level", { length: 50 }), // standard/premium/enterprise
+  responseTimeTarget: integer("response_time_target"), // in minutes
+  notes: text("notes"),
+  tags: jsonb("tags"), // Array of custom tags
+  clientHealthScore: integer("client_health_score").default(80), // 0-100
+  lastCommunicationDate: timestamp("last_communication_date"),
+  nextFollowUpDate: timestamp("next_follow_up_date"),
+
+  // Enterprise support system fields
+  rancelabCode: varchar("ralcodelab_code", { length: 50 }).unique(), // Client's Rancelab code
+  rancelabUrl: text("ralcodelab_url"), // Rancelab system URL
+  googleDriveFolderId: varchar("google_drive_folder_id", { length: 255 }), // Root folder in Google Drive
+  supportExpiryDate: timestamp("support_expiry_date"), // AMC/support expiry date
+  daysRemainingForSupport: integer("days_remaining_for_support"), // Computed field: days until expiry
+  isActive: boolean("is_active").default(true), // Account active status
+
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 /**
@@ -161,10 +185,29 @@ export const employees = pgTable("employees", {
   department: varchar("department", { length: 100 }),
   phone: varchar("phone", { length: 20 }),
   email: varchar("email", { length: 255 }),
+
+  // Enhanced fields for next-gen support system
+  skills: jsonb("skills"), // Array of skill strings
+  specializations: jsonb("specializations"), // Array of specialization areas
+  certifications: jsonb("certifications"), // Array of certifications with expiry dates
+  maxConcurrentProblems: integer("max_concurrent_problems").default(5), // Max concurrent assignments
+  currentWorkload: integer("current_workload").default(0), // Current number of active problems
+  performanceMetrics: jsonb("performance_metrics"), // Object containing various performance KPIs
+  availability: varchar("availability", { length: 20 }).default("available"), // available/busy/offline
+  averageResponseTime: integer("average_response_time"), // in minutes
+  averageResolutionTime: integer("average_resolution_time"), // in minutes
+  clientSatisfactionScore: integer("client_satisfaction_score").default(80), // 0-100
+
+  // Enterprise support system fields
+  isSuperadmin: boolean("is_superadmin").default(false), // Superadmin access
+  supportGroupId: integer("support_group_id"), // Assigned support group
+  whatsappNumber: varchar("whatsapp_number", { length: 50 }), // WhatsApp for direct communication
+  isAvailableForChat: boolean("is_available_for_chat").default(true) // Available for chat assignments
 }, (table) => ({
   statusIdx: index("idx_employees_status").on(table.status),
   departmentIdx: index("idx_employees_department").on(table.department),
   designationIdx: index("idx_employees_designation").on(table.designation),
+  availabilityIdx: index("idx_employees_availability").on(table.availability),
 }));
 
 /**
@@ -1416,5 +1459,613 @@ export const contactInfoExtended = pgTable("contact_info_extended", {
 }, (table) => ({
   typeIdx: index("idx_contact_info_type").on(table.infoType),
   activeIdx: index("idx_contact_info_active").on(table.isActive),
+}));
+
+/**
+ * 🎯 HERO CONTENT TABLE
+ * Admin-editable hero section content with video integration
+ */
+export const heroContent = pgTable("hero_content", {
+  id: serial("id").primaryKey(),
+  isActive: boolean("is_active").default(true),
+
+  // Main messaging
+  headline: varchar("headline", { length: 255 }).notNull(),
+  subheadline: text("subheadline"),
+  description: text("description"),
+
+  // CTAs
+  primaryCtaText: varchar("primary_cta_text", { length: 100 }),
+  primaryCtaLink: varchar("primary_cta_link", { length: 500 }),
+  secondaryCtaText: varchar("secondary_cta_text", { length: 100 }),
+  secondaryCtaLink: varchar("secondary_cta_link", { length: 500 }),
+
+  // Video settings (Cloudinary)
+  videoCloudinaryId: varchar("video_cloudinary_id", { length: 255 }), // Video public ID
+  videoPosterImageId: varchar("video_poster_image_id", { length: 255 }), // Poster/thumbnail image ID
+  enableVideoBackground: boolean("enable_video_background").default(false),
+
+  // Visual settings
+  gradientFrom: varchar("gradient_from", { length: 50 }).default("#10B981"),
+  gradientTo: varchar("gradient_to", { length: 50 }).default("#3B82F6"),
+  overlayOpacity: decimal("overlay_opacity", { precision: 3, scale: 2 }).default("0.7"),
+
+  // Trust indicators
+  showTrustIndicators: boolean("show_trust_indicators").default(true),
+  clientCount: integer("client_count").default(350),
+  yearsInBusiness: integer("years_in_business").default(12),
+
+  // Featured products showcase
+  featuredProducts: jsonb("featured_products"), // Array of product highlights
+
+  // Display settings
+  displayOrder: integer("display_order").default(0),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  activeIdx: index("idx_hero_content_active").on(table.isActive),
+  orderIdx: index("idx_hero_content_order").on(table.displayOrder),
+}));
+
+/**
+ * 🎯 PROBLEMS TABLE (Enhanced issue tracking)
+ * Next-generation problem tracking with AI and root cause analysis
+ */
+export const problems = pgTable("problems", {
+  id: serial("id").primaryKey(),
+
+  // Basic problem information
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  severity: varchar("severity", { length: 20 }).default("medium"), // low/medium/high/critical
+  category: varchar("category", { length: 100 }),
+  status: varchar("status", { length: 50 }).default("new"), // new/in-progress/resolved/prevention/closed
+
+  // Client and assignment
+  clientId: integer("client_id").references(() => clients.id),
+  assignedTeamId: integer("assigned_team_id").references(() => employees.id),
+  assignedTo: integer("assigned_to").references(() => employees.id),
+
+  // Root cause analysis
+  rootCause: text("root_cause"),
+  preventionMeasures: text("prevention_measures"),
+  lessonsLearned: text("lessons_learned"),
+  resolutionTime: integer("resolution_time"), // in minutes
+  clientImpact: varchar("client_impact", { length: 50 }), // low/medium/high/critical
+
+  // Communication and tracking
+  communicationLog: jsonb("communication_log"), // Array of communication entries
+  linkedTicketId: integer("linked_ticket_id"),
+  aiSuggestedCategory: varchar("ai_suggested_category", { length: 100 }),
+  aiSuggestedResolution: text("ai_suggested_resolution"),
+
+  // Status tracking
+  createdById: integer("created_by_id").references(() => employees.id),
+  resolvedById: integer("resolved_by_id").references(() => employees.id),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("idx_problems_client").on(table.clientId),
+  statusIdx: index("idx_problems_status").on(table.status),
+  severityIdx: index("idx_problems_severity").on(table.severity),
+  assignedToIdx: index("idx_problems_assigned").on(table.assignedTo),
+}));
+
+/**
+ * 📞 CLIENT COMMUNICATIONS TABLE (Unified timeline)
+ * All client interactions across channels
+ */
+export const clientCommunications = pgTable("client_communications", {
+  id: serial("id").primaryKey(),
+
+  // Communication details
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  type: varchar("type", { length: 50 }).notNull(), // whatsapp/email/ticket/visit/call
+  subject: varchar("subject", { length: 255 }),
+  content: text("content").notNull(),
+  outcome: text("outcome"),
+  nextAction: text("next_action"),
+
+  // Team members involved
+  focalPersonId: integer("focal_person_id").references(() => employees.id),
+  teamMemberId: integer("team_member_id").references(() => employees.id),
+  problemId: integer("problem_id").references(() => problems.id),
+
+  // Communication tracking
+  direction: varchar("direction", { length: 20 }).notNull(), // inbound/outbound
+  status: varchar("status", { length: 50 }).default("completed"), // pending/completed/failed
+  importance: varchar("importance", { length: 20 }).default("normal"), // low/normal/high/urgent
+
+  // AI analysis
+  sentiment: varchar("sentiment", { length: 20 }), // positive/neutral/negative
+  aiSummary: text("ai_summary"),
+  requiresFollowUp: boolean("requires_follow_up").default(false),
+
+  // Timing
+  scheduledFor: timestamp("scheduled_for"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("idx_communications_client").on(table.clientId),
+  typeIdx: index("idx_communications_type").on(table.type),
+  scheduledForIdx: index("idx_communications_scheduled").on(table.scheduledFor),
+  problemIdx: index("idx_communications_problem").on(table.problemId),
+}));
+
+/**
+ * 👥 TEAM ASSIGNMENTS TABLE (Client-to-team mapping)
+ * Manages focal persons and team workload
+ */
+export const teamAssignments = pgTable("team_assignments", {
+  id: serial("id").primaryKey(),
+
+  // Assignment details
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  teamMemberId: integer("team_member_id").references(() => employees.id).notNull(),
+  role: varchar("role", { length: 50 }).notNull(), // focal-person/backup-team-member/specialist
+
+  // Focal person system
+  isFocalPerson: boolean("is_focal_person").default(false),
+  isPrimaryBackup: boolean("is_primary_backup").default(false),
+
+  // Workload and performance
+  workload: integer("workload").default(0), // Number of active assignments
+  performanceScore: integer("performance_score").default(80), // 0-100
+  skills: jsonb("skills"), // Array of skill strings
+
+  // Assignment period
+  validFrom: timestamp("valid_from").defaultNow(),
+  validTo: timestamp("valid_to"),
+  isActive: boolean("is_active").default(true),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("idx_team_assignments_client").on(table.clientId),
+  teamMemberIdx: index("idx_team_assignments_team").on(table.teamMemberId),
+  activeIdx: index("idx_team_assignments_active").on(table.isActive),
+  focalPersonIdx: index("idx_team_assignments_focal").on(table.isFocalPerson),
+}));
+
+/**
+ * 🌐 CLIENT PORTAL ACCESS TABLE (Client self-service)
+ * Manages client portal access and permissions
+ */
+export const clientPortalAccess = pgTable("client_portal_access", {
+  id: serial("id").primaryKey(),
+
+  // Access details
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  userId: integer("user_id"), // Links to Supabase auth.users
+  accessLevel: varchar("access_level", { length: 50 }).default("basic"), // basic/standard/admin
+
+  // Features and permissions
+  features: jsonb("features"), // Array of enabled features
+  allowedActions: jsonb("allowed_actions"), // Array of permitted actions
+
+  // Portal activity
+  lastLogin: timestamp("last_login"),
+  loginCount: integer("login_count").default(0),
+  isActive: boolean("is_active").default(false), // Whether they've activated their account
+
+  // Invitation tracking
+  invitedBy: integer("invited_by").references(() => employees.id),
+  invitedAt: timestamp("invited_at"),
+  activatedAt: timestamp("activated_at"),
+
+  // Security
+  lastPasswordChange: timestamp("last_password_change"),
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("idx_client_portal_client").on(table.clientId),
+  userIdx: index("idx_client_portal_user").on(table.userId),
+  activeIdx: index("idx_client_portal_active").on(table.isActive),
+}));
+
+// ============================================================================
+// 🚀 ENTERPRISE SUPPORT SYSTEM MODULE (300+ Clients)
+// ============================================================================
+
+/**
+ * 📱 WHATSAPP GROUPS TABLE (300+ Client Groups)
+ * Manages individual WhatsApp groups for each client
+ */
+export const clientWhatsappGroups = pgTable("client_whatsapp_groups", {
+  id: serial("id").primaryKey(),
+
+  // Client and group details
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  groupId: varchar("group_id", { length: 100 }).unique(), // WhatsApp Group ID
+  groupName: varchar("group_name", { length: 255 }),
+  groupDescription: text("group_description"),
+  groupProfileImage: text("group_profile_image"), // Cloudinary URL
+
+  // Group access
+  qrCode: text("qr_code"), // Cloudinary URL for QR code
+  inviteLink: text("invite_link").unique(), // WhatsApp group invite link
+
+  // Admin assignment
+  adminId: integer("admin_id").references(() => employees.id),
+  focalPersonId: integer("focal_person_id").references(() => employees.id),
+
+  // Activity tracking
+  isActive: boolean("is_active").default(true),
+  lastActivityAt: timestamp("last_activity_at"),
+  messageCount: integer("message_count").default(0),
+  lastProblemSolved: text("last_problem_solved"), // Last issue resolved summary
+
+  // Group metadata
+  groupCreated: timestamp("group_created"),
+  participantCount: integer("participant_count").default(0),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("idx_whatsapp_groups_client").on(table.clientId),
+  groupIdx: index("idx_whatsapp_groups_group").on(table.groupId),
+  adminIdx: index("idx_whatsapp_groups_admin").on(table.adminId),
+  focalPersonIdx: index("idx_whatsapp_groups_focal").on(table.focalPersonId),
+  activeIdx: index("idx_whatsapp_groups_active").on(table.isActive),
+}));
+
+/**
+ * 🔑 CLIENT CREDENTIALS TABLE (Encrypted Storage)
+ * Secure credential storage with AES-256 encryption
+ */
+export const clientCredentials = pgTable("client_credentials", {
+  id: serial("id").primaryKey(),
+
+  // Client and credential type
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  credentialType: varchar("credential_type", { length: 50 }).notNull(), // rancelab/server/api/database
+  credentialName: varchar("credential_name", { length: 255 }).notNull(),
+
+  // Encrypted credentials
+  username: varchar("username", { length: 255 }),
+  passwordEncrypted: text("password_encrypted"), // AES-256 encrypted password
+  apiKey: text("api_key"),
+  configUrl: text("config_url"),
+  configJson: jsonb("config_json"), // Additional configuration data
+
+  // Google Drive integration
+  googleDriveFileId: varchar("google_drive_file_id", { length: 255 }), // Reference to stored config file
+
+  // Verification and status
+  lastVerifiedAt: timestamp("last_verified_at"),
+  isValid: boolean("is_valid").default(true),
+  expiresAt: timestamp("expires_at"), // Credential expiration
+
+  // Security metadata
+  notes: text("notes"),
+  lastRotatedAt: timestamp("last_rotated_at"),
+  rotationFrequency: integer("rotation_frequency"), // Days between rotations
+
+  // Access tracking
+  accessCount: integer("access_count").default(0),
+  lastAccessedAt: timestamp("last_accessed_at"),
+  lastAccessedBy: integer("last_accessed_by").references(() => employees.id),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("idx_credentials_client").on(table.clientId),
+  typeIdx: index("idx_credentials_type").on(table.credentialType),
+  validIdx: index("idx_credentials_valid").on(table.isValid),
+  lastVerifiedIdx: index("idx_credentials_verified").on(table.lastVerifiedAt),
+}));
+
+/**
+ * 📁 GOOGLE DRIVE FILES TABLE
+ * Tracks files stored in Google Drive for clients
+ */
+export const googleDriveFiles = pgTable("google_drive_files", {
+  id: serial("id").primaryKey(),
+
+  // Client and file details
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  fileName: varchar("file_name", { length: 500 }).notNull(),
+  fileType: varchar("file_type", { length: 50 }).notNull(), // config/credential/document/image/exports
+
+  // Google Drive metadata
+  googleDriveFileId: varchar("google_drive_file_id", { length: 255 }).unique().notNull(),
+  googleDriveFolderId: varchar("google_drive_folder_id", { length: 255 }),
+  webViewLink: text("web_view_link"),
+  webContentLink: text("web_content_link"),
+
+  // File metadata
+  fileSize: integer("file_size"), // in bytes
+  mimeType: varchar("mime_type", { length: 100 }),
+  description: text("description"),
+
+  // Categorization
+  category: varchar("category", { length: 100 }), // rancelab_config/server_config/contract/etc
+  tags: jsonb("tags"), // Array of tags for filtering
+
+  // Upload tracking
+  uploadedBy: integer("uploaded_by").references(() => employees.id),
+  syncStatus: varchar("sync_status", { length: 50 }).default("synced"), // synced/pending/failed
+  lastSyncedAt: timestamp("last_synced_at"),
+
+  // Version control
+  version: integer("version").default(1),
+  parentFileId: integer("parent_file_id"), // For version history
+
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("idx_drive_files_client").on(table.clientId),
+  typeIdx: index("idx_drive_files_type").on(table.fileType),
+  categoryIdx: index("idx_drive_files_category").on(table.category),
+  googleFileIdIdx: index("idx_drive_files_google_id").on(table.googleDriveFileId),
+  activeIdx: index("idx_drive_files_active").on(table.isActive),
+}));
+
+/**
+ * 👮 SUPPORT GROUPS TABLE (Team Organization)
+ * Manages support teams for client assignment
+ */
+export const supportGroups = pgTable("support_groups", {
+  id: serial("id").primaryKey(),
+
+  // Group details
+  groupName: varchar("group_name", { length: 255 }).unique().notNull(),
+  groupCode: varchar("group_code", { length: 20 }).unique(), // Short code like "RANCELAB", "NETWORK"
+  groupDescription: text("group_description"),
+
+  // Leadership
+  groupLeadId: integer("group_lead_id").references(() => employees.id),
+
+  // Specialization
+  specialization: varchar("specialization", { length: 100 }), // rancelab/network/hardware/software/general
+  skills: jsonb("skills"), // Array of required skills
+  certifications: jsonb("certifications"), // Required certifications
+
+  // Workload management
+  maxConcurrentClients: integer("max_concurrent_clients").default(50),
+  currentClientCount: integer("current_client_count").default(0),
+  maxConcurrentProblems: integer("max_concurrent_problems").default(100),
+  currentProblemCount: integer("current_problem_count").default(0),
+
+  // Performance metrics
+  averageResponseTime: integer("average_response_time"), // in minutes
+  averageResolutionTime: integer("average_resolution_time"), // in minutes
+  clientSatisfactionScore: integer("client_satisfaction_score").default(80), // 0-100
+
+  // Availability
+  isActive: boolean("is_active").default(true),
+  workingHours: jsonb("working_hours"), // { weekdays: "9-6", timezone: "Asia/Thimphu" }
+
+  // Priority
+  priority: integer("priority").default(0), // Higher priority = gets assigned first
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  groupCodeIdx: index("idx_support_groups_code").on(table.groupCode),
+  groupLeadIdx: index("idx_support_groups_lead").on(table.groupLeadId),
+  specializationIdx: index("idx_support_groups_specialization").on(table.specialization),
+  activeIdx: index("idx_support_groups_active").on(table.isActive),
+  priorityIdx: index("idx_support_groups_priority").on(table.priority),
+}));
+
+/**
+ * 👥 SUPPORT GROUP MEMBERS TABLE
+ * Team member assignments to support groups
+ */
+export const supportGroupMembers = pgTable("support_group_members", {
+  id: serial("id").primaryKey(),
+
+  // Group and member
+  supportGroupId: integer("support_group_id").references(() => supportGroups.id).notNull(),
+  employeeId: integer("employee_id").references(() => employees.id).notNull(),
+
+  // Role within group
+  role: varchar("role", { length: 50 }).notNull(), // lead/senior/junior/trainee
+  level: varchar("level", { length: 50 }), // L1/L2/L3 support level
+
+  // Specialization within group
+  specialization: varchar("specialization", { length: 100 }), // Specific area of expertise
+  skills: jsonb("skills"), // Array of verified skills
+
+  // Workload and performance
+  maxConcurrentClients: integer("max_concurrent_clients").default(30),
+  currentClientCount: integer("current_client_count").default(0),
+  currentProblemCount: integer("current_problem_count").default(0),
+  performanceScore: integer("performance_score").default(80), // 0-100
+
+  // Availability
+  isActive: boolean("is_active").default(true),
+  isAvailableForNewAssignments: boolean("is_available_for_new_assignments").default(true),
+  isOnLeave: boolean("is_on_leave").default(false),
+
+  // Time tracking
+  joinedAt: timestamp("joined_at").defaultNow(),
+  leftAt: timestamp("left_at"),
+
+  // Performance tracking
+  totalAssignments: integer("total_assignments").default(0),
+  totalResolutions: integer("total_resolutions").default(0),
+  averageResolutionTime: integer("average_resolution_time"), // in minutes
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  groupIdx: index("idx_support_group_members_group").on(table.supportGroupId),
+  employeeIdx: index("idx_support_group_members_employee").on(table.employeeId),
+  activeIdx: index("idx_support_group_members_active").on(table.isActive),
+  roleIdx: index("idx_support_group_members_role").on(table.role),
+}));
+
+/**
+ * 🏢 CLIENT SUPPORT GROUP MAPPING TABLE
+ * Assigns clients to support groups
+ */
+export const clientSupportGroupMapping = pgTable("client_support_group_mapping", {
+  id: serial("id").primaryKey(),
+
+  // Client and group
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  supportGroupId: integer("support_group_id").references(() => supportGroups.id).notNull(),
+
+  // Assignment details
+  isPrimaryGroup: boolean("is_primary_group").default(true),
+  assignmentReason: text("assignment_reason"), // Why this group was assigned
+
+  // Priority and workload
+  priority: varchar("priority", { length: 50 }).default("normal"), // low/normal/high/urgent
+  workloadLevel: varchar("workload_level", { length: 50 }).default("standard"), // light/standard/heavy
+
+  // Assignment tracking
+  assignedBy: integer("assigned_by").references(() => employees.id),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  unassignedAt: timestamp("unassigned_at"),
+  unassignedBy: integer("unassigned_by").references(() => employees.id),
+  unassignmentReason: text("unassignment_reason"),
+
+  // Status
+  isActive: boolean("is_active").default(true),
+
+  // Performance
+  satisfactionScore: integer("satisfaction_score"), // Client satisfaction 1-5
+  responseTimeTarget: integer("response_time_target"), // Expected response time
+  responseTimeActual: integer("response_time_actual"), // Actual avg response time
+
+  // Notes
+  notes: text("notes"),
+  specialRequirements: jsonb("special_requirements"), // Special client needs
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("idx_client_group_mapping_client").on(table.clientId),
+  groupIdx: index("idx_client_group_mapping_group").on(table.supportGroupId),
+  activeIdx: index("idx_client_group_mapping_active").on(table.isActive),
+  primaryIdx: index("idx_client_group_mapping_primary").on(table.isPrimaryGroup),
+}));
+
+/**
+ * 🤖 BOT CONVERSATIONS TABLE (AI Interactions)
+ * Tracks all bot conversations for training and analysis
+ */
+export const botConversations = pgTable("bot_conversations", {
+  id: serial("id").primaryKey(),
+
+  // Client and context
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  whatsappGroupId: integer("whatsapp_group_id").references(() => clientWhatsappGroups.id),
+
+  // Conversation details
+  conversationType: varchar("conversation_type", { length: 100 }).notNull(), // credential_request/config_update/problem_report/etc
+  category: varchar("category", { length: 100 }), // AI-classified category
+
+  // Messages
+  clientMessage: text("client_message").notNull(),
+  botResponse: text("bot_response").notNull(),
+
+  // AI confidence and classification
+  confidenceScore: decimal("confidence_score", { precision: 5, scale: 2 }), // 0-1 confidence level
+  intent: varchar("intent", { length: 100 }), // Detected intent
+  sentiment: varchar("sentiment", { length: 50 }), // positive/neutral/negative
+
+  // Resolution tracking
+  wasHandedToHuman: boolean("handed_to_human").default(false),
+  handedToEmployeeId: integer("handed_to_employee_id").references(() => employees.id),
+  handoffReason: text("handoff_reason"),
+
+  // Outcome
+  resolutionStatus: varchar("resolution_status", { length: 50 }).default("bot_resolved"), // bot_resolved/human_resolved/pending
+  resolutionTime: integer("resolution_time"), // Time to resolve in seconds
+
+  // Feedback for learning
+  clientSatisfied: boolean("client_satisfied"), // Did client indicate satisfaction?
+  requiredHumanIntervention: boolean("required_human_intervention").default(false),
+  interventionReason: text("intervention_reason"),
+
+  // Training data
+  isTrainingExample: boolean("is_training_example").default(false),
+  usedForTraining: boolean("used_for_training").default(false),
+  trainingQuality: varchar("training_quality", { length: 20 }), // good/bad/uncertain
+
+  // Metadata
+  language: varchar("language", { length: 10 }).default("en"),
+  sessionId: varchar("session_id", { length: 255 }), // To group related messages
+
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("idx_bot_conversations_client").on(table.clientId),
+  whatsappGroupIdx: index("idx_bot_conversations_whatsapp").on(table.whatsappGroupId),
+  typeIdx: index("idx_bot_conversations_type").on(table.conversationType),
+  categoryIdx: index("idx_bot_conversations_category").on(table.category),
+  resolutionStatusIdx: index("idx_bot_conversations_resolution").on(table.resolutionStatus),
+  createdAtIdx: index("idx_bot_conversations_created").on(table.createdAt),
+}));
+
+/**
+ * 🎓 BOT TRAINING DATA TABLE (Knowledge Base)
+ * Training data for AI bot responses
+ */
+export const botTrainingData = pgTable("bot_training_data", {
+  id: serial("id").primaryKey(),
+
+  // Category and classification
+  category: varchar("category", { length: 100 }).notNull(), // credential_requests/config_requests/problem_reports/etc
+  subcategory: varchar("subcategory", { length: 100 }), // More specific classification
+  intent: varchar("intent", { length: 100 }), // Specific intent within category
+
+  // Training examples
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+
+  // Context and metadata
+  context: jsonb("context"), // Additional context for the response
+  keywords: jsonb("keywords"), // Array of keywords for matching
+
+  // Response quality metrics
+  isActive: boolean("is_active").default(true),
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }).default("0.8"), // 0-1 success rate
+  timesUsed: integer("times_used").default(0),
+  timesSuccessful: integer("times_successful").default(0),
+
+  // Quality assessment
+  confidence: varchar("confidence", { length: 20 }).default("medium"), // low/medium/high
+  quality: varchar("quality", { length: 20 }).default("good"), // excellent/good/fair/poor
+
+  // Training metadata
+  source: varchar("source", { length: 50 }), // manual/imported/generated
+  language: varchar("language", { length: 10 }).default("en"),
+  locale: varchar("locale", { length: 20 }).default("en-BT"), // Bhutanese English
+
+  // Version control
+  version: integer("version").default(1),
+  parentVersionId: integer("parent_version_id"), // For version history
+
+  // Approval
+  isApproved: boolean("is_approved").default(false),
+  approvedBy: integer("approved_by").references(() => employees.id),
+  approvedAt: timestamp("approved_at"),
+
+  // Feedback
+  feedbackCount: integer("feedback_count").default(0),
+  positiveFeedback: integer("positive_feedback").default(0),
+  negativeFeedback: integer("negative_feedback").default(0),
+
+  // Response variants (A/B testing)
+  alternativeAnswers: jsonb("alternative_answers"), // Array of alternative responses
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  categoryIdx: index("idx_bot_training_category").on(table.category),
+  subcategoryIdx: index("idx_bot_training_subcategory").on(table.subcategory),
+  intentIdx: index("idx_bot_training_intent").on(table.intent),
+  activeIdx: index("idx_bot_training_active").on(table.isActive),
+  qualityIdx: index("idx_bot_training_quality").on(table.quality),
+  successRateIdx: index("idx_bot_training_success").on(table.successRate),
 }));
 

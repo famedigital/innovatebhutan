@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-import { ArrowRight, Store, Hotel, Shield, Star, Users, Zap, Cloud } from "lucide-react";
+import { ArrowRight, Store, Hotel, Shield, Star, Users, Zap, Cloud, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { PerformanceTier } from "@/lib/performance-config";
@@ -15,8 +15,11 @@ interface TabletHeroProps {
   description: string;
   ctaText: string;
   ctaLink: string;
+  secondaryCtaText?: string;
+  secondaryCtaLink?: string;
   onContact?: () => void;
   performanceTier: PerformanceTier;
+  heroContent?: any;
 }
 
 /**
@@ -33,8 +36,11 @@ export function TabletHero({
   description,
   ctaText,
   ctaLink,
+  secondaryCtaText,
+  secondaryCtaLink,
   onContact,
   performanceTier,
+  heroContent,
 }: TabletHeroProps) {
   const router = useRouter();
   const { scrollY } = useScroll();
