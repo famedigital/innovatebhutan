@@ -86,11 +86,26 @@ export async function refreshAccessToken(refreshToken: string) {
 /**
  * Get authenticated Drive client
  */
-export async function getDriveClient(accessToken: string) {
+export async function getDriveClient(accessToken: string, refreshToken?: string) {
   const oauth2Client = getOAuth2Client();
   oauth2Client.setCredentials({
     access_token: accessToken,
+    refresh_token: refreshToken,
   });
+
+  // Add automatic token refresh listener
+  if (refreshToken) {
+    oauth2Client.on('tokens', async (tokens) => {
+      // Tokens were refreshed - update in database
+      console.log('Google tokens refreshed, updating database...');
+      try {
+        // Note: This would need to be called from an API endpoint that can update the database
+        // For now, we log it. In production, this should trigger a database update.
+      } catch (error) {
+        console.error('Failed to update refreshed tokens:', error);
+      }
+    });
+  }
 
   return google.drive({ version: 'v3', auth: oauth2Client });
 }
@@ -111,6 +126,49 @@ export async function getDriveClientServiceAccount() {
   });
 
   return google.drive({ version: 'v3', auth });
+}
+
+/**
+ * Validate and refresh access token if needed
+ * This function checks if the current token is expired and refreshes it automatically
+ */
+export async function getValidAccessToken(
+  accessToken: string,
+  refreshToken: string,
+  tokenExpiry: Date | null | undefined
+): Promise<{ accessToken: string; expiryDate: Date | null; wasRefreshed: boolean }> {
+  try {
+    // Check if token is expired or will expire in next 5 minutes
+    const now = new Date();
+    const expiryDate = tokenExpiry ? new Date(tokenExpiry) : null;
+    const isExpired = !expiryDate || expiryDate <= new Date(now.getTime() + 5 * 60 * 1000);
+
+    if (!isExpired) {
+      // Token is still valid, return as-is
+      return {
+        accessToken,
+        expiryDate: expiryDate || null,
+        wasRefreshed: false
+      };
+    }
+
+    if (!refreshToken) {
+      throw new Error('Token is expired but no refresh token available');
+    }
+
+    // Refresh the token
+    console.log('Access token expired, refreshing...');
+    const newTokens = await refreshAccessToken(refreshToken);
+
+    return {
+      accessToken: newTokens.accessToken,
+      expiryDate: newTokens.expiryDate || null,
+      wasRefreshed: true
+    };
+  } catch (error) {
+    console.error('Token validation error:', error);
+    throw new Error('Failed to validate or refresh access token');
+  }
 }
 
 /**

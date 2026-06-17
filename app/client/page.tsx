@@ -192,7 +192,7 @@ export default function ClientPortal() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">Nu. {Number(inv.total).toLocaleString()}</p>
+                      <p className="text-sm font-medium">Nu. {Number(inv.total).toLocaleString('en-US')}</p>
                       <Badge className={`text-[10px] ${inv.status === 'paid' ? 'bg-green-100 text-green-700' : inv.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
                         {inv.status}
                       </Badge>
@@ -232,7 +232,7 @@ export default function ClientPortal() {
                     </div>
                     <div>
                       <p className="text-[#717171]">Value</p>
-                      <p className="font-medium">Nu. {Number(activeAMC.contract_value).toLocaleString()}</p>
+                      <p className="font-medium">Nu. {Number(activeAMC.contract_value).toLocaleString('en-US')}</p>
                     </div>
                     <div>
                       <p className="text-[#717171]">Services</p>

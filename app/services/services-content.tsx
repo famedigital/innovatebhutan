@@ -6,14 +6,14 @@ import {
   Store, Utensils, Hotel, Code, Database, LayoutGrid,
   Wrench, Shield, Zap, Smartphone, FileText, Users, Search,
   X, Plus, Minus, ChevronRight, ShoppingCart, Check, ArrowLeft,
-  GitCompare, Clock, Eye, Sparkles, Loader2
+  GitCompare, Clock, Eye, Sparkles, Loader2, ShoppingBag
 } from "lucide-react";
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { getMediaUrl } from "@/lib/cloudinary";
 import Image from "next/image";
 import Fuse from 'fuse.js';
 
-// 12 Services with premium gradients
+// 12 Services with premium gradients and products
 const allServices = [
   {
     id: "pos-solutions",
@@ -26,6 +26,14 @@ const allServices = [
     description: "Modern point-of-sale systems for retail and hospitality businesses with real-time inventory tracking and multi-store support.",
     screenshots: ["/hero/restaurantpos.png", "/hero/resturant.png"],
     features: ["Multi-store Support", "Real-time Analytics", "Cloud-Based", "Offline Mode", "Receipt Printing"],
+    products: [
+      { name: "15\" Touch Screen POS", description: "Capacitive touch screen with integrated card reader", price: "Nu. 45,000" },
+      { name: "17\" Touch Screen POS", description: "Enhanced performance for busy retail environments", price: "Nu. 65,000" },
+      { name: "80mm Thermal Printer", description: "High-speed thermal receipt printer with auto-cutter", price: "Nu. 12,000" },
+      { name: "2D Barcode Scanner", description: "Advanced QR and barcode scanning capabilities", price: "Nu. 8,500" },
+      { name: "Cash Drawer", description: "Medium-sized cash drawer with bill compartments", price: "Nu. 9,500" },
+      { name: "POS Software License", description: "Annual subscription with inventory & sales features", price: "Nu. 18,000/year" },
+    ],
     subs: [
       {
         id: "retail-pos",
@@ -55,7 +63,14 @@ const allServices = [
     category: "POS Systems",
     screenshots: ["/hero/hotelpms.png"],
     description: "Complete property management for hotels and hospitality with booking engine and housekeeping schedules.",
-    features: ["Booking Management", "Housekeeping", "Front Desk Operations", "Room Service", "Guest History"]
+    features: ["Booking Management", "Housekeeping", "Front Desk Operations", "Room Service", "Guest History"],
+    products: [
+      { name: "Hotel PMS Software", description: "Complete booking, check-in, and housekeeping management", price: "Nu. 85,000/year" },
+      { name: "Key Card Locks", description: "Electronic door locks with RFID cards", price: "Nu. 3,500/door" },
+      { name: "Room Number Displays", description: "Digital room status displays outside rooms", price: "Nu. 2,500/unit" },
+      { name: "Billing Kiosk", description: "Self-service billing and checkout kiosk", price: "Nu. 45,000" },
+      { name: "Reservation System", description: "Online booking engine with channel management", price: "Nu. 35,000/year" },
+    ],
   },
   {
     id: "web-development",
@@ -67,7 +82,14 @@ const allServices = [
     category: "Web/SaaS",
     screenshots: ["/hero/webdev.png", "/hero/dashboard.png"],
     description: "Custom web applications built with modern frameworks like React, Next.js, and TypeScript.",
-    features: ["React", "Next.js", "TypeScript", "API Integration", "Responsive Design"]
+    features: ["React", "Next.js", "TypeScript", "API Integration", "Responsive Design"],
+    products: [
+      { name: "Corporate Website", description: "Professional company website with CMS", price: "From Nu. 75,000" },
+      { name: "E-commerce Platform", description: "Full online store with payment integration", price: "From Nu. 150,000" },
+      { name: "Custom Web Application", description: "Tailored web apps for your business needs", price: "From Nu. 100,000" },
+      { name: "Customer Portal", description: "Self-service portal for your clients", price: "From Nu. 85,000" },
+      { name: "Landing Pages", description: "High-converting marketing landing pages", price: "From Nu. 25,000" },
+    ],
   },
   {
     id: "saas-development",
@@ -79,7 +101,13 @@ const allServices = [
     category: "Web/SaaS",
     screenshots: ["/hero/saas.png", "/hero/analytics.png"],
     description: "Scalable SaaS platforms with subscription billing, multi-tenant architecture, and cloud deployment.",
-    features: ["Cloud Architecture", "API Design", "Subscription Billing", "Multi-tenant", "Analytics Dashboard"]
+    features: ["Cloud Architecture", "API Design", "Subscription Billing", "Multi-tenant", "Analytics Dashboard"],
+    products: [
+      { name: "Multi-tenant SaaS Platform", description: "Scalable platform with subscription billing", price: "From Nu. 350,000" },
+      { name: "API Development", description: "RESTful APIs with documentation", price: "From Nu. 75,000" },
+      { name: "Cloud Deployment Setup", description: "AWS/Vercel deployment with CI/CD", price: "From Nu. 45,000" },
+      { name: "Analytics Dashboard", description: "Real-time business intelligence dashboard", price: "From Nu. 95,000" },
+    ],
   },
   {
     id: "erp-development",
@@ -91,7 +119,14 @@ const allServices = [
     category: "Web/SaaS",
     screenshots: ["/hero/erp.png", "/hero/erp-dashboard.png"],
     description: "Enterprise resource planning covering finance, HR, and supply chain management.",
-    features: ["Finance Module", "HR Management", "Supply Chain", "Reporting", "Workflow Automation"]
+    features: ["Finance Module", "HR Management", "Supply Chain", "Reporting", "Workflow Automation"],
+    products: [
+      { name: "Finance Module", description: "Complete accounting, billing, and financial reporting", price: "From Nu. 150,000" },
+      { name: "HR & Payroll Module", description: "Employee management, attendance, and payroll", price: "From Nu. 125,000" },
+      { name: "Inventory Management", description: "Stock tracking, reorder points, and warehouse mgmt", price: "From Nu. 95,000" },
+      { name: "Supply Chain Module", description: "Procurement, vendor management, and logistics", price: "From Nu. 135,000" },
+      { name: "Custom Reports", description: "Tailored business intelligence reports", price: "From Nu. 45,000" },
+    ],
   },
   {
     id: "mobile-app",
@@ -103,7 +138,14 @@ const allServices = [
     category: "Web/SaaS",
     screenshots: ["/hero/mobile.png", "/hero/appscreen.png"],
     description: "Native and cross-platform mobile applications for iOS and Android with React Native.",
-    features: ["iOS Development", "Android Development", "React Native", "App Store Deployment", "Push Notifications"]
+    features: ["iOS Development", "Android Development", "React Native", "App Store Deployment", "Push Notifications"],
+    products: [
+      { name: "Android App", description: "Native Android application with latest features", price: "From Nu. 125,000" },
+      { name: "iOS App", description: "Native iOS app for iPhone and iPad", price: "From Nu. 150,000" },
+      { name: "React Native App", description: "Cross-platform app for iOS and Android", price: "From Nu. 175,000" },
+      { name: "PWA Solution", description: "Progressive Web App working on all platforms", price: "From Nu. 85,000" },
+      { name: "App Maintenance", description: "Ongoing updates and support package", price: "From Nu. 25,000/year" },
+    ],
   },
   {
     id: "infrastructure",
@@ -116,6 +158,14 @@ const allServices = [
     screenshots: ["/hero/server.png", "/hero/datacenter.png"],
     description: "Complete IT infrastructure including servers, networking, and power backup solutions.",
     features: ["Server Setup", "Network Cabling", "Power Backup", "Rack Installation", "Maintenance"],
+    products: [
+      { name: "Server Installation", description: "Complete server setup and configuration", price: "From Nu. 25,000" },
+      { name: "24U Server Rack", description: "Wall-mount server rack with accessories", price: "Nu. 14,500" },
+      { name: "42U Server Cabinet", description: "Full-height server rack for data centers", price: "Nu. 38,000" },
+      { name: "Structured Cabling", description: "Cat6 network cabling and termination", price: "Nu. 4500/box" },
+      { name: "WiFi Access Point", description: "Enterprise WiFi with cloud management", price: "Nu. 14,500" },
+      { name: "Network Switch", description: "24-port managed gigabit switch", price: "Nu. 18,000" },
+    ],
     subs: [
       {
         id: "hardware",
@@ -154,6 +204,16 @@ const allServices = [
     screenshots: ["/hero/cctv.png", "/hero/access.png"],
     description: "Advanced security and surveillance with CCTV, access control, and anti-theft systems.",
     features: ["CCTV Installation", "Access Control", "Alarm Systems", "Remote Monitoring", "Motion Detection"],
+    products: [
+      { name: "2MP Dome CCTV Camera", description: "Indoor dome camera with night vision", price: "Nu. 5,500" },
+      { name: "5MP Bullet CCTV Camera", description: "Outdoor camera with weatherproof housing", price: "Nu. 9,500" },
+      { name: "4MP PTZ Camera", description: "Pan-tilt-zoom with 20x optical zoom", price: "Nu. 25,000" },
+      { name: "8CH DVR System", description: "Complete DVR with 2TB storage", price: "Nu. 25,000" },
+      { name: "16CH NVR System", description: "NVR for IP cameras with 4TB storage", price: "Nu. 45,000" },
+      { name: "Biometric Attendance", description: "Fingerprint attendance system (1000 users)", price: "Nu. 18,500" },
+      { name: "Face Recognition Terminal", description: "Face detection with temperature screening", price: "Nu. 32,000" },
+      { name: "Access Control Kit", description: "Door access control with 5 key cards", price: "Nu. 12,000" },
+    ],
     subs: [
       {
         id: "cctv",
@@ -183,7 +243,15 @@ const allServices = [
     category: "Maintenance",
     screenshots: ["/hero/support.png", "/hero/maintenance.png"],
     description: "Ongoing technical support with 24/7 monitoring, on-site service, and remote assistance.",
-    features: ["24/7 Support", "On-site Service", "Remote Monitoring", "Preventive Maintenance", "SLA Guarantee"]
+    features: ["24/7 Support", "On-site Service", "Remote Monitoring", "Preventive Maintenance", "SLA Guarantee"],
+    products: [
+      { name: "AMC Basic Plan", description: "Quarterly maintenance visits + remote support", price: "From Nu. 15,000/year" },
+      { name: "AMC Standard Plan", description: "Monthly maintenance visits + priority support", price: "From Nu. 35,000/year" },
+      { name: "AMC Premium Plan", description: "Weekly visits + 24/7 priority support", price: "From Nu. 65,000/year" },
+      { name: "On-site Support", description: "Per-visit on-site technical assistance", price: "Nu. 1,500/visit" },
+      { name: "Remote Support", description: "Remote troubleshooting and assistance", price: "Nu. 750/incident" },
+      { name: "Emergency Response", description: "4-hour emergency response time", price: "Nu. 5,000/year addon" },
+    ],
   },
   {
     id: "payroll-hr",
@@ -195,7 +263,15 @@ const allServices = [
     category: "Web/SaaS",
     screenshots: ["/hero/payroll.png", "/hero/hrms.png"],
     description: "White-label HR and payroll management with attendance tracking and compliance reporting.",
-    features: ["Payroll Processing", "HR Management", "Attendance Tracking", "Compliance", "Employee Self-Service"]
+    features: ["Payroll Processing", "HR Management", "Attendance Tracking", "Compliance", "Employee Self-Service"],
+    products: [
+      { name: "Payroll & HR Software", description: "Complete HRMS with payroll, attendance, leave", price: "From Nu. 95,000/year" },
+      { name: "Payroll Module Only", description: "Payroll processing with PF/GIS calculations", price: "From Nu. 55,000/year" },
+      { name: "Attendance System", description: "Biometric attendance with integration", price: "Nu. 18,500" },
+      { name: "Leave Management", description: "Leave tracking and approval workflow", price: "Included in HRMS" },
+      { name: "Employee Self-Service", description: "Portal for employees to view payslips, apply leave", price: "Included in HRMS" },
+      { name: "Compliance Reports", description: "PF, GIS, PIT compliance reports", price: "Included" },
+    ],
   },
   {
     id: "gst-services",
@@ -207,7 +283,15 @@ const allServices = [
     category: "Business Services",
     screenshots: ["/hero/gst.png", "/hero/tax.png"],
     description: "Complete GST services including registration, filing, and consultation for tax compliance.",
-    features: ["GST Registration", "Return Filing", "Consultation", "Compliance Check", "Tax Planning"]
+    features: ["GST Registration", "Return Filing", "Consultation", "Compliance Check", "Tax Planning"],
+    products: [
+      { name: "GST Registration", description: "New GST registration with TIN and certificate", price: "Nu. 5,000" },
+      { name: "Monthly Return Filing", description: "GSTR-1, GSTR-3B monthly filing package", price: "Nu. 2,500/month" },
+      { name: "Annual Return Filing", description: "GSTR-9 annual filing with reconciliation", price: "Nu. 8,500" },
+      { name: "GST Audit Support", description: "Documentation and support for GST audit", price: "Nu. 15,000" },
+      { name: "GST Consultation", description: "Advisory on GST compliance and planning", price: "Nu. 3,500/session" },
+      { name: "Registration for Multiple States", description: "Multi-state GST registration package", price: "Nu. 12,000" },
+    ],
   },
   {
     id: "it-consulting",
@@ -219,7 +303,15 @@ const allServices = [
     category: "Consulting",
     screenshots: ["/hero/consulting.png", "/hero/strategy.png"],
     description: "Strategic IT consulting for digital transformation, technology planning, and advisory services.",
-    features: ["Technology Planning", "Digital Transformation", "Advisory", "Roadmap Design", "Vendor Evaluation"]
+    features: ["Technology Planning", "Digital Transformation", "Advisory", "Roadmap Design", "Vendor Evaluation"],
+    products: [
+      { name: "IT Strategy Assessment", description: "Complete technology infrastructure assessment", price: "Nu. 25,000" },
+      { name: "Digital Transformation Roadmap", description: "3-year digital transformation strategy", price: "Nu. 75,000" },
+      { name: "Technology Selection", description: "Vendor evaluation and technology recommendations", price: "Nu. 35,000" },
+      { name: "IT Audit", description: "Comprehensive IT systems and security audit", price: "Nu. 45,000" },
+      { name: "Cloud Migration Planning", description: "Strategy for moving to cloud infrastructure", price: "Nu. 55,000" },
+      { name: "CIO Advisory", description: "Fractional CIO services for strategic guidance", price: "From Nu. 45,000/month" },
+    ],
   },
 ];
 
@@ -647,6 +739,37 @@ function QuickPreviewModal({
                 )}
               </div>
             </div>
+
+            {/* Products Section - Available for Bhutan Clients */}
+            {service.products && service.products.length > 0 && (
+              <div className="mb-5">
+                <h3 className="text-sm font-semibold text-foreground/70 mb-3 flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4" />
+                  Available Products
+                </h3>
+                <div className="grid grid-cols-1 gap-2">
+                  {service.products.map((product, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="p-3 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20"
+                    >
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="flex-1">
+                          <h4 className="text-sm font-semibold text-foreground mb-1">{product.name}</h4>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-primary">{product.price}</div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Action buttons */}
             <div className="flex gap-3">
@@ -1173,6 +1296,37 @@ function ServiceDetailPanel({
           ))}
         </div>
       </div>
+
+      {/* Products Section - Available for Bhutan Clients */}
+      {service.products && service.products.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-sm font-semibold text-foreground/70 mb-3 flex items-center gap-2">
+            <ShoppingBag className="w-4 h-4" />
+            Available Products
+          </h3>
+          <div className="grid grid-cols-1 gap-3">
+            {service.products.map((product, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-2xl border border-primary/20"
+              >
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-foreground mb-1">{product.name}</h4>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-primary">{product.price}</div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Add main service button */}
       {!hideAddButton && (

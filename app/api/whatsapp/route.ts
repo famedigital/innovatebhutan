@@ -47,46 +47,199 @@ export async function POST(request: NextRequest) {
     console.log("📥 Inbound WhatsApp Signal:", JSON.stringify(body, null, 2));
 
     const messageEntry = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-    
-    if (!messageEntry || messageEntry.type !== "text") {
-      return NextResponse.json({ success: true, reason: "No text message" });
+
+    if (!messageEntry) {
+      return NextResponse.json({ success: true, reason: "No message entry" });
     }
 
     const from = messageEntry.from;
-    const text = messageEntry.text.body;
+    const messageType = messageEntry.type;
+
+    // Handle different message types
+    const messageContent = getMessageContent(messageEntry, messageType);
 
     const supabase = await createClient();
 
-    // 🧠 Step 1: Analyze intent via AI
-    const aiResult: AIActionResponse = await analyzeERPIntent(text);
-    console.log(`🤖 AI Triage [${from}]:`, aiResult.intent);
+    // 🔄 TWO-WAY SYNC: Sync to chat system
+    await syncToChatSystem(supabase, from, messageContent, messageType, messageEntry);
 
-    // 📝 Step 2: Log interaction to database
-    await supabase.from('whatsapp_logs').insert({
-      from_number: from,
-      message: text,
-      intent: aiResult.intent,
-      ai_response: aiResult.suggestedReply,
-      confidence: aiResult.confidence
-    });
+    // Only process text messages for AI analysis
+    if (messageType === "text") {
+      const text = messageEntry.text.body;
 
-    // 👑 SUPERUSER MODE - Admin can control ERP via WhatsApp
-    if (from === superuserPhone || from === `+${superuserPhone}`) {
-      await handleSuperuserCommand(supabase, from, text, aiResult);
-      return NextResponse.json({ success: true, mode: "superuser" });
+      // 🧠 Step 1: Analyze intent via AI
+      const aiResult: AIActionResponse = await analyzeERPIntent(text);
+      console.log(`🤖 AI Triage [${from}]:`, aiResult.intent);
+
+      // 📝 Step 2: Log interaction to database
+      await supabase.from('whatsapp_logs').insert({
+        from_number: from,
+        message: text,
+        intent: aiResult.intent,
+        ai_response: aiResult.suggestedReply,
+        confidence: aiResult.confidence
+      });
+
+      // 👑 SUPERUSER MODE - Admin can control ERP via WhatsApp
+      if (from === superuserPhone || from === `+${superuserPhone}`) {
+        await handleSuperuserCommand(supabase, from, text, aiResult);
+        return NextResponse.json({ success: true, mode: "superuser" });
+      }
+
+      // 🏢 CLIENT MODE - Auto-create tickets, leads, etc.
+      await handleClientMessage(supabase, from, text, aiResult);
+
+      // 📤 Step 3: Send AI-generated auto-reply
+      const replyMessage = generateAutoReply(aiResult);
+      await sendWhatsAppMessage(from, replyMessage);
+
+      return NextResponse.json({ success: true, intent: aiResult.intent });
     }
 
-    // 🏢 CLIENT MODE - Auto-create tickets, leads, etc.
-    await handleClientMessage(supabase, from, text, aiResult);
-
-    // 📤 Step 3: Send AI-generated auto-reply
-    const replyMessage = generateAutoReply(aiResult);
-    await sendWhatsAppMessage(from, replyMessage);
-
-    return NextResponse.json({ success: true, intent: aiResult.intent });
+    // For media messages, sync to chat and acknowledge
+    return NextResponse.json({ success: true, type: messageType });
   } catch (error) {
     console.error("🌋 WhatsApp Bot Error:", error);
     return NextResponse.json({ success: false, error: "Internal Protocol Failure" }, { status: 500 });
+  }
+}
+
+/**
+ * Extract message content based on type
+ */
+function getMessageContent(entry: any, type: string): { text: string; mediaUrl?: string } {
+  switch (type) {
+    case "text":
+      return { text: entry.text.body };
+    case "image":
+      return { text: entry.image.caption || "📷 Image", mediaUrl: entry.image.id };
+    case "document":
+      return { text: entry.document.filename || "📄 Document", mediaUrl: entry.document.id };
+    case "audio":
+      return { text: "🎵 Audio message", mediaUrl: entry.audio.id };
+    case "video":
+      return { text: entry.video.caption || "🎬 Video", mediaUrl: entry.video.id };
+    default:
+      return { text: `Unsupported type: ${type}` };
+  }
+}
+
+/**
+ * 🔄 TWO-WAY SYNC: Sync WhatsApp messages to chat system
+ */
+async function syncToChatSystem(
+  supabase: any,
+  from: string,
+  content: { text: string; mediaUrl?: string },
+  messageType: string,
+  entry: any
+) {
+  try {
+    // Find or create client by WhatsApp number
+    let { data: client } = await supabase
+      .from('clients')
+      .select('id, name, userId')
+      .eq('whatsapp', from)
+      .single();
+
+    // If client doesn't exist but user is authenticated, link by user
+    if (!client) {
+      const { data: userByPhone } = await supabase
+        .from('profiles')
+        .select('userId, name')
+        .eq('phone', from)
+        .single();
+
+      if (userByPhone) {
+        // Create client record linked to user
+        const { data: newClient } = await supabase
+          .from('clients')
+          .insert({
+            userId: userByPhone.userId,
+            name: userByPhone.name || "WhatsApp User",
+            whatsapp: from,
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        client = newClient;
+      }
+    }
+
+    if (!client) {
+      console.log(`🔗 No client found for WhatsApp number: ${from}`);
+      // Could create anonymous lead here
+      return;
+    }
+
+    // Find or create conversation
+    let { data: conversation } = await supabase
+      .from('chat_conversations')
+      .select('id, status')
+      .eq('clientId', client.id)
+      .eq('source', 'whatsapp')
+      .in('status', ['open', 'active'])
+      .order('createdAt', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!conversation) {
+      // Create new conversation
+      const { data: newConv } = await supabase
+        .from('chat_conversations')
+        .insert({
+          clientId: client.id,
+          status: 'active',
+          source: 'whatsapp',
+          whatsappPhone: from,
+        })
+        .select()
+        .single();
+
+      conversation = newConv;
+    }
+
+    // Insert message into chat_messages
+    await supabase.from('chat_messages').insert({
+      conversationId: conversation.id,
+      senderId: client.userId?.toString() || `whatsapp_${from}`,
+      senderType: 'client',
+      message: content.text,
+      messageType: messageType === 'text' ? 'text' : messageType === 'image' ? 'image' : 'file',
+      mediaUrl: content.mediaUrl,
+    });
+
+    console.log(`🔄 Synced WhatsApp message to chat conversation ${conversation.id}`);
+  } catch (error) {
+    console.error("❌ Error syncing to chat system:", error);
+  }
+}
+
+/**
+ * 📤 OUTBOUND: Send message from chat system to WhatsApp
+ */
+export async function sendChatToWhatsApp(
+  toPhone: string,
+  message: string,
+  messageType: 'text' | 'image' | 'file' = 'text',
+  mediaUrl?: string
+) {
+  try {
+    // Use the existing sendWhatsAppMessage function for text
+    if (messageType === 'text') {
+      await sendWhatsAppMessage(toPhone, message);
+    } else if (messageType === 'image' && mediaUrl) {
+      // For images, you'd need to implement Media API calls
+      await sendWhatsAppMessage(toPhone, `📷 [Image]: ${message}`);
+    } else if (messageType === 'file' && mediaUrl) {
+      await sendWhatsAppMessage(toPhone, `📄 [File]: ${message}`);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error sending chat message to WhatsApp:", error);
+    return { success: false, error };
   }
 }
 

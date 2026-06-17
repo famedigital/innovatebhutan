@@ -202,12 +202,21 @@ export const employees = pgTable("employees", {
   isSuperadmin: boolean("is_superadmin").default(false), // Superadmin access
   supportGroupId: integer("support_group_id"), // Assigned support group
   whatsappNumber: varchar("whatsapp_number", { length: 50 }), // WhatsApp for direct communication
-  isAvailableForChat: boolean("is_available_for_chat").default(true) // Available for chat assignments
+  isAvailableForChat: boolean("is_available_for_chat").default(true), // Available for chat assignments
+
+  // Google OAuth Authentication Fields
+  authId: text("auth_id").unique(), // Supabase Auth user ID reference
+  googleAccessToken: text("google_access_token"), // Current Google OAuth access token
+  googleRefreshToken: text("google_refresh_token"), // Google OAuth refresh token for getting new access tokens
+  googleTokenExpiry: timestamp("google_token_expiry"), // When the current access token expires
+  googleConnectedAt: timestamp("google_connected_at"), // When Google OAuth was established
+  googleScopes: jsonb("google_scopes") // JSON array of granted OAuth scopes
 }, (table) => ({
   statusIdx: index("idx_employees_status").on(table.status),
   departmentIdx: index("idx_employees_department").on(table.department),
   designationIdx: index("idx_employees_designation").on(table.designation),
   availabilityIdx: index("idx_employees_availability").on(table.availability),
+  authIdIdx: index("idx_employees_auth_id").on(table.authId),
 }));
 
 /**

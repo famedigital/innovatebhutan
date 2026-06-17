@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getDriveClient, uploadFile } from '@/lib/integrations/googleDrive';
+import { getDriveClient, uploadFile, getValidAccessToken } from '@/lib/integrations/googleDrive';
 import { createClient } from '@/utils/supabase/server';
 import { logClientAccess } from '@/lib/utils/auditLogger';
 
@@ -29,8 +29,49 @@ export async function POST(request: NextRequest) {
 
     if (employeeError || !employee?.googleAccessToken) {
       return NextResponse.json(
-        { error: 'Google Drive not connected' },
+        { error: 'Google Drive not connected. Please connect your Google Drive account first.' },
         { status: 400 }
+      );
+    }
+
+    if (!employee.googleRefreshToken) {
+      return NextResponse.json(
+        { error: 'Google Drive connection incomplete. Please reconnect your account.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate and refresh token if needed
+    let validToken = employee.googleAccessToken;
+    let tokenExpiry = employee.googleTokenExpiry;
+
+    try {
+      const tokenValidation = await getValidAccessToken(
+        employee.googleAccessToken,
+        employee.googleRefreshToken,
+        employee.googleTokenExpiry
+      );
+
+      validToken = tokenValidation.accessToken;
+      tokenExpiry = tokenValidation.expiryDate;
+
+      // If token was refreshed, update it in the database
+      if (tokenValidation.wasRefreshed) {
+        await supabase
+          .from('employees')
+          .update({
+            googleAccessToken: validToken,
+            googleTokenExpiry: tokenExpiry,
+          })
+          .eq('authId', user.id);
+
+        console.log('Google token refreshed and updated in database');
+      }
+    } catch (tokenError) {
+      console.error('Token validation failed:', tokenError);
+      return NextResponse.json(
+        { error: 'Google Drive token expired or invalid. Please reconnect your account.' },
+        { status: 401 }
       );
     }
 
@@ -62,8 +103,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get Drive client
-    const drive = await getDriveClient(employee.googleAccessToken);
+    // Get Drive client with validated token
+    const drive = await getDriveClient(validToken, employee.googleRefreshToken);
 
     // Determine folder ID based on folder type
     // In production, you'd store these folder IDs in the database

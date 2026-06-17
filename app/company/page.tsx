@@ -4,7 +4,7 @@ import { WhatsAppButton } from '@/components/whatsapp-button'
 import { CompanyContent } from './company-content'
 
 export const metadata: Metadata = {
-  title: 'Operational Strategy & Legacy | INNOVATE BHUTAN Talent Brokerage',
+  title: 'innovates.bt',
   description: 'The architectural foundation of Bhutan\'s premier technology talent brokerage. Founded in 2009, we broker elite skills for high-stakes operations across 20 dzongkhags.',
   keywords: 'Innovate Bhutan strategy, technology brokerage, talent broker Thimphu, POS experts Bhutan, CCTV architects, IT talent Bhutan',
 }

@@ -1,11 +1,31 @@
 import { NextResponse } from "next/server";
 
-export async function GET() {
-  try {
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dr9a371tx';
-    const folder = 'innovatebhutan/slider';
+interface CloudinaryResource {
+  public_id: string;
+  secure_url: string;
+  resource_type: 'image' | 'video';
+  format: string;
+  created_at: string;
+  width?: number;
+  height?: number;
+  duration?: number;
+}
 
-    // Cloudinary Admin API for listing resources
+interface CloudinaryResponse {
+  resources: CloudinaryResource[];
+  next_cursor?: string;
+  total_count: number;
+}
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const folder = searchParams.get('folder') || 'innovate_bhutan';
+    const includeVideos = searchParams.get('includeVideos') === 'true';
+
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dr9a371tx';
+
+    // Cloudinary Admin API credentials
     const apiKey = process.env.CLOUDINARY_API_KEY;
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
@@ -13,50 +33,97 @@ export async function GET() {
       return NextResponse.json({
         success: false,
         error: 'Cloudinary credentials not configured',
-        images: []
+        media: []
       });
     }
 
-    // Cloudinary REST API to list resources in a folder
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
-    const url = `https://api.cloudinary.com/v1_1/${cloudName}/resources/image/upload?prefix=${folder}&max_results=50`;
+    const allMedia: any[] = [];
+    let nextCursor: string | undefined;
 
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Basic ${auth}`
+    // Fetch all resources with pagination
+    do {
+      // Fetch images
+      const imageUrl = `https://api.cloudinary.com/v1_1/${cloudName}/resources/image/upload?prefix=${folder}&max_results=500${nextCursor ? `&next_cursor=${nextCursor}` : ''}`;
+      const imageResponse = await fetch(imageUrl, {
+        headers: { 'Authorization': `Basic ${auth}` }
+      });
+
+      if (imageResponse.ok) {
+        const imageData: CloudinaryResponse = await imageResponse.json();
+        allMedia.push(...imageData.resources);
+        nextCursor = imageData.next_cursor;
+      } else {
+        console.error('Cloudinary image API error:', imageResponse.statusText);
       }
-    });
+    } while (nextCursor);
 
-    if (!response.ok) {
-      throw new Error(`Cloudinary API error: ${response.statusText}`);
+    // Fetch videos if requested
+    if (includeVideos) {
+      nextCursor = undefined;
+      do {
+        const videoUrl = `https://api.cloudinary.com/v1_1/${cloudName}/resources/video/upload?prefix=${folder}&max_results=500${nextCursor ? `&next_cursor=${nextCursor}` : ''}`;
+        const videoResponse = await fetch(videoUrl, {
+          headers: { 'Authorization': `Basic ${auth}` }
+        });
+
+        if (videoResponse.ok) {
+          const videoData: CloudinaryResponse = await videoResponse.json();
+          allMedia.push(...videoData.resources);
+          nextCursor = videoData.next_cursor;
+        } else {
+          console.error('Cloudinary video API error:', videoResponse.statusText);
+          break;
+        }
+      } while (nextCursor);
     }
 
-    const data = await response.json();
+    // Transform resources into media items
+    const media = allMedia.map((resource: CloudinaryResource) => {
+      const parts = resource.public_id.split('/');
+      const fileName = parts.pop();
+      const subfolder = parts[parts.length - 1] || 'root';
 
-    // Extract image names and create URLs
-    const images = data.resources?.map((resource: any) => {
-      const fileName = resource.public_id.split('/').pop();
       return {
+        publicId: resource.public_id,
         name: fileName,
         url: resource.secure_url,
-        publicId: resource.public_id,
-        createdAt: resource.created_at
+        type: resource.resource_type, // 'image' or 'video'
+        format: resource.format,
+        subfolder,
+        createdAt: resource.created_at,
+        width: resource.width,
+        height: resource.height,
+        duration: resource.duration
       };
-    }) || [];
+    });
+
+    // Sort by created date (newest first)
+    media.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Group by subfolder
+    const bySubfolder = media.reduce((acc: any, item) => {
+      if (!acc[item.subfolder]) acc[item.subfolder] = [];
+      acc[item.subfolder].push(item);
+      return acc;
+    }, {});
 
     return NextResponse.json({
       success: true,
       folder,
-      images,
-      count: images.length
+      media,
+      count: media.length,
+      bySubfolder,
+      imageCount: media.filter((m: any) => m.type === 'image').length,
+      videoCount: media.filter((m: any) => m.type === 'video').length
     });
 
   } catch (error) {
-    console.error('Error scanning Cloudinary folder:', error);
+    console.error('Error scanning Cloudinary:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to scan folder',
-      images: []
+      error: error instanceof Error ? error.message : 'Failed to scan Cloudinary',
+      media: []
     }, { status: 500 });
   }
 }

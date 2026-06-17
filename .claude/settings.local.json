@@ -12,7 +12,13 @@
       "Bash(vercel env pull:*)",
       "Bash(vercel login:*)",
       "Bash(vercel link:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(psql:*)",
+      "Bash(curl:*)",
+      "Bash(dir:*)",
+      "WebSearch",
+      "Bash(cat:*)"
     ]
   }
 }

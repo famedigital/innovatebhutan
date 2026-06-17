@@ -52,22 +52,70 @@ export async function GET(request: NextRequest) {
     }
 
     // Store Google OAuth tokens in database
-    // Note: You'll need to create a table to store user OAuth tokens
-    const { data: userData, error: updateError } = await supabase
-      .from('employees')
-      .update({
-        googleAccessToken: tokens.accessToken,
-        googleRefreshToken: tokens.refreshToken,
-        googleTokenExpiry: tokens.expiryDate,
-        googleConnectedAt: new Date().toISOString(),
-      })
-      .eq('authId', user.id)
-      .select()
-      .single();
+    try {
+      // First, check if employee record exists for this user
+      const { data: employee } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('authId', user.id)
+        .single();
 
-    if (updateError) {
-      console.error('Failed to store Google tokens:', updateError);
-      // For now, just log the error - in production you might want to handle this better
+      if (employee) {
+        // Update existing employee with new tokens
+        const { error: updateError } = await supabase
+          .from('employees')
+          .update({
+            googleAccessToken: tokens.accessToken,
+            googleRefreshToken: tokens.refreshToken,
+            googleTokenExpiry: tokens.expiryDate,
+            googleConnectedAt: new Date().toISOString(),
+            googleScopes: ['https://www.googleapis.com/auth/drive',
+                          'https://www.googleapis.com/auth/drive.file',
+                          'https://www.googleapis.com/auth/drive.metadata']
+          })
+          .eq('authId', user.id);
+
+        if (updateError) {
+          console.error('Failed to update Google tokens:', updateError);
+          return NextResponse.redirect(
+            new URL('/admin/support/google-drive?error=token_update_failed', request.url)
+          );
+        }
+
+        console.log('Google tokens updated successfully for employee:', employee.id);
+      } else {
+        // Create employee record with OAuth tokens (if employee doesn't exist)
+        const { error: insertError } = await supabase
+          .from('employees')
+          .insert({
+            authId: user.id,
+            profileId: null, // Will be set during profile creation
+            googleAccessToken: tokens.accessToken,
+            googleRefreshToken: tokens.refreshToken,
+            googleTokenExpiry: tokens.expiryDate,
+            googleConnectedAt: new Date().toISOString(),
+            googleScopes: ['https://www.googleapis.com/auth/drive',
+                          'https://www.googleapis.com/auth/drive.file',
+                          'https://www.googleapis.com/auth/drive.metadata'],
+            status: 'active',
+            designation: 'Staff Member',
+            availability: 'available'
+          });
+
+        if (insertError) {
+          console.error('Failed to create employee with Google tokens:', insertError);
+          return NextResponse.redirect(
+            new URL('/admin/support/google-drive?error=employee_creation_failed', request.url)
+          );
+        }
+
+        console.log('Employee record created with Google tokens for user:', user.id);
+      }
+    } catch (dbError) {
+      console.error('Database error storing Google tokens:', dbError);
+      return NextResponse.redirect(
+        new URL('/admin/support/google-drive?error=database_error', request.url)
+      );
     }
 
     // Clear the state cookie
