@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { ServicesContent } from './services-content'
+import { ServicesContentNew } from './services-content-new'
 
 export const metadata: Metadata = {
   title: 'Technology Services in Bhutan | POS, CCTV, Biometric | INNOVATES BHUTAN',
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function ServicesPage() {
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-black transition-colors">
-      <ServicesContent />
+      <ServicesContentNew />
     </main>
   )
 }
