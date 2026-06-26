@@ -15,6 +15,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           '--normal-bg': 'var(--popover)',
           '--normal-text': 'var(--popover-foreground)',
           '--normal-border': 'var(--border)',
+          '--toast-z-index': '9999', // Ensure toasts appear above modals
         } as React.CSSProperties
       }
       {...props}

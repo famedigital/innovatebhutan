@@ -8,7 +8,7 @@ import { isApiError, RateLimitError } from "@/lib/errors";
 import { validateRequest, validateQueryParams } from "@/lib/validations/validation";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
 
 // GET /api/projects - List projects with filters
 export async function GET(req: NextRequest) {

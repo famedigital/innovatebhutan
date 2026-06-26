@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, Plus, Trash2, Edit2, Calendar, Clock, User, CheckCircle2, Circle, AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { X, Plus, Trash2, Edit2, Calendar, Clock, User, CheckCircle2, Circle, AlertCircle, Loader2, RefreshCw, Building2, DollarSign, Save, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +29,16 @@ type Task = {
   estimatedHours?: string;
   actualHours?: string;
   createdAt: string;
+};
+
+type Client = {
+  id: number;
+  name: string;
+};
+
+type Service = {
+  id: number;
+  name: string;
 };
 
 type ProjectStats = {
@@ -77,6 +87,22 @@ export function ProjectDetailModal({
   });
   const [teamMembers, setTeamMembers] = useState<Array<{ id: string; fullName: string }>>([]);
   const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
+
+  // Edit project mode
+  const [editMode, setEditMode] = useState(false);
+  const [projectForm, setProjectForm] = useState({
+    name: project.name || "",
+    description: project.description || "",
+    budget: project.budget || "",
+    clientId: project.clientId ? String(project.clientId) : "",
+    serviceId: project.serviceId ? String(project.serviceId) : "",
+    leadId: project.leadId || "",
+    startDate: project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : "",
+    endDate: project.endDate ? new Date(project.endDate).toISOString().split('T')[0] : "",
+  });
+  const [clients, setClients] = useState<Client[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [savingProject, setSavingProject] = useState(false);
 
   const fetchProjectData = useCallback(async () => {
     try {
@@ -134,6 +160,24 @@ export function ProjectDetailModal({
         if (result.success) {
           // Map to use userId as value
           setTeamMembers(result.data?.map((p: any) => ({ id: p.userId, fullName: p.fullName })) || []);
+        }
+      });
+
+    // Fetch clients
+    fetch("/api/clients")
+      .then((r) => r.json())
+      .then((result) => {
+        if (result.success) {
+          setClients(result.data || []);
+        }
+      });
+
+    // Fetch services
+    fetch("/api/services")
+      .then((r) => r.json())
+      .then((result) => {
+        if (result.success) {
+          setServices(result.data || []);
         }
       });
   }, [fetchProjectData]);
@@ -249,6 +293,44 @@ export function ProjectDetailModal({
     }
   };
 
+  const handleSaveProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProject(true);
+
+    try {
+      const payload: any = {};
+      if (projectForm.name) payload.name = projectForm.name;
+      if (projectForm.description) payload.description = projectForm.description;
+      if (projectForm.budget) payload.budget = projectForm.budget;
+      if (projectForm.clientId) payload.clientId = Number(projectForm.clientId);
+      if (projectForm.serviceId) payload.serviceId = Number(projectForm.serviceId);
+      if (projectForm.leadId) payload.leadId = projectForm.leadId;
+      if (projectForm.startDate) payload.startDate = new Date(projectForm.startDate);
+      if (projectForm.endDate) payload.endDate = new Date(projectForm.endDate);
+
+      const response = await fetch(`/api/projects/${project.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success("Project updated successfully");
+        setEditMode(false);
+        onUpdated();
+      } else {
+        toast.error(result.error || "Failed to update project. Please try again.");
+      }
+    } catch (err) {
+      console.error("[ProjectDetailModal] Save project error:", err);
+      toast.error("Network error: Could not update project. Please check your connection.");
+    } finally {
+      setSavingProject(false);
+    }
+  };
+
   const columns: Array<{ key: string; label: string; icon: React.ElementType; color: string }> = [
     { key: "todo", ...statusConfig.todo },
     { key: "in_progress", ...statusConfig.in_progress },
@@ -287,22 +369,179 @@ export function ProjectDetailModal({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#E5E5E1] bg-gradient-to-r from-[#3ECF8E]/5 to-transparent">
           <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold">{project.name}</h2>
-              <Badge className={statusConfig[project.status]?.color || ""}>
-                {project.status?.replace("_", " ") || "Unknown"}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-4 mt-2 text-sm text-[#717171]">
-              <span>Client: {project.clientName || "-"}</span>
-              <span>Lead: {project.leadName || "-"}</span>
-              <span>Progress: {loading ? "..." : `${stats?.progressPercentage || 0}%`}</span>
-            </div>
+            {editMode ? (
+              <form onSubmit={handleSaveProject} className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Input
+                    className="max-w-md bg-white"
+                    value={projectForm.name}
+                    onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
+                    required
+                  />
+                  <Button type="submit" size="sm" disabled={savingProject} className="bg-[#3ECF8E] hover:bg-[#34b27b]">
+                    <Save className="w-4 h-4 mr-1" />
+                    Save
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setEditMode(false)}>
+                    Cancel
+                  </Button>
+                </div>
+                <Textarea
+                  className="max-w-lg bg-white"
+                  placeholder="Project description..."
+                  value={projectForm.description}
+                  onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
+                  rows={2}
+                />
+              </form>
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-semibold">{project.name}</h2>
+                  <Badge className={statusConfig[project.status]?.color || ""}>
+                    {project.status?.replace("_", " ") || "Unknown"}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-4 mt-2 text-sm text-[#717171]">
+                  <span className="flex items-center gap-1">
+                    <Building2 className="w-3 h-3" />
+                    {project.clientName || "-"}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    {project.leadName || "-"}
+                  </span>
+                  {project.budget && (
+                    <span className="flex items-center gap-1">
+                      <DollarSign className="w-3 h-3" />
+                      Nu. {project.budget}
+                    </span>
+                  )}
+                  <span>Progress: {loading ? "..." : `${stats?.progressPercentage || 0}%`}</span>
+                </div>
+              </>
+            )}
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            {!editMode && (
+              <Button variant="outline" size="sm" onClick={() => setEditMode(true)}>
+                <Edit2 className="w-4 h-4 mr-1" />
+                Edit Project
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
+
+        {/* Edit Form - Extended Fields */}
+        {editMode && (
+          <div className="border-b border-[#E5E5E1] p-4 bg-gray-50">
+            <form onSubmit={handleSaveProject} className="grid grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[#717171]">Budget</label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    className="pl-9 bg-white"
+                    placeholder="0.00"
+                    value={projectForm.budget}
+                    onChange={(e) => setProjectForm({ ...projectForm, budget: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[#717171]">Client</label>
+                <Select
+                  value={projectForm.clientId}
+                  onValueChange={(v) => setProjectForm({ ...projectForm, clientId: v })}
+                >
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Select client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((c) => (
+                      <SelectItem key={c.id} value={c.id.toString()}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[#717171]">Service</label>
+                <Select
+                  value={projectForm.serviceId}
+                  onValueChange={(v) => setProjectForm({ ...projectForm, serviceId: v })}
+                >
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Select service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map((s) => (
+                      <SelectItem key={s.id} value={s.id.toString()}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[#717171]">Project Lead</label>
+                <Select
+                  value={projectForm.leadId}
+                  onValueChange={(v) => setProjectForm({ ...projectForm, leadId: v })}
+                >
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Select lead" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamMembers.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.fullName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[#717171]">Start Date</label>
+                <Input
+                  type="date"
+                  className="bg-white"
+                  value={projectForm.startDate}
+                  onChange={(e) => setProjectForm({ ...projectForm, startDate: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[#717171]">End Date</label>
+                <Input
+                  type="date"
+                  className="bg-white"
+                  value={projectForm.endDate}
+                  onChange={(e) => setProjectForm({ ...projectForm, endDate: e.target.value })}
+                />
+              </div>
+
+              <div className="col-span-2 flex items-end gap-2">
+                <Button type="submit" disabled={savingProject} className="bg-[#3ECF8E] hover:bg-[#34b27b]">
+                  {savingProject ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Save Changes
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setEditMode(false)}>
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">

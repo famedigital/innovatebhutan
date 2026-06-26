@@ -68,7 +68,7 @@ export default function AMCReportsPage() {
   const [exporting, setExporting] = useState(false);
   const [kpis, setKpis] = useState<AMCKPIs | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
     fetchReportData();
@@ -78,7 +78,7 @@ export default function AMCReportsPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (statusFilter) params.append("status", statusFilter);
+      if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
       if (dateRange?.from) params.append("startDate", dateRange.from.toISOString());
       if (dateRange?.to) params.append("endDate", dateRange.to.toISOString());
 
@@ -107,14 +107,14 @@ export default function AMCReportsPage() {
         ["AMC Report - " + new Date().toLocaleDateString()],
         [],
         ["Summary"],
-        ["Total Contracts", kpis.summary.totalContracts.toString()],
-        ["Active Contracts", kpis.summary.activeContracts.toString()],
-        ["Expiring Soon", kpis.summary.expiringContracts.toString()],
-        ["Expired", kpis.summary.expiredContracts.toString()],
-        ["Monthly Recurring Revenue", kpis.summary.totalMonthlyRevenue.toFixed(2)],
-        ["Total Annual Value", kpis.summary.totalAnnualValue.toFixed(2)],
-        ["Upcoming Renewals", kpis.summary.upcomingRenewals.toString()],
-        ["Average Contract Value", kpis.summary.averageContractValue.toFixed(2)],
+        ["Total Contracts", (kpis.summary?.totalContracts ?? 0).toString()],
+        ["Active Contracts", (kpis.summary?.activeContracts ?? 0).toString()],
+        ["Expiring Soon", (kpis.summary?.expiringContracts ?? 0).toString()],
+        ["Expired", (kpis.summary?.expiredContracts ?? 0).toString()],
+        ["Monthly Recurring Revenue", (kpis.summary?.totalMonthlyRevenue ?? 0).toFixed(2)],
+        ["Total Annual Value", (kpis.summary?.totalAnnualValue ?? 0).toFixed(2)],
+        ["Upcoming Renewals", (kpis.summary?.upcomingRenewals ?? 0).toString()],
+        ["Average Contract Value", (kpis.summary?.averageContractValue ?? 0).toFixed(2)],
         [],
         ["By Status"],
         ["Status", "Count", "Total Value", "Percentage"],
@@ -259,7 +259,7 @@ export default function AMCReportsPage() {
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="expiring">Expiring Soon</SelectItem>
                   <SelectItem value="expired">Expired</SelectItem>
@@ -271,7 +271,7 @@ export default function AMCReportsPage() {
             <div className="ml-auto flex items-end">
               <Button variant="outline" onClick={() => {
                 setDateRange(undefined);
-                setStatusFilter("");
+                setStatusFilter("all");
               }}>
                 Clear Filters
               </Button>
@@ -280,7 +280,7 @@ export default function AMCReportsPage() {
         </CardContent>
       </Card>
 
-      {kpis && (
+      {kpis && kpis.summary && (
         <>
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -289,12 +289,12 @@ export default function AMCReportsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-[#717171]">Total Contracts</p>
-                    <p className="text-2xl font-bold">{kpis.summary.totalContracts}</p>
+                    <p className="text-2xl font-bold">{kpis.summary?.totalContracts ?? 0}</p>
                   </div>
                   <FileText className="w-8 h-8 text-[#3ECF8E]" />
                 </div>
                 <p className="text-xs text-[#717171] mt-2">
-                  {kpis.summary.activeContracts} active
+                  {kpis.summary?.activeContracts ?? 0} active
                 </p>
               </CardContent>
             </Card>
@@ -304,12 +304,12 @@ export default function AMCReportsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-[#717171]">Monthly Revenue</p>
-                    <p className="text-2xl font-bold">Nu. {(kpis.summary.totalMonthlyRevenue / 1000).toFixed(0)}k</p>
+                    <p className="text-2xl font-bold">Nu. {((kpis.summary?.totalMonthlyRevenue ?? 0) / 1000).toFixed(0)}k</p>
                   </div>
                   <DollarSign className="w-8 h-8 text-blue-500" />
                 </div>
                 <p className="text-xs text-[#717171] mt-2">
-                  Annual: Nu. {(kpis.summary.totalAnnualValue / 1000).toFixed(0)}k
+                  Annual: Nu. {((kpis.summary?.totalAnnualValue ?? 0) / 1000).toFixed(0)}k
                 </p>
               </CardContent>
             </Card>
@@ -319,12 +319,12 @@ export default function AMCReportsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-[#717171]">Expiring Soon</p>
-                    <p className="text-2xl font-bold">{kpis.summary.expiringContracts}</p>
+                    <p className="text-2xl font-bold">{kpis.summary?.expiringContracts ?? 0}</p>
                   </div>
                   <Clock className="w-8 h-8 text-orange-500" />
                 </div>
                 <p className="text-xs text-[#717171] mt-2">
-                  {kpis.summary.upcomingRenewals} renewals pending
+                  {kpis.summary?.upcomingRenewals ?? 0} renewals pending
                 </p>
               </CardContent>
             </Card>
@@ -334,7 +334,7 @@ export default function AMCReportsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-[#717171]">Avg Contract</p>
-                    <p className="text-2xl font-bold">Nu. {(kpis.summary.averageContractValue / 1000).toFixed(0)}k</p>
+                    <p className="text-2xl font-bold">Nu. {((kpis.summary?.averageContractValue ?? 0) / 1000).toFixed(0)}k</p>
                   </div>
                   <TrendingUp className="w-8 h-8 text-purple-500" />
                 </div>

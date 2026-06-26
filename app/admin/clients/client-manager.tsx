@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { 
-  Search, 
-  ExternalLink, 
-  MoreVertical, 
-  ShieldCheck, 
-  ShieldAlert, 
+import {
+  Search,
+  ExternalLink,
+  MoreVertical,
+  ShieldCheck,
+  ShieldAlert,
   ShieldClose,
   Phone,
   Layout,
@@ -33,11 +33,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import { EditClientModal } from "./edit-client-modal";
 
 export function ClientManager() {
   const [searchTerm, setSearchTerm] = useState("");
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingClient, setEditingClient] = useState<any | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   const supabase = createClient();
 
   // 📡 Real-time Data Sync
@@ -76,9 +79,36 @@ export function ClientManager() {
     }
   };
 
-  const filteredClients = clients.filter(client => 
+  const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleEditClient = (client: any) => {
+    setEditingClient(client);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteClient = async (clientId: number) => {
+    if (!confirm("Are you sure you want to delete this client?")) return;
+
+    try {
+      const response = await fetch(`/api/clients/${clientId}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success("Client deleted successfully");
+        fetchClients();
+      } else {
+        toast.error(result.error || "Failed to delete client");
+      }
+    } catch (error) {
+      console.error("Failed to delete client:", error);
+      toast.error("Failed to delete client");
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -180,11 +210,17 @@ export function ClientManager() {
                             <DropdownMenuItem className="focus:bg-green-50 focus:text-green-600 cursor-pointer text-[10px] font-black uppercase tracking-widest">
                                <ExternalLink className="w-4 h-4 mr-2" /> View Detailed Logs
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="focus:bg-blue-50 focus:text-blue-600 cursor-pointer text-[10px] font-black uppercase tracking-widest">
+                            <DropdownMenuItem
+                              className="focus:bg-blue-50 focus:text-blue-600 cursor-pointer text-[10px] font-black uppercase tracking-widest"
+                              onClick={() => handleEditClient(client)}
+                            >
                                Edit Client Details
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-gray-100" />
-                            <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer text-[10px] font-black uppercase tracking-widest">
+                            <DropdownMenuItem
+                              className="text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer text-[10px] font-black uppercase tracking-widest"
+                              onClick={() => handleDeleteClient(client.id)}
+                            >
                                Delete Client Node
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -198,6 +234,22 @@ export function ClientManager() {
           </Table>
         )}
       </div>
+
+      {/* Edit Client Modal */}
+      {showEditModal && editingClient && (
+        <EditClientModal
+          client={editingClient}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingClient(null);
+          }}
+          onUpdated={() => {
+            fetchClients();
+            setShowEditModal(false);
+            setEditingClient(null);
+          }}
+        />
+      )}
     </div>
   );
 }

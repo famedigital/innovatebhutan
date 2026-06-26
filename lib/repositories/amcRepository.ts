@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { amcs, clients, services } from "@/db/schema";
+import { amcs, clients, services, invoices, tickets } from "@/db/schema";
 import { eq, and, desc, sql, count, gte, lte, isNotNull, or } from "drizzle-orm";
 import { dashboardCache, withCache, CacheTTL, hashFilters, listCache } from "@/lib/cache/repository-cache";
 
@@ -166,6 +166,8 @@ export class AMCRepository {
           clientName: clients.name,
           clientLogo: clients.logoUrl,
           clientWhatsapp: clients.whatsapp,
+          clientWhatsappGroupLink: clients.whatsappGroupLink,
+          clientMeta: clients.meta,
           serviceName: services.name,
           serviceCategory: services.category,
         })
@@ -183,8 +185,47 @@ export class AMCRepository {
         .where(whereClause),
     ]);
 
+    // Fetch related invoices and tickets for each AMC
+    const amcsWithData = await Promise.all(
+      amcsData.map(async (amc) => {
+        // Fetch recent invoices for this client
+        const clientInvoices = await this.db
+          .select({
+            id: invoices.id,
+            invoiceNumber: invoices.invoiceNumber,
+            total: invoices.total,
+            status: invoices.status,
+            dueDate: invoices.dueDate,
+          })
+          .from(invoices)
+          .where(eq(invoices.clientId, amc.clientId))
+          .orderBy(desc(invoices.createdAt))
+          .limit(5);
+
+        // Fetch recent tickets for this client
+        const clientTickets = await this.db
+          .select({
+            id: tickets.id,
+            subject: tickets.subject,
+            status: tickets.status,
+            priority: tickets.priority,
+            createdAt: tickets.createdAt,
+          })
+          .from(tickets)
+          .where(eq(tickets.clientId, amc.clientId))
+          .orderBy(desc(tickets.createdAt))
+          .limit(5);
+
+        return {
+          ...amc,
+          invoices: clientInvoices,
+          tickets: clientTickets,
+        };
+      })
+    );
+
     const result = {
-      amcs: amcsData,
+      amcs: amcsWithData,
       total: Number(totalResult[0]?.count || 0),
     };
 

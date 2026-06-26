@@ -43,6 +43,13 @@
       "when": 1776698000000,
       "tag": "0005_amc_schema_enhancement",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782468153835,
+      "tag": "0006_strong_callisto",
+      "breakpoints": true
     }
   ]
 }

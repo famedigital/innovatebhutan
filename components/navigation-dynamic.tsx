@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Moon, Sun, LogIn, Home, Layers, Building2, Grid3X3, Headphones, ChevronRight } from "lucide-react";
+import { useTheme } from "@/components/PureThemeProvider";
 
 // Icon mapping for navigation
 const iconMap: Record<string, any> = {
@@ -73,18 +74,25 @@ function ModernLogo() {
 
 export function NavigationDynamic() {
   const pathname = usePathname();
-  const isCompanyPage = pathname === '/company' || pathname === '/company/';
+  const { theme, setTheme } = useTheme();
+
+  // ALL useState hooks must be declared before any conditional returns
   const [isOpen, setIsOpen] = useState(false);
-  const [isDark, setIsDark] = useState(false);
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  const [mobileOpenSubmenu, setMobileOpenSubmenu] = useState<string | null>(null);
+  const [submenuTimeout, setSubmenuTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [navLinks, setNavLinks] = useState<NavLink[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Hide navigation for admin/backend routes
-  if (pathname?.startsWith('/admin')) {
-    return null;
-  }
+  // ALL useEffect hooks MUST be declared before any conditional returns
+  // Wait for client-side mount to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Scroll detection for sticky navbar styling (client-only)
   useEffect(() => {
@@ -108,11 +116,8 @@ export function NavigationDynamic() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
-  const [mobileOpenSubmenu, setMobileOpenSubmenu] = useState<string | null>(null);
-  const [submenuTimeout, setSubmenuTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [navLinks, setNavLinks] = useState<NavLink[]>([]);
-  const [loading, setLoading] = useState(true);
 
+  // Fetch navigation links from API
   useEffect(() => {
     async function fetchNavigation() {
       try {
@@ -133,24 +138,25 @@ export function NavigationDynamic() {
     fetchNavigation();
   }, []);
 
-  // Check local storage or system preference for theme
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "dark" || (!savedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
-      setIsDark(true);
-      document.documentElement.classList.add("dark");
-    }
-  }, []);
+  const isCompanyPage = pathname === '/company' || pathname === '/company/';
+
+  // Hide navigation for admin/backend routes (MUST be after ALL hooks)
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+
+  // Helper to determine if dark mode is active
+  const isDarkMode = mounted && (theme === 'dark' || (theme === 'system' && window.matchMedia("(prefers-color-scheme: dark)").matches));
 
   const toggleTheme = () => {
-    const newDark = !isDark;
-    setIsDark(newDark);
-    if (newDark) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
+    if (theme === 'dark') {
+      setTheme('light');
+    } else if (theme === 'light') {
+      setTheme('dark');
     } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
+      // System mode - toggle to explicit mode
+      const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      setTheme(systemPrefersDark ? 'light' : 'dark');
     }
   };
 
@@ -300,7 +306,7 @@ export function NavigationDynamic() {
                 onClick={toggleTheme}
                 className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-primary hover:scale-110 active:scale-95 transition-all outline-none dark:shadow-[0_0_15px_rgba(57,255,20,0.2)]"
               >
-                {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
               </button>
             </div>
           </div>
@@ -469,7 +475,7 @@ export function NavigationDynamic() {
                     }}
                     className="flex items-center gap-2"
                   >
-                    {isDark ? (
+                    {isDarkMode ? (
                       <>
                         <Sun className="w-5 h-5 text-primary" />
                         <span className="text-sm">Light</span>

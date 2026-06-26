@@ -2,11 +2,8 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/utils/supabase/middleware'
 
 export async function proxy(request: NextRequest) {
-  // Skip auth check for API routes - they handle their own auth
-  if (request.nextUrl.pathname.startsWith('/api')) {
-    return NextResponse.next()
-  }
-
+  // Update session for all routes (including API)
+  // This ensures cookies are refreshed and available to API routes
   return updateSession(request)
 }
 

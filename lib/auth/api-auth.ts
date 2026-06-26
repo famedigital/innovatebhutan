@@ -130,8 +130,11 @@ export async function requireApiAuth(request: Request): Promise<AuthContext> {
 
   // Normalize role value (handle case sensitivity and whitespace)
   const normalizedProfile: UserProfile = {
-    ...profile,
+    id: profile.id,
+    userId: (profile as any).user_id || profile.userId, // Handle both snake_case and camelCase
+    fullName: (profile as any).full_name || profile.fullName, // Handle both snake_case and camelCase
     role: (profile.role || 'CLIENT').toString().toUpperCase().trim(),
+    createdAt: (profile as any).created_at || profile.createdAt || new Date(),
   };
 
   console.log('[API Auth] Profile loaded:', {

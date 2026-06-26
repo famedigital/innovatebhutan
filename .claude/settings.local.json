@@ -18,7 +18,11 @@
       "Bash(curl:*)",
       "Bash(dir:*)",
       "WebSearch",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(taskkill:*)",
+      "Skill(supabase)",
+      "Bash(npx supabase-db-diff:*)",
+      "Bash(npx drizzle-kit:*)"
     ]
   }
 }

@@ -193,8 +193,8 @@ export default function BotTrainingPage() {
       </div>
 
       <div className="space-y-3">
-        {responses.map((resp) => (
-          <Card key={resp.id} className={resp.active ? '' : 'opacity-60'}>
+        {responses.map((resp, index) => (
+          <Card key={resp.id || `resp-${index}`} className={resp.active ? '' : 'opacity-60'}>
             {editingId === resp.id ? (
               <CardContent className="p-4 space-y-4">
                 <div className="flex items-center justify-between">

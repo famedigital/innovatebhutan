@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { orders, orderItems, services } from "@/db/schema";
-import { eq, and, desc, sql, count, like, or } from "drizzle-orm";
+import { eq, and, desc, sql, count, like, or, inArray } from "drizzle-orm";
 
 type Order = typeof orders.$inferSelect;
 type NewOrder = typeof orders.$inferInsert;
@@ -137,16 +137,23 @@ export class OrderRepository {
 
     // Get item counts for each order
     const orderIds = ordersData.map(o => o.id);
-    const itemCounts = await this.db
-      .select({
-        orderId: orderItems.orderId,
-        itemCount: count(),
-      })
-      .from(orderItems)
-      .where(sql`${orderItems.orderId} = ANY(${orderIds})`)
-      .groupBy(orderItems.orderId);
+    const itemCountMap = new Map<number, number>();
 
-    const itemCountMap = new Map(itemCounts.map(ic => [ic.orderId, ic.itemCount]));
+    if (orderIds.length > 0) {
+      // Use inArray instead of sql template with ANY
+      const itemCounts = await this.db
+        .select({
+          orderId: orderItems.orderId,
+          itemCount: count(),
+        })
+        .from(orderItems)
+        .where(inArray(orderItems.orderId, orderIds))
+        .groupBy(orderItems.orderId);
+
+      for (const ic of itemCounts) {
+        itemCountMap.set(ic.orderId, ic.itemCount);
+      }
+    }
 
     const ordersWithCounts = ordersData.map(order => ({
       ...order,

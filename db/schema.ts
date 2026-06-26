@@ -46,6 +46,7 @@ export const clients = pgTable("clients", {
   responseTimeTarget: integer("response_time_target"), // in minutes
   notes: text("notes"),
   tags: jsonb("tags"), // Array of custom tags
+  meta: jsonb("meta"), // Flexible JSON storage for yearsWithUs, totalPaid, custom fields
   clientHealthScore: integer("client_health_score").default(80), // 0-100
   lastCommunicationDate: timestamp("last_communication_date"),
   nextFollowUpDate: timestamp("next_follow_up_date"),
