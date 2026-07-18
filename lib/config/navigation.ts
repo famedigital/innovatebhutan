@@ -12,8 +12,6 @@ import {
   DollarSign,
   Briefcase,
   Building2,
-  Store,
-  MapPin,
   ScrollText,
   Settings,
   BookOpen,
@@ -22,12 +20,14 @@ import {
   TrendingUp,
   MessageSquare,
   Brain,
-  File,
   Bell,
   Package,
-  Wrench,
   Building,
   Calculator,
+  AlertTriangle,
+  MessagesSquare,
+  UserCog,
+  BarChart3,
 } from "lucide-react";
 
 export type UserRole = "ADMIN" | "STAFF" | "CLIENT";
@@ -60,6 +60,9 @@ export const navigationConfig: NavGroup[] = [
       { title: "Orders", href: "/admin/orders", icon: ShoppingCart },
       { title: "AMC", href: "/admin/amc", icon: ShieldCheck },
       { title: "Support Tickets", href: "/admin/tickets", icon: Ticket },
+      { title: "Problems", href: "/admin/support/problems", icon: AlertTriangle },
+      { title: "Communications", href: "/admin/support/communications", icon: MessagesSquare },
+      { title: "Support Team", href: "/admin/support/team", icon: UserCog },
     ],
   },
   {
@@ -70,6 +73,7 @@ export const navigationConfig: NavGroup[] = [
       { title: "Expenses", href: "/admin/expenses", icon: Receipt },
       { title: "Transactions", href: "/admin/transactions", icon: ArrowUpDown },
       { title: "Accounts", href: "/admin/accounts", icon: Calculator },
+      { title: "Finance Reports", href: "/admin/finance/reports", icon: BarChart3 },
     ],
   },
   {
@@ -88,6 +92,7 @@ export const navigationConfig: NavGroup[] = [
       { title: "Employees", href: "/admin/employees", icon: Users },
       { title: "Attendance", href: "/admin/attendance", icon: Clock },
       { title: "Payroll", href: "/admin/hr", icon: DollarSign },
+      { title: "HR Reports", href: "/admin/hr/reports", icon: BarChart3 },
     ],
   },
   {
@@ -96,8 +101,6 @@ export const navigationConfig: NavGroup[] = [
     items: [
       { title: "Services", href: "/admin/services", icon: Briefcase },
       { title: "Clients", href: "/admin/clients", icon: Building2 },
-      { title: "Businesses", href: "/admin/businesses", icon: Store },
-      { title: "Locations", href: "/admin/locations", icon: MapPin },
     ],
   },
   {
@@ -124,7 +127,6 @@ export const navigationConfig: NavGroup[] = [
     items: [
       { title: "WhatsApp", href: "/admin/whatsapp", icon: MessageSquare },
       { title: "Bot Training", href: "/admin/ai/bot-training", icon: Brain },
-      { title: "Docs", href: "/admin/docs", icon: File },
     ],
   },
 ];

@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { canAccessRoute, type UserRole } from '@/lib/auth/rbac-rules'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -37,19 +38,36 @@ export async function updateSession(request: NextRequest) {
 
   // Skip redirect for API routes - they handle their own auth
   const isApiRoute = request.nextUrl.pathname.startsWith('/api')
+  const pathname = request.nextUrl.pathname
 
   if (
     !user &&
     !isApiRoute &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/client') &&
-    !isPublicPage(request.nextUrl.pathname)
+    !pathname.startsWith('/login') &&
+    !pathname.startsWith('/auth') &&
+    !pathname.startsWith('/client') &&
+    !isPublicPage(pathname)
   ) {
-    // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // Enforce ADMIN/STAFF for /admin/* (CLIENT redirected to portal)
+  if (user && !isApiRoute && pathname.startsWith('/admin')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single()
+
+    const role = ((profile?.role || 'CLIENT').toString().toUpperCase().trim()) as UserRole
+
+    if (!canAccessRoute(role, pathname)) {
+      const url = request.nextUrl.clone()
+      url.pathname = role === 'CLIENT' ? '/client' : '/login'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

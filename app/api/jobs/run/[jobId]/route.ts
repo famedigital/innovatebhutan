@@ -14,6 +14,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { runJob, getJob } from "@/lib/jobs/scheduler";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from '@/lib/auth/api-auth';
+import { isApiError } from '@/lib/errors';
 
 /**
  * POST handler - Run a specific job by ID
@@ -23,6 +25,8 @@ export async function POST(
   { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const { jobId } = await params;
 
     // Validate job exists
@@ -82,6 +86,8 @@ export async function GET(
   { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const { jobId } = await params;
 
     const job = getJob(jobId);

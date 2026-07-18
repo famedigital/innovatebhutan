@@ -205,41 +205,41 @@ export function getRolePermissions(role: UserRole): Permission[] {
  * Filter routes based on role permissions
  */
 export function canAccessRoute(role: UserRole, route: string): boolean {
-  // Admin-only routes
-  const adminOnlyRoutes = [
-    '/admin/settings',
-    '/admin/employees',
-    '/admin/attendance',
-    '/admin/hr',
-    '/admin/invoice',
-    '/admin/accounts',
-    '/admin/notifications',
-    '/admin/audit',
-    '/admin/website',
-    '/admin/blog',
-    '/admin/media',
-    '/admin/marketing',
-  ]
+  // Only ADMIN and STAFF may access any /admin route
+  if (route.startsWith('/admin')) {
+    if (role !== 'ADMIN' && role !== 'STAFF') {
+      return false
+    }
 
-  if (adminOnlyRoutes.some(r => route.startsWith(r))) {
-    return role === 'ADMIN'
-  }
+    // Admin-only routes
+    const adminOnlyRoutes = [
+      '/admin/settings',
+      '/admin/employees',
+      '/admin/attendance',
+      '/admin/hr',
+      '/admin/invoice',
+      '/admin/accounts',
+      '/admin/expenses',
+      '/admin/transactions',
+      '/admin/finance',
+      '/admin/notifications',
+      '/admin/audit',
+      '/admin/website',
+      '/admin/blog',
+      '/admin/media',
+      '/admin/marketing',
+      '/admin/hero',
+    ]
 
-  // Admin/Staff routes
-  const adminStaffRoutes = [
-    '/admin',
-  ]
+    if (adminOnlyRoutes.some(r => route === r || route.startsWith(r + '/'))) {
+      return role === 'ADMIN'
+    }
 
-  if (adminStaffRoutes.some(r => route.startsWith(r))) {
-    return role === 'ADMIN' || role === 'STAFF'
+    return true
   }
 
   // Portal routes (all authenticated users)
-  const portalRoutes = [
-    '/portal',
-  ]
-
-  if (portalRoutes.some(r => route.startsWith(r))) {
+  if (route.startsWith('/portal') || route.startsWith('/client')) {
     return true
   }
 

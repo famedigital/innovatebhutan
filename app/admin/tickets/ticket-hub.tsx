@@ -8,15 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { TicketDetailModal } from "./ticket-detail-modal";
-
-const PRIORITY_SLA_HOURS = {
-  high: 4,      // 4 hours response time
-  medium: 24,   // 24 hours
-  low: 72       // 72 hours
-};
 
 export function TicketHub() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -30,8 +23,6 @@ export function TicketHub() {
   const [showDetail, setShowDetail] = useState(false);
   const [newTicket, setNewTicket] = useState({ subject: '', clientId: '', priority: 'medium', description: '' });
 
-  const supabase = createClient();
-
   useEffect(() => {
     fetchTickets();
     fetchClients();
@@ -40,36 +31,39 @@ export function TicketHub() {
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      const { data } = await supabase
-        .from('tickets')
-        .select(`*, clients(name)`)
-        .order('created_at', { ascending: false });
-
-      // Add SLA breach calculation
-      const ticketsWithSLA = (data || []).map((ticket: any) => {
-        const createdAt = new Date(ticket.created_at);
-        const slaHours = PRIORITY_SLA_HOURS[ticket.priority as keyof typeof PRIORITY_SLA_HOURS] || 24;
-        const slaDeadline = new Date(createdAt.getTime() + slaHours * 60 * 60 * 1000);
-        const isBreached = ticket.status === 'open' && new Date() > slaDeadline;
-
-        return {
+      const response = await fetch("/api/tickets?limit=100");
+      const result = await response.json();
+      if (!result.success) {
+        toast.error(result.error || "Failed to load tickets");
+        setTickets([]);
+        return;
+      }
+      setTickets(
+        (result.data || []).map((ticket: any) => ({
           ...ticket,
-          sla_breach: isBreached,
-          sla_deadline: slaDeadline
-        };
-      });
-
-      setTickets(ticketsWithSLA);
+          clients: { name: ticket.clientName },
+          sla_breach: ticket.slaBreach,
+          created_at: ticket.createdAt,
+        }))
+      );
     } catch (err) {
       console.error("Ticket Fetch Error:", err);
+      toast.error("Failed to load tickets");
     } finally {
       setLoading(false);
     }
   };
 
   const fetchClients = async () => {
-    const { data } = await supabase.from('clients').select('id, name').order('name');
-    setClients(data || []);
+    try {
+      const response = await fetch("/api/clients?limit=200");
+      const result = await response.json();
+      if (result.success) {
+        setClients(result.data || result.clients || []);
+      }
+    } catch {
+      /* ignore */
+    }
   };
 
   const handleCreateTicket = async () => {
@@ -78,16 +72,20 @@ export function TicketHub() {
       return;
     }
 
-    const { error } = await supabase.from('tickets').insert({
-      subject: newTicket.subject,
-      client_id: parseInt(newTicket.clientId),
-      priority: newTicket.priority,
-      description: newTicket.description,
-      status: 'open',
+    const response = await fetch("/api/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subject: newTicket.subject,
+        clientId: parseInt(newTicket.clientId),
+        priority: newTicket.priority,
+        description: newTicket.description || undefined,
+      }),
     });
+    const result = await response.json();
 
-    if (error) {
-      toast.error("Failed to create ticket");
+    if (!result.success) {
+      toast.error(result.error || "Failed to create ticket");
     } else {
       toast.success("Ticket created");
       setShowCreate(false);
@@ -99,9 +97,10 @@ export function TicketHub() {
   const handleDeleteTicket = async (id: number) => {
     if (!confirm("Delete this ticket?")) return;
 
-    const { error } = await supabase.from('tickets').delete().eq('id', id);
-    if (error) {
-      toast.error("Failed to delete");
+    const response = await fetch(`/api/tickets/${id}`, { method: "DELETE" });
+    const result = await response.json();
+    if (!result.success) {
+      toast.error(result.error || "Failed to delete");
     } else {
       toast.success("Ticket deleted");
       fetchTickets();
@@ -109,9 +108,14 @@ export function TicketHub() {
   };
 
   const handleUpdateStatus = async (id: number, status: string) => {
-    const { error } = await supabase.from('tickets').update({ status }).eq('id', id);
-    if (error) {
-      toast.error("Failed to update");
+    const response = await fetch(`/api/tickets/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    const result = await response.json();
+    if (!result.success) {
+      toast.error(result.error || "Failed to update");
     } else {
       toast.success("Status updated");
       fetchTickets();
@@ -125,7 +129,8 @@ export function TicketHub() {
 
   const filteredTickets = tickets.filter(t => {
     const matchesSearch = t.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.clients?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      t.clients?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || t.status === statusFilter;
     const matchesPriority = priorityFilter === "all" || t.priority === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
@@ -144,7 +149,7 @@ export function TicketHub() {
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-[#717171] uppercase">Open</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Open</p>
                 <p className="text-lg font-bold">{openTickets}</p>
               </div>
               <MessageSquare className="w-5 h-5 text-green-600" />
@@ -155,7 +160,7 @@ export function TicketHub() {
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-[#717171] uppercase">In Progress</p>
+                <p className="text-[10px] text-muted-foreground uppercase">In Progress</p>
                 <p className="text-lg font-bold">{inProgressTickets}</p>
               </div>
               <Clock className="w-5 h-5 text-blue-600" />
@@ -166,7 +171,7 @@ export function TicketHub() {
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-[#717171] uppercase">SLA Breached</p>
+                <p className="text-[10px] text-muted-foreground uppercase">SLA Breached</p>
                 <p className={`text-lg font-bold ${breachedTickets > 0 ? "text-red-600" : ""}`}>{breachedTickets}</p>
               </div>
               <AlertTriangle className={`w-5 h-5 ${breachedTickets > 0 ? "text-red-600" : "text-gray-400"}`} />
@@ -179,19 +184,19 @@ export function TicketHub() {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#717171]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search tickets..."
-              className="pl-9 w-64 bg-[#F3F3F1] border-[#E5E5E1] h-9"
+              className="pl-9 w-64 bg-muted border-border h-9"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32 bg-[#F3F3F1] border-[#E5E5E1] h-9">
+            <SelectTrigger className="w-32 bg-muted border-border h-9">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent className="bg-white border-[#E5E5E1]">
+            <SelectContent className="bg-white border-border">
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="open">Open</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
@@ -200,10 +205,10 @@ export function TicketHub() {
             </SelectContent>
           </Select>
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="w-32 bg-[#F3F3F1] border-[#E5E5E1] h-9">
+            <SelectTrigger className="w-32 bg-muted border-border h-9">
               <SelectValue placeholder="Priority" />
             </SelectTrigger>
-            <SelectContent className="bg-white border-[#E5E5E1]">
+            <SelectContent className="bg-white border-border">
               <SelectItem value="all">All Priority</SelectItem>
               <SelectItem value="high">High</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
@@ -213,11 +218,11 @@ export function TicketHub() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button onClick={fetchTickets} variant="outline" className="border-[#E5E5E1]">
+          <Button onClick={fetchTickets} variant="outline" className="border-border">
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button onClick={() => setShowCreate(true)} className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white">
+          <Button onClick={() => setShowCreate(true)} className="bg-primary hover:bg-[#34b27b] text-white">
             <Plus className="w-4 h-4 mr-2" />
             New Ticket
           </Button>
@@ -229,7 +234,7 @@ export function TicketHub() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowCreate(false)} />
           <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between p-4 border-b border-[#E5E5E1]">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="font-semibold text-lg">Create New Ticket</h3>
               <Button variant="ghost" size="icon" onClick={() => setShowCreate(false)}>
                 <X className="w-5 h-5" />
@@ -238,22 +243,22 @@ export function TicketHub() {
 
             <div className="p-4 space-y-4">
               <div className="space-y-2">
-                <label className="text-xs font-medium text-[#717171]">Subject *</label>
+                <label className="text-xs font-medium text-muted-foreground">Subject *</label>
                 <Input
                   placeholder="Enter ticket subject"
-                  className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  className="bg-muted border-border"
                   value={newTicket.subject}
                   onChange={(e) => setNewTicket({...newTicket, subject: e.target.value})}
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-medium text-[#717171]">Client *</label>
+                <label className="text-xs font-medium text-muted-foreground">Client *</label>
                 <Select value={newTicket.clientId} onValueChange={(v) => setNewTicket({...newTicket, clientId: v})}>
-                  <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
+                  <SelectTrigger className="bg-muted border-border">
                     <SelectValue placeholder="Select client" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-[#E5E5E1]">
+                  <SelectContent className="bg-white border-border">
                     {clients.map(c => (
                       <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
                     ))}
@@ -262,12 +267,12 @@ export function TicketHub() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-medium text-[#717171]">Priority</label>
+                <label className="text-xs font-medium text-muted-foreground">Priority</label>
                 <Select value={newTicket.priority} onValueChange={(v) => setNewTicket({...newTicket, priority: v})}>
-                  <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
+                  <SelectTrigger className="bg-muted border-border">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-[#E5E5E1]">
+                  <SelectContent className="bg-white border-border">
                     <SelectItem value="high">High (4h SLA)</SelectItem>
                     <SelectItem value="medium">Medium (24h SLA)</SelectItem>
                     <SelectItem value="low">Low (72h SLA)</SelectItem>
@@ -276,20 +281,20 @@ export function TicketHub() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-medium text-[#717171]">Description</label>
+                <label className="text-xs font-medium text-muted-foreground">Description</label>
                 <textarea
                   placeholder="Describe the issue..."
-                  className="w-full h-24 p-3 bg-[#F3F3F1] border-[#E5E5E1] rounded-lg text-sm resize-none"
+                  className="w-full h-24 p-3 bg-muted border-border rounded-lg text-sm resize-none"
                   value={newTicket.description}
                   onChange={(e) => setNewTicket({...newTicket, description: e.target.value})}
                 />
               </div>
 
               <div className="flex gap-2 pt-2">
-                <Button variant="outline" className="flex-1 border-[#E5E5E1]" onClick={() => setShowCreate(false)}>
+                <Button variant="outline" className="flex-1 border-border" onClick={() => setShowCreate(false)}>
                   Cancel
                 </Button>
-                <Button className="flex-1 bg-[#3ECF8E] hover:bg-[#34b27b] text-white" onClick={handleCreateTicket}>
+                <Button className="flex-1 bg-primary hover:bg-[#34b27b] text-white" onClick={handleCreateTicket}>
                   Create Ticket
                 </Button>
               </div>
@@ -303,15 +308,15 @@ export function TicketHub() {
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-[#E5E5E1] bg-[#F3F3F1]">
-                <TableHead className="text-xs text-[#717171]">ID</TableHead>
-                <TableHead className="text-xs text-[#717171]">Subject</TableHead>
-                <TableHead className="text-xs text-[#717171]">Client</TableHead>
-                <TableHead className="text-xs text-[#717171]">Priority</TableHead>
-                <TableHead className="text-xs text-[#717171]">Status</TableHead>
-                <TableHead className="text-xs text-[#717171]">SLA</TableHead>
-                <TableHead className="text-xs text-[#717171]">Created</TableHead>
-                <TableHead className="text-xs text-[#717171]">Actions</TableHead>
+              <TableRow className="border-border bg-muted">
+                <TableHead className="text-xs text-muted-foreground">ID</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Subject</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Client</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Priority</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Status</TableHead>
+                <TableHead className="text-xs text-muted-foreground">SLA</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Created</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -320,8 +325,8 @@ export function TicketHub() {
                 const hoursRemaining = slaDeadline ? Math.round((slaDeadline.getTime() - Date.now()) / (1000 * 60 * 60)) : null;
 
                 return (
-                  <TableRow key={ticket.id} className={`border-[#E5E5E1] hover:bg-[#F3F3F1] ${ticket.sla_breach ? 'bg-red-50' : ''}`}>
-                    <TableCell className="text-xs font-mono text-[#717171]">#{ticket.id}</TableCell>
+                  <TableRow key={ticket.id} className={`border-border hover:bg-muted ${ticket.sla_breach ? 'bg-red-50' : ''}`}>
+                    <TableCell className="text-xs font-mono text-muted-foreground">#{ticket.id}</TableCell>
                     <TableCell className="text-sm font-medium">{ticket.subject}</TableCell>
                     <TableCell className="text-sm">{ticket.clients?.name || '-'}</TableCell>
                     <TableCell>
@@ -356,10 +361,10 @@ export function TicketHub() {
                           </span>
                         ) : null
                       ) : (
-                        <span className="text-xs text-[#717171]">-</span>
+                        <span className="text-xs text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-[#717171]">
+                    <TableCell className="text-xs text-muted-foreground">
                       {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : '-'}
                     </TableCell>
                     <TableCell>
@@ -379,7 +384,7 @@ export function TicketHub() {
                           <SelectTrigger className="h-8 w-24 text-xs">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-white border-[#E5E5E1]">
+                          <SelectContent className="bg-white border-border">
                             <SelectItem value="open">Open</SelectItem>
                             <SelectItem value="in_progress">In Progress</SelectItem>
                             <SelectItem value="resolved">Resolved</SelectItem>
@@ -400,7 +405,7 @@ export function TicketHub() {
                 );
               }) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-[#717171]">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     {loading ? 'Loading...' : (
                       <div className="flex flex-col items-center">
                         <MessageSquare className="w-8 h-8 mb-2 opacity-50" />

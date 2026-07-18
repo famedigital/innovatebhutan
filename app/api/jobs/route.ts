@@ -7,12 +7,17 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getRegisteredJobs, runAllJobs } from "@/lib/jobs/scheduler";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from "@/lib/auth/api-auth";
+import { isApiError } from "@/lib/errors";
+import { checkRateLimitMiddleware } from "@/lib/rate-limit/rate-limiter";
 
-/**
- * GET handler - List all registered jobs
- */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const limited = checkRateLimitMiddleware(request, 30, 60000);
+    if (limited) return limited;
+
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const jobs = getRegisteredJobs();
 
     return NextResponse.json({
@@ -26,51 +31,29 @@ export async function GET() {
       count: jobs.length,
     });
   } catch (error: any) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error?.message || "Internal server error",
-      },
-      { status: 500 }
-    );
+    const errorResponse = formatApiError(error);
+    const statusCode = isApiError(error) ? (error as any).statusCode : 500;
+    return NextResponse.json(errorResponse, { status: statusCode });
   }
 }
 
-/**
- * POST handler - Run all jobs
- */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    // TODO: Add authentication check here
-    // const user = await getCurrentUser(request);
-    // if (!user || user.role !== 'ADMIN') {
-    //   return NextResponse.json(
-    //     { success: false, error: 'Unauthorized' },
-    //     { status: 401 }
-    //   );
-    // }
+    const limited = checkRateLimitMiddleware(request, 10, 60000);
+    if (limited) return limited;
+
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
 
     const results = await runAllJobs();
 
-    const successCount = results.filter((r) => r.success).length;
-    const failureCount = results.filter((r) => !r.success).length;
-
     return NextResponse.json({
-      success: failureCount === 0,
+      success: true,
       results,
-      summary: {
-        total: results.length,
-        success: successCount,
-        failed: failureCount,
-      },
     });
   } catch (error: any) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error?.message || "Internal server error",
-      },
-      { status: 500 }
-    );
+    const errorResponse = formatApiError(error);
+    const statusCode = isApiError(error) ? (error as any).statusCode : 500;
+    return NextResponse.json(errorResponse, { status: statusCode });
   }
 }

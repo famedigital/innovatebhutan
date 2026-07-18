@@ -4,6 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from '@/lib/auth/api-auth';
+import { isApiError } from '@/lib/errors';
 import {
   getAllHeroContent,
   createHeroContent,
@@ -15,6 +17,8 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     // TODO: Add admin authentication check
     const heroContentList = await getAllHeroContent();
 
@@ -38,6 +42,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     // TODO: Add admin authentication check
     const body = await request.json();
 

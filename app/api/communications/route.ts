@@ -5,6 +5,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { communicationService } from "@/lib/services/communicationService";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from '@/lib/auth/api-auth';
+import { isApiError } from '@/lib/errors';
 
 /**
  * GET /api/communications
@@ -12,6 +14,8 @@ import { communicationService } from "@/lib/services/communicationService";
  */
 export async function GET(request: NextRequest) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const searchParams = request.nextUrl.searchParams;
     const clientId = searchParams.get('clientId');
     const type = searchParams.get('type');
@@ -51,6 +55,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const body = await request.json();
 
     // AI sentiment analysis

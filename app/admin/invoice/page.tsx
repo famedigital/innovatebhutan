@@ -359,8 +359,8 @@ export default function InvoicePage() {
   if (loading) {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-[400px]">
-        <RefreshCw className="w-8 h-8 animate-spin text-[#3ECF8E] mb-4" />
-        <p className="text-[#717171]">Loading invoices...</p>
+        <RefreshCw className="w-8 h-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading invoices...</p>
       </div>
     );
   }
@@ -373,11 +373,11 @@ export default function InvoicePage() {
             <AlertTriangle className="w-8 h-8 text-red-600" />
           </div>
           <div className="text-center">
-            <h2 className="text-xl font-semibold text-[#1A1A1A] mb-2">Failed to Load Invoices</h2>
-            <p className="text-[#717171] mb-4">{error}</p>
+            <h2 className="text-xl font-semibold text-foreground mb-2">Failed to Load Invoices</h2>
+            <p className="text-muted-foreground mb-4">{error}</p>
           </div>
           <div className="flex gap-3">
-            <Button onClick={fetchData} className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white">
+            <Button onClick={fetchData} className="bg-primary hover:bg-[#34b27b] text-white">
               <RefreshCw className="w-4 h-4 mr-2" />
               Try Again
             </Button>
@@ -394,12 +394,12 @@ export default function InvoicePage() {
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1A1A1A]">Invoices</h1>
-          <p className="text-sm text-[#717171]">Manage client invoices and payments</p>
+          <h1 className="text-2xl font-bold text-foreground">Invoices</h1>
+          <p className="text-sm text-muted-foreground">Manage client invoices and payments</p>
         </div>
         <Button
           onClick={() => setShowCreate(true)}
-          className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white"
+          className="bg-primary hover:bg-[#34b27b] text-white"
           disabled={clients.length === 0}
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -420,25 +420,25 @@ export default function InvoicePage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
           <CardContent className="p-3">
-            <p className="text-[10px] text-[#717171] uppercase">Total Invoices</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Total Invoices</p>
             <p className="text-xl font-bold">{invoices.length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
-            <p className="text-[10px] text-[#717171] uppercase">Pending</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Pending</p>
             <p className="text-xl font-bold text-blue-600">Nu. {totalPending.toLocaleString()}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
-            <p className="text-[10px] text-[#717171] uppercase">Overdue</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Overdue</p>
             <p className="text-xl font-bold text-red-600">Nu. {totalOverdue.toLocaleString()}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
-            <p className="text-[10px] text-[#717171] uppercase">Collected</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Collected</p>
             <p className="text-xl font-bold text-green-600">Nu. {totalPaid.toLocaleString()}</p>
           </CardContent>
         </Card>
@@ -447,19 +447,19 @@ export default function InvoicePage() {
       {/* Filters */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#717171]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search invoices..."
-            className="pl-9 bg-[#F3F3F1] border-[#E5E5E1]"
+            className="pl-9 bg-muted border-border"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 bg-[#F3F3F1] border-[#E5E5E1]">
+          <SelectTrigger className="w-40 bg-muted border-border">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
-          <SelectContent className="bg-white border-[#E5E5E1]">
+          <SelectContent className="bg-white border-border">
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="draft">Draft</SelectItem>
             <SelectItem value="sent">Sent</SelectItem>
@@ -474,21 +474,21 @@ export default function InvoicePage() {
       <Card>
         <CardContent className="p-0">
           <table className="w-full">
-            <thead className="bg-[#F3F3F1] border-b border-[#E5E5E1]">
+            <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="text-left text-xs font-medium text-[#717171] p-3">Invoice #</th>
-                <th className="text-left text-xs font-medium text-[#717171] p-3">Client</th>
-                <th className="text-left text-xs font-medium text-[#717171] p-3">Issue Date</th>
-                <th className="text-left text-xs font-medium text-[#717171] p-3">Due Date</th>
-                <th className="text-right text-xs font-medium text-[#717171] p-3">Amount</th>
-                <th className="text-center text-xs font-medium text-[#717171] p-3">Status</th>
-                <th className="text-center text-xs font-medium text-[#717171] p-3">Actions</th>
+                <th className="text-left text-xs font-medium text-muted-foreground p-3">Invoice #</th>
+                <th className="text-left text-xs font-medium text-muted-foreground p-3">Client</th>
+                <th className="text-left text-xs font-medium text-muted-foreground p-3">Issue Date</th>
+                <th className="text-left text-xs font-medium text-muted-foreground p-3">Due Date</th>
+                <th className="text-right text-xs font-medium text-muted-foreground p-3">Amount</th>
+                <th className="text-center text-xs font-medium text-muted-foreground p-3">Status</th>
+                <th className="text-center text-xs font-medium text-muted-foreground p-3">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-[#717171]">
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     <FileText className="w-8 h-8 mx-auto mb-2 text-[#A3A3A3]" />
                     <p>No invoices found</p>
                   </td>
@@ -496,13 +496,13 @@ export default function InvoicePage() {
               ) : filteredInvoices.map((inv) => {
                 const daysUntilDue = getDaysUntilDue(inv.due_date, inv.status);
                 return (
-                  <tr key={inv.id} className="border-b border-[#E5E5E1] hover:bg-[#F3F3F1]">
+                  <tr key={inv.id} className="border-b border-border hover:bg-muted">
                     <td className="p-3 text-sm font-medium">{inv.invoice_number}</td>
                     <td className="p-3 text-sm">{inv.client_name || 'Unknown Client'}</td>
-                    <td className="p-3 text-sm text-[#717171]">{new Date(inv.issue_date).toLocaleDateString()}</td>
+                    <td className="p-3 text-sm text-muted-foreground">{new Date(inv.issue_date).toLocaleDateString()}</td>
                     <td className="p-3 text-sm">
                       <div className="flex items-center gap-1">
-                        <span className={daysUntilDue !== null && daysUntilDue < 0 ? "text-red-600" : "text-[#717171]"}>
+                        <span className={daysUntilDue !== null && daysUntilDue < 0 ? "text-red-600" : "text-muted-foreground"}>
                           {new Date(inv.due_date).toLocaleDateString()}
                         </span>
                         {daysUntilDue !== null && daysUntilDue < 0 && (
@@ -585,7 +585,7 @@ export default function InvoicePage() {
 
       {/* Create Invoice Modal */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="bg-white border-[#E5E5E1] max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-border max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Invoice</DialogTitle>
             <DialogDescription>Create a new invoice for a client</DialogDescription>
@@ -595,12 +595,12 @@ export default function InvoicePage() {
             {/* Client & Dates */}
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-medium text-[#717171]">Client *</label>
+                <label className="text-xs font-medium text-muted-foreground">Client *</label>
                 <Select value={newInvoice.clientId} onValueChange={(v) => setNewInvoice({ ...newInvoice, clientId: v })}>
-                  <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
+                  <SelectTrigger className="bg-muted border-border">
                     <SelectValue placeholder="Select client" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-[#E5E5E1]">
+                  <SelectContent className="bg-white border-border">
                     {clients.map(client => (
                       <SelectItem key={client.id} value={client.id.toString()}>{client.name}</SelectItem>
                     ))}
@@ -608,31 +608,31 @@ export default function InvoicePage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-medium text-[#717171]">Issue Date</label>
+                <label className="text-xs font-medium text-muted-foreground">Issue Date</label>
                 <Input
                   type="date"
                   value={newInvoice.issueDate}
                   onChange={(e) => setNewInvoice({ ...newInvoice, issueDate: e.target.value })}
-                  className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  className="bg-muted border-border"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-medium text-[#717171]">Due Date</label>
+                <label className="text-xs font-medium text-muted-foreground">Due Date</label>
                 <Input
                   type="date"
                   value={newInvoice.dueDate}
                   onChange={(e) => setNewInvoice({ ...newInvoice, dueDate: e.target.value })}
-                  className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  className="bg-muted border-border"
                 />
               </div>
             </div>
 
             {/* Invoice Items */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[#717171]">Invoice Items</label>
-              <div className="border border-[#E5E5E1] rounded-lg overflow-hidden">
+              <label className="text-xs font-medium text-muted-foreground">Invoice Items</label>
+              <div className="border border-border rounded-lg overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-[#F3F3F1]">
+                  <thead className="bg-muted">
                     <tr>
                       <th className="text-left p-2">Description</th>
                       <th className="text-center p-2 w-20">Qty</th>
@@ -643,7 +643,7 @@ export default function InvoicePage() {
                   </thead>
                   <tbody>
                     {newInvoice.items.map((item, index) => (
-                      <tr key={index} className="border-t border-[#E5E5E1]">
+                      <tr key={index} className="border-t border-border">
                         <td className="p-2">
                           <Input
                             placeholder="Service description"
@@ -682,27 +682,27 @@ export default function InvoicePage() {
                   </tbody>
                 </table>
               </div>
-              <Button variant="outline" size="sm" onClick={addItem} className="border-[#E5E5E1]">
+              <Button variant="outline" size="sm" onClick={addItem} className="border-border">
                 <Plus className="w-3 h-3 mr-1" /> Add Item
               </Button>
             </div>
 
             {/* Notes */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[#717171]">Notes</label>
+              <label className="text-xs font-medium text-muted-foreground">Notes</label>
               <Input
                 placeholder="Payment terms, bank details, etc."
                 value={newInvoice.notes}
                 onChange={(e) => setNewInvoice({ ...newInvoice, notes: e.target.value })}
-                className="bg-[#F3F3F1] border-[#E5E5E1]"
+                className="bg-muted border-border"
               />
             </div>
 
             {/* Total */}
             <div className="flex justify-end">
               <div className="text-right">
-                <p className="text-sm text-[#717171]">Total Amount</p>
-                <p className="text-2xl font-bold text-[#3ECF8E]">
+                <p className="text-sm text-muted-foreground">Total Amount</p>
+                <p className="text-2xl font-bold text-primary">
                   Nu. {newInvoice.items.reduce((sum, item) => sum + (item.quantity * item.rate), 0).toLocaleString()}
                 </p>
               </div>
@@ -712,7 +712,7 @@ export default function InvoicePage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreate(false)} disabled={isSubmitting}>Cancel</Button>
             <Button
-              className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white"
+              className="bg-primary hover:bg-[#34b27b] text-white"
               onClick={createInvoice}
               disabled={isSubmitting}
             >
@@ -734,7 +734,7 @@ export default function InvoicePage() {
 
       {/* Invoice Detail Modal */}
       <Dialog open={showDetail} onOpenChange={setShowDetail}>
-        <DialogContent className="bg-white border-[#E5E5E1] max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-border max-w-2xl max-h-[90vh] overflow-y-auto">
           {selectedInvoice && (
             <>
               <DialogHeader>
@@ -747,20 +747,20 @@ export default function InvoicePage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-[#717171]">Issue Date</p>
+                    <p className="text-xs text-muted-foreground">Issue Date</p>
                     <p className="text-sm font-medium">{new Date(selectedInvoice.issue_date).toLocaleDateString()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#717171]">Due Date</p>
+                    <p className="text-xs text-muted-foreground">Due Date</p>
                     <p className="text-sm font-medium">{new Date(selectedInvoice.due_date).toLocaleDateString()}</p>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-xs text-[#717171] mb-2">Line Items</p>
-                  <div className="border border-[#E5E5E1] rounded-lg overflow-hidden">
+                  <p className="text-xs text-muted-foreground mb-2">Line Items</p>
+                  <div className="border border-border rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
-                      <thead className="bg-[#F3F3F1]">
+                      <thead className="bg-muted">
                         <tr>
                           <th className="text-left p-2">Description</th>
                           <th className="text-center p-2 w-16">Qty</th>
@@ -770,7 +770,7 @@ export default function InvoicePage() {
                       </thead>
                       <tbody>
                         {(selectedInvoice.items || []).map((item, index) => (
-                          <tr key={index} className="border-t border-[#E5E5E1]">
+                          <tr key={index} className="border-t border-border">
                             <td className="p-2">{item.description}</td>
                             <td className="p-2 text-center">{item.quantity}</td>
                             <td className="p-2 text-right">Nu. {item.rate?.toLocaleString() || 0}</td>
@@ -780,10 +780,10 @@ export default function InvoicePage() {
                           </tr>
                         ))}
                       </tbody>
-                      <tfoot className="bg-[#F3F3F1]">
+                      <tfoot className="bg-muted">
                         <tr>
                           <td colSpan={3} className="p-2 text-right font-medium">Total</td>
-                          <td className="p-2 text-right font-bold text-[#3ECF8E]">
+                          <td className="p-2 text-right font-bold text-primary">
                             Nu. {Number(selectedInvoice.total || 0).toLocaleString()}
                           </td>
                         </tr>
@@ -794,7 +794,7 @@ export default function InvoicePage() {
 
                 {selectedInvoice.notes && (
                   <div>
-                    <p className="text-xs text-[#717171]">Notes</p>
+                    <p className="text-xs text-muted-foreground">Notes</p>
                     <p className="text-sm">{selectedInvoice.notes}</p>
                   </div>
                 )}

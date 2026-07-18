@@ -17,7 +17,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 
 interface TicketMessage {
@@ -52,10 +51,10 @@ interface TicketDetailModalProps {
   onTicketUpdate?: () => void;
 }
 
-const PRIORITY_SLA_HOURS = {
-  high: 4,      // 4 hours response time
-  medium: 24,   // 24 hours
-  low: 72       // 72 hours
+const PRIORITY_SLA_HOURS: Record<string, number> = {
+  high: 4,
+  medium: 24,
+  low: 72,
 };
 
 export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate }: TicketDetailModalProps) {
@@ -66,8 +65,6 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
   const [sending, setSending] = useState(false);
   const [updating, setUpdating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const supabase = createClient();
 
   useEffect(() => {
     if (open && ticketId) {
@@ -89,24 +86,23 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
 
     setLoading(true);
     try {
-      const { data } = await supabase
-        .from('tickets')
-        .select(`*, clients(name), assigned_profile:profiles!tickets_assigned_to_fkey(full_name)`)
-        .eq('id', ticketId)
-        .single();
-
-      if (data) {
-        // Calculate SLA breach
-        const createdAt = new Date(data.created_at);
-        const slaHours = PRIORITY_SLA_HOURS[data.priority as keyof typeof PRIORITY_SLA_HOURS] || 24;
-        const slaDeadline = new Date(createdAt.getTime() + slaHours * 60 * 60 * 1000);
-        const slaBreach = data.status === 'open' && new Date() > slaDeadline;
-
+      const response = await fetch(`/api/tickets/${ticketId}`);
+      const result = await response.json();
+      if (result.success && result.data) {
+        const data = result.data;
         setTicket({
-          ...data,
-          client_name: data.clients?.name,
-          assigned_name: data.assigned_profile?.full_name,
-          sla_breach: slaBreach
+          id: data.id,
+          client_id: data.clientId,
+          client_name: data.clientName,
+          subject: data.subject,
+          description: data.description,
+          status: data.status,
+          priority: data.priority,
+          assigned_to: data.assignedTo,
+          assigned_name: data.assignedName,
+          created_at: data.createdAt,
+          updated_at: data.updatedAt,
+          sla_breach: data.slaBreach,
         });
       }
     } catch (err) {
@@ -120,17 +116,17 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
     if (!ticketId) return;
 
     try {
-      const { data } = await supabase
-        .from('ticket_messages')
-        .select(`*, profiles(full_name)`)
-        .eq('ticket_id', ticketId)
-        .order('created_at', { ascending: true });
-
-      const messagesWithNames = (data || []).map((msg: any) => ({
-        ...msg,
-        sender_name: msg.profiles?.full_name || 'Unknown'
+      const response = await fetch(`/api/tickets/${ticketId}/messages`);
+      const result = await response.json();
+      const messagesWithNames = (result.data || []).map((msg: any) => ({
+        id: msg.id,
+        ticket_id: msg.ticketId,
+        sender_id: String(msg.senderId),
+        sender_name: msg.senderName || "Unknown",
+        message: msg.message,
+        is_system: false,
+        created_at: msg.createdAt,
       }));
-
       setMessages(messagesWithNames);
     } catch (err) {
       console.error("Messages fetch error:", err);
@@ -142,27 +138,19 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
 
     setSending(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Authentication required");
-        return;
-      }
-
-      const { error } = await supabase.from('ticket_messages').insert({
-        ticket_id: ticketId,
-        sender_id: user.id,
-        message: newMessage.trim(),
-        is_system: false
+      const response = await fetch(`/api/tickets/${ticketId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: newMessage.trim() }),
       });
-
-      if (error) throw error;
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || "Failed");
 
       setNewMessage("");
       fetchMessages();
 
-      // Update ticket status if it's closed
-      if (ticket?.status === 'closed') {
-        await updateStatus('open');
+      if (ticket?.status === "closed") {
+        await updateStatus("open");
       }
     } catch (err) {
       toast.error("Failed to send message");
@@ -176,12 +164,13 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
 
     setUpdating(true);
     try {
-      const { error } = await supabase
-        .from('tickets')
-        .update({ status: newStatus })
-        .eq('id', ticketId);
-
-      if (error) throw error;
+      const response = await fetch(`/api/tickets/${ticketId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || "Failed");
 
       toast.success(`Status updated to ${newStatus}`);
       fetchTicketDetails();
@@ -198,12 +187,13 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
 
     setUpdating(true);
     try {
-      const { error } = await supabase
-        .from('tickets')
-        .update({ priority: newPriority })
-        .eq('id', ticketId);
-
-      if (error) throw error;
+      const response = await fetch(`/api/tickets/${ticketId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priority: newPriority }),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || "Failed");
 
       toast.success(`Priority updated to ${newPriority}`);
       fetchTicketDetails();

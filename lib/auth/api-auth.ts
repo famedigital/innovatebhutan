@@ -54,9 +54,12 @@ export async function requireApiAuth(request: Request): Promise<AuthContext> {
 
   if (!user) {
     console.error('[API Auth] No user found in session');
-    // Development mode fallback for testing (remove in production)
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[API Auth] DEV MODE: Using fallback admin user');
+    // Explicit opt-in only — never auto-elevate in production-like environments
+    if (
+      process.env.NODE_ENV === 'development' &&
+      process.env.ALLOW_DEV_AUTH_BYPASS === 'true'
+    ) {
+      console.warn('[API Auth] DEV MODE: Using fallback admin user (ALLOW_DEV_AUTH_BYPASS)');
       return {
         user: { id: 'dev-admin-id', email: 'dev@innovates.bt' },
         profile: {
@@ -89,9 +92,12 @@ export async function requireApiAuth(request: Request): Promise<AuthContext> {
       hint: 'This usually means the user profile does not exist or RLS policies are blocking access'
     });
 
-    // Development mode fallback for testing (remove in production)
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[API Auth] DEV MODE: Profile not found, using fallback');
+    // Explicit opt-in only
+    if (
+      process.env.NODE_ENV === 'development' &&
+      process.env.ALLOW_DEV_AUTH_BYPASS === 'true'
+    ) {
+      console.warn('[API Auth] DEV MODE: Profile not found, using fallback (ALLOW_DEV_AUTH_BYPASS)');
       return {
         user: { id: user.id, email: user.email },
         profile: {
@@ -110,9 +116,11 @@ export async function requireApiAuth(request: Request): Promise<AuthContext> {
   if (!profile) {
     console.error('[API Auth] Profile is null for user:', user.id);
 
-    // Development mode fallback for testing (remove in production)
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[API Auth] DEV MODE: Profile is null, using fallback');
+    if (
+      process.env.NODE_ENV === 'development' &&
+      process.env.ALLOW_DEV_AUTH_BYPASS === 'true'
+    ) {
+      console.warn('[API Auth] DEV MODE: Profile is null, using fallback (ALLOW_DEV_AUTH_BYPASS)');
       return {
         user: { id: user.id, email: user.email },
         profile: {

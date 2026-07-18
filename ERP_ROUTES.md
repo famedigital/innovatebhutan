@@ -3,21 +3,20 @@
 ## 📁 Admin Pages (Frontend Routes)
 | Route | Page | Status |
 |-------|------|--------|
-| `/admin` | Dashboard | ✅ Working - Real DB |
-| `/admin/clients` | Clients | ✅ Working - Real DB |
-| `/admin/services` | Services | ✅ Working - Real DB |
-| `/admin/hr` | HR & Payroll | ✅ Working - Real DB |
-| `/admin/finance` | Finance Hub | ✅ Working - Real DB + OCR |
-| `/admin/projects` | Projects | ✅ Working - Real DB |
-| `/admin/tickets` | Tickets | ✅ Working - Real DB |
-| `/admin/whatsapp` | WhatsApp Superbot | ✅ Working - Real DB |
-| `/admin/ai` | AI Console | ✅ Working - Real DB |
-| `/admin/marketing` | Marketing / Leads | ✅ Working - Real DB |
-| `/admin/website` | Website CMS | ✅ Working - Real DB |
-| `/admin/media` | Media Library | ✅ Working - Real DB |
-| `/admin/settings` | Settings | ✅ Working - Real DB |
-| `/admin/support` | Support | ✅ Working |
-| `/admin/docs` | Documentation | ✅ Working |
+| `/admin` | Dashboard | ✅ Live metrics via `/api/reports/summary` |
+| `/admin/clients` | Clients | ✅ API → clientService |
+| `/admin/services` | Services | ✅ API → serviceCatalogService |
+| `/admin/hr` | HR & Payroll | ✅ Working |
+| `/admin/finance` | Legacy Finance | ↪️ Redirects to `/admin/transactions` |
+| `/admin/transactions` | Transactions | ✅ Working |
+| `/admin/accounts` | Accounts | ✅ Create payment/journal dialogs |
+| `/admin/procurement` | Procurement | ✅ Create PO/RFQ dialogs |
+| `/admin/projects` | Projects | ✅ Working |
+| `/admin/tickets` | Tickets | ✅ `/api/tickets` stack (no client Supabase writes) |
+| `/admin/amc` | AMC | ✅ Working |
+| `/admin/whatsapp` | WhatsApp | ✅ Working |
+| `/admin/support/problems` | Problems | ✅ In sidebar |
+| `/admin/settings` | Settings | ✅ ADMIN only (RBAC enforced) |
 
 ## 🌐 Public Pages (Frontend Routes)
 | Route | Page | Status |
@@ -32,7 +31,10 @@
 ## 🔌 API Routes (Backend)
 | Route | Method | Purpose | Status |
 |-------|--------|---------|--------|
-| `/api/whatsapp` | GET/POST | WhatsApp Webhook + Bot | ✅ |
+| `/api/tickets` | GET/POST | Support tickets list/create | ✅ Auth + rate limit |
+| `/api/tickets/[id]` | GET/PUT/DELETE | Ticket detail/update | ✅ Auth + audit |
+| `/api/tickets/[id]/messages` | GET/POST | Ticket thread | ✅ Auth |
+| `/api/jobs` | GET/POST | Background job registry | ✅ Auth required |
 | `/api/gemini` | POST | AI Content Generation | ✅ |
 | `/api/ocr` | POST | Bank Statement/Receipt OCR | ✅ |
 | `/api/leads/webhook` | POST | Add leads from Make.com/Zapier | ✅ |

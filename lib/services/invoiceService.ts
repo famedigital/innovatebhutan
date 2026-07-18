@@ -37,10 +37,18 @@ export class InvoiceService {
   // ==================== INVOICE GENERATION ====================
 
   async generateInvoice(data: CreateInvoiceDTO) {
-    // Generate invoice number: INV-YYYYMMDD-XXXX
+    // Collision-safe invoice number: INV-YYYYMMDD-<seq>-<shortId>
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const invoiceNumber = `INV-${dateStr}-${randomSuffix}`;
+    const existing = await this.repository.listInvoices({ limit: 1, offset: 0 });
+    const seq = String((existing.total || 0) + 1).padStart(4, "0");
+    const shortId = Date.now().toString(36).slice(-4).toUpperCase();
+    let invoiceNumber = `INV-${dateStr}-${seq}-${shortId}`;
+
+    // Retry once if rare collision
+    const clash = await this.repository.getInvoiceByNumber(invoiceNumber);
+    if (clash) {
+      invoiceNumber = `INV-${dateStr}-${seq}-${Date.now().toString(36).toUpperCase()}`;
+    }
 
     // Calculate total
     const total = data.items.reduce((sum, item) => sum + (item.quantity * item.rate), 0);

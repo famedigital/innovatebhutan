@@ -83,14 +83,32 @@ const emptySupplierForm: SupplierFormData = {
 export default function ProcurementPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
+  const [rfqs, setRfqs] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<"po" | "suppliers" | "rfq">("suppliers");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [poDialogOpen, setPoDialogOpen] = useState(false);
+  const [rfqDialogOpen, setRfqDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [deletingSupplier, setDeletingSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState<SupplierFormData>(emptySupplierForm);
+  const [poForm, setPoForm] = useState({
+    supplierId: "",
+    notes: "",
+    itemDescription: "",
+    quantity: "1",
+    rate: "0",
+  });
+  const [rfqForm, setRfqForm] = useState({
+    title: "",
+    description: "",
+    supplierId: "",
+    itemDescription: "",
+    quantity: "1",
+    unit: "pcs",
+  });
 
   useEffect(() => {
     fetchData();
@@ -110,7 +128,8 @@ export default function ProcurementPage() {
       const result = await response.json();
       if (result.success) {
         if (activeTab === "suppliers") setSuppliers(result.data || []);
-        else setOrders(result.data || []);
+        else if (activeTab === "po") setOrders(result.data || []);
+        else setRfqs(result.data || []);
       } else {
         toast.error(result.error || "Failed to load data");
       }
@@ -121,10 +140,125 @@ export default function ProcurementPage() {
     }
   };
 
+  const ensureSuppliersLoaded = async () => {
+    if (suppliers.length > 0) return;
+    try {
+      const response = await fetch("/api/procurement/suppliers");
+      const result = await response.json();
+      if (result.success) setSuppliers(result.data || []);
+    } catch {
+      /* ignore */
+    }
+  };
+
   const openCreateDialog = () => {
     setEditingSupplier(null);
     setFormData({ ...emptySupplierForm });
     setDialogOpen(true);
+  };
+
+  const openPoDialog = async () => {
+    await ensureSuppliersLoaded();
+    setPoForm({
+      supplierId: "",
+      notes: "",
+      itemDescription: "",
+      quantity: "1",
+      rate: "0",
+    });
+    setPoDialogOpen(true);
+  };
+
+  const openRfqDialog = async () => {
+    await ensureSuppliersLoaded();
+    setRfqForm({
+      title: "",
+      description: "",
+      supplierId: "",
+      itemDescription: "",
+      quantity: "1",
+      unit: "pcs",
+    });
+    setRfqDialogOpen(true);
+  };
+
+  const handleCreatePo = async () => {
+    const supplierId = Number(poForm.supplierId);
+    if (!supplierId) {
+      toast.error("Supplier is required");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/procurement/purchase-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          supplierId,
+          notes: poForm.notes || undefined,
+          items: [
+            {
+              itemId: 1,
+              description: poForm.itemDescription || "Line item",
+              quantity: Number(poForm.quantity) || 1,
+              rate: poForm.rate || "0",
+            },
+          ],
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success("Purchase order created");
+        setPoDialogOpen(false);
+        fetchData();
+      } else {
+        toast.error(result.error || "Failed to create PO");
+      }
+    } catch {
+      toast.error("Failed to create PO");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCreateRfq = async () => {
+    if (!rfqForm.title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/procurement/rfq", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: rfqForm.title.trim(),
+          description: rfqForm.description || undefined,
+          suppliers: rfqForm.supplierId
+            ? [{ supplierId: Number(rfqForm.supplierId) }]
+            : [],
+          items: [
+            {
+              description: rfqForm.itemDescription || rfqForm.title,
+              quantity: Number(rfqForm.quantity) || 1,
+              unit: rfqForm.unit || "pcs",
+            },
+          ],
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success("RFQ created");
+        setRfqDialogOpen(false);
+        fetchData();
+      } else {
+        toast.error(result.error || "Failed to create RFQ");
+      }
+    } catch {
+      toast.error("Failed to create RFQ");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const openEditDialog = (supplier: Supplier) => {
@@ -248,10 +382,15 @@ export default function ProcurementPage() {
               <Plus className="w-4 h-4 mr-2" />
               Add Supplier
             </Button>
-          ) : (
-            <Button onClick={() => window.location.href = `/admin/procurement/${activeTab === "po" ? "purchase-orders" : "rfq"}/create`}>
+          ) : activeTab === "po" ? (
+            <Button onClick={openPoDialog}>
               <Plus className="w-4 h-4 mr-2" />
-              New {activeTab === "po" ? "PO" : "RFQ"}
+              New PO
+            </Button>
+          ) : (
+            <Button onClick={openRfqDialog}>
+              <Plus className="w-4 h-4 mr-2" />
+              New RFQ
             </Button>
           )}
         </div>
@@ -274,7 +413,7 @@ export default function ProcurementPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Active Suppliers</span>
-              <Users className="w-5 h-5 text-[#3ECF8E]" />
+              <Users className="w-5 h-5 text-primary" />
             </div>
             <p className="text-2xl font-bold mt-2">{activeSuppliers}</p>
           </CardContent>
@@ -310,7 +449,7 @@ export default function ProcurementPage() {
         <CardContent>
           {loading ? (
             <div className="flex justify-center py-8">
-              <RefreshCw className="w-6 h-6 animate-spin text-[#3ECF8E]" />
+              <RefreshCw className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : activeTab === "suppliers" ? (
             <Table>
@@ -539,6 +678,148 @@ export default function ProcurementPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={poDialogOpen} onOpenChange={setPoDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New Purchase Order</DialogTitle>
+            <DialogDescription>Create a draft purchase order</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Supplier *</Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={poForm.supplierId}
+                onChange={(e) => setPoForm({ ...poForm, supplierId: e.target.value })}
+              >
+                <option value="">Select supplier</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Item description</Label>
+              <Input
+                value={poForm.itemDescription}
+                onChange={(e) => setPoForm({ ...poForm, itemDescription: e.target.value })}
+                placeholder="Line item description"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  value={poForm.quantity}
+                  onChange={(e) => setPoForm({ ...poForm, quantity: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Rate (Nu.)</Label>
+                <Input
+                  type="number"
+                  value={poForm.rate}
+                  onChange={(e) => setPoForm({ ...poForm, rate: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea
+                value={poForm.notes}
+                onChange={(e) => setPoForm({ ...poForm, notes: e.target.value })}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPoDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreatePo} disabled={submitting}>
+              {submitting ? "Saving..." : "Create PO"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={rfqDialogOpen} onOpenChange={setRfqDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New RFQ</DialogTitle>
+            <DialogDescription>Request quotations from suppliers</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Title *</Label>
+              <Input
+                value={rfqForm.title}
+                onChange={(e) => setRfqForm({ ...rfqForm, title: e.target.value })}
+                placeholder="e.g., POS hardware Q3"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={rfqForm.description}
+                onChange={(e) => setRfqForm({ ...rfqForm, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Supplier (optional)</Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={rfqForm.supplierId}
+                onChange={(e) => setRfqForm({ ...rfqForm, supplierId: e.target.value })}
+              >
+                <option value="">None</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Item description</Label>
+              <Input
+                value={rfqForm.itemDescription}
+                onChange={(e) => setRfqForm({ ...rfqForm, itemDescription: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  value={rfqForm.quantity}
+                  onChange={(e) => setRfqForm({ ...rfqForm, quantity: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Unit</Label>
+                <Input
+                  value={rfqForm.unit}
+                  onChange={(e) => setRfqForm({ ...rfqForm, unit: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRfqDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateRfq} disabled={submitting}>
+              {submitting ? "Saving..." : "Create RFQ"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { projectService } from "@/lib/services/projectService";
 import { updateTaskSchema } from "@/lib/validations/project";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from '@/lib/auth/api-auth';
+import { isApiError } from '@/lib/errors';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -12,6 +14,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const _auth = await requireApiAuth(req);
+    requireStaffOrAdmin(_auth.profile);
     const { id: taskId } = await params;
     const id = parseInt(taskId);
 
@@ -50,6 +54,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const _auth = await requireApiAuth(req);
+    requireStaffOrAdmin(_auth.profile);
     const { id: taskId } = await params;
     const id = parseInt(taskId);
 
@@ -102,6 +108,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const _auth = await requireApiAuth(req);
+    requireStaffOrAdmin(_auth.profile);
     const { id: taskId } = await params;
     const id = parseInt(taskId);
 

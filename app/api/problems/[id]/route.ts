@@ -5,6 +5,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { problemService } from "@/lib/services/problemService";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from '@/lib/auth/api-auth';
+import { isApiError } from '@/lib/errors';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -16,6 +18,8 @@ type RouteContext = {
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const { id } = await context.params;
     const problemId = parseInt(id);
 
@@ -58,6 +62,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
  */
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const { id } = await context.params;
     const problemId = parseInt(id);
 
@@ -99,6 +105,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
  */
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const { id } = await context.params;
     const problemId = parseInt(id);
 
@@ -146,6 +154,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
  */
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const { id } = await context.params;
     const problemId = parseInt(id);
 

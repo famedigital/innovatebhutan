@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from '@/lib/auth/api-auth';
+import { isApiError } from '@/lib/errors';
 
 async function getGeminiKey() {
   // Check env first
@@ -17,6 +19,8 @@ async function getGeminiKey() {
 
 export async function POST(req: NextRequest) {
   try {
+    const _auth = await requireApiAuth(req);
+    requireStaffOrAdmin(_auth.profile);
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const type = formData.get("type") as string;

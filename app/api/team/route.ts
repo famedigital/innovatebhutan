@@ -5,6 +5,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { teamManagementService } from "@/lib/services/teamManagementService";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from '@/lib/auth/api-auth';
+import { isApiError } from '@/lib/errors';
 
 /**
  * GET /api/team/workload
@@ -12,6 +14,8 @@ import { teamManagementService } from "@/lib/services/teamManagementService";
  */
 export async function GET(request: NextRequest) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const endpoint = request.nextUrl.pathname.split('/').pop();
 
     let data;
@@ -51,6 +55,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const body = await request.json();
     const action = body.action;
 

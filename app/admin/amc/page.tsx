@@ -449,8 +449,8 @@ export default function AMCPage() {
   if (loadingState === 'loading') {
     return (
       <div className="p-6 flex flex-col items-center justify-center space-y-4">
-        <RefreshCw className="w-8 h-8 animate-spin text-[#3ECF8E]" />
-        <p className="text-[#717171]">Loading AMC contracts...</p>
+        <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">Loading AMC contracts...</p>
       </div>
     );
   }
@@ -461,10 +461,10 @@ export default function AMCPage() {
       <div className="p-6 flex flex-col items-center justify-center space-y-4">
         <AlertCircle className="w-12 h-12 text-red-500" />
         <div className="text-center">
-          <h2 className="text-lg font-semibold text-[#1A1A1A]">Failed to load AMC contracts</h2>
-          <p className="text-[#717171] mt-1">{error}</p>
+          <h2 className="text-lg font-semibold text-foreground">Failed to load AMC contracts</h2>
+          <p className="text-muted-foreground mt-1">{error}</p>
         </div>
-        <Button onClick={fetchData} className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white">
+        <Button onClick={fetchData} className="bg-primary hover:bg-[#34b27b] text-white">
           <RefreshCw className="w-4 h-4 mr-2" />
           Retry
         </Button>
@@ -476,8 +476,8 @@ export default function AMCPage() {
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1A1A1A]">AMC Contracts</h1>
-          <p className="text-sm text-[#717171]">Manage Annual Maintenance Contracts with clients</p>
+          <h1 className="text-2xl font-bold text-foreground">AMC Contracts</h1>
+          <p className="text-sm text-muted-foreground">Manage Annual Maintenance Contracts with clients</p>
         </div>
         <div className="flex gap-2">
           <Link href="/admin/amc/reports">
@@ -496,7 +496,7 @@ export default function AMCPage() {
           </Button>
           <Button
             onClick={() => setShowCreate(true)}
-            className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white"
+            className="bg-primary hover:bg-[#34b27b] text-white"
           >
             <Plus className="w-4 h-4 mr-2" />
             New AMC
@@ -508,26 +508,26 @@ export default function AMCPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
           <CardContent className="p-3">
-            <p className="text-[10px] text-[#717171] uppercase">Active Contracts</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Active Contracts</p>
             <p className="text-xl font-bold text-green-600">{activeAMCs}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
-            <p className="text-[10px] text-[#717171] uppercase">Expiring Soon</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Expiring Soon</p>
             <p className="text-xl font-bold text-orange-600">{expiringSoon}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
-            <p className="text-[10px] text-[#717171] uppercase">Total Contract Value</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Total Contract Value</p>
             <p className="text-xl font-bold">Nu. {(totalValue / 1000).toFixed(1)}k</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
-            <p className="text-[10px] text-[#717171] uppercase">Annual Revenue</p>
-            <p className="text-xl font-bold text-[#3ECF8E]">Nu. {(totalValue / 12).toFixed(0)}k/mo</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Annual Revenue</p>
+            <p className="text-xl font-bold text-primary">Nu. {(totalValue / 12).toFixed(0)}k/mo</p>
           </CardContent>
         </Card>
       </div>
@@ -580,16 +580,16 @@ export default function AMCPage() {
       {/* Search & Filter */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#717171]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search contracts..."
-            className="pl-9 bg-[#F3F3F1] border-[#E5E5E1]"
+            className="pl-9 bg-muted border-border"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 bg-[#F3F3F1] border-[#E5E5E1]">
+          <SelectTrigger className="w-40 bg-muted border-border">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -763,14 +763,14 @@ export default function AMCPage() {
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
-            <div className="flex items-center justify-between p-4 border-b border-[#E5E5E1]">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="font-semibold">Create New AMC Contract</h3>
               <Button variant="ghost" size="icon" onClick={() => setShowCreate(false)} disabled={isSubmitting}>×</Button>
             </div>
 
             <div className="p-4 space-y-4">
               <div className="space-y-2">
-                <label className="text-xs text-[#717171]">Client *</label>
+                <label className="text-xs text-muted-foreground">Client *</label>
                 {clients.length === 0 ? (
                   <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
                     No clients available. Please create a client first.
@@ -788,10 +788,10 @@ export default function AMCPage() {
                       }}
                       disabled={isSubmitting}
                     >
-                      <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
+                      <SelectTrigger className="bg-muted border-border">
                         <SelectValue placeholder="Select client" />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-[#E5E5E1]">
+                      <SelectContent className="bg-white border-border">
                         {clients.map(client => (
                           <SelectItem key={client.id} value={client.id.toString()}>{client.name}</SelectItem>
                         ))}
@@ -808,15 +808,15 @@ export default function AMCPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-[#717171]">Service</label>
+                <label className="text-xs text-muted-foreground">Service</label>
                 {services.length === 0 ? (
-                  <div className="text-sm text-[#717171] italic">No services available (optional)</div>
+                  <div className="text-sm text-muted-foreground italic">No services available (optional)</div>
                 ) : (
                   <Select value={newAMC.serviceId} onValueChange={(v) => setNewAMC({ ...newAMC, serviceId: v })} disabled={isSubmitting}>
-                    <SelectTrigger className="bg-[#F3F3F1] border-[#E5E5E1]">
+                    <SelectTrigger className="bg-muted border-border">
                       <SelectValue placeholder="Select service (optional)" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-[#E5E5E1]">
+                    <SelectContent className="bg-white border-border">
                       {services.map(service => (
                         <SelectItem key={service.id} value={service.id.toString()}>{service.name}</SelectItem>
                       ))}
@@ -826,46 +826,46 @@ export default function AMCPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-[#717171]">Contract Number</label>
+                <label className="text-xs text-muted-foreground">Contract Number</label>
                 <Input
                   value={newAMC.contractNumber}
                   onChange={(e) => setNewAMC({ ...newAMC, contractNumber: e.target.value })}
-                  className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  className="bg-muted border-border"
                   disabled={isSubmitting}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">Start Date</label>
+                  <label className="text-xs text-muted-foreground">Start Date</label>
                   <Input
                     type="date"
                     value={newAMC.startDate}
                     onChange={(e) => setNewAMC({ ...newAMC, startDate: e.target.value })}
-                    className="bg-[#F3F3F1] border-[#E5E5E1]"
+                    className="bg-muted border-border"
                     disabled={isSubmitting}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">End Date</label>
+                  <label className="text-xs text-muted-foreground">End Date</label>
                   <Input
                     type="date"
                     value={newAMC.endDate}
                     onChange={(e) => setNewAMC({ ...newAMC, endDate: e.target.value })}
-                    className="bg-[#F3F3F1] border-[#E5E5E1]"
+                    className="bg-muted border-border"
                     disabled={isSubmitting}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-[#717171]">Contract Value (Nu.) *</label>
+                <label className="text-xs text-muted-foreground">Contract Value (Nu.) *</label>
                 <Input
                   type="number"
                   placeholder="50000"
                   value={newAMC.amount}
                   onChange={(e) => setNewAMC({ ...newAMC, amount: e.target.value })}
-                  className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  className="bg-muted border-border"
                   disabled={isSubmitting}
                   min="0"
                   step="0.01"
@@ -875,16 +875,16 @@ export default function AMCPage() {
                 )}
               </div>
 
-              <div className="p-3 bg-[#F3F3F1] rounded-lg">
-                <p className="text-xs text-[#717171] mb-1">Default Services:</p>
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-xs text-muted-foreground mb-1">Default Services:</p>
                 <p className="text-sm">Technical Support, System Maintenance, Remote Assistance</p>
               </div>
             </div>
 
-            <div className="p-4 border-t border-[#E5E5E1] flex justify-end gap-2">
+            <div className="p-4 border-t border-border flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowCreate(false)} disabled={isSubmitting}>Cancel</Button>
               <Button
-                className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white"
+                className="bg-primary hover:bg-[#34b27b] text-white"
                 onClick={createAMC}
                 disabled={isSubmitting || !newAMC.clientId || !newAMC.amount}
               >
@@ -909,7 +909,7 @@ export default function AMCPage() {
       {showRenew && selectedAMC && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
-            <div className="flex items-center justify-between p-4 border-b border-[#E5E5E1]">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="font-semibold">Renew AMC Contract</h3>
               <Button variant="ghost" size="icon" onClick={() => setShowRenew(false)} disabled={isSubmitting}>×</Button>
             </div>
@@ -922,52 +922,52 @@ export default function AMCPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">New Start Date</label>
+                  <label className="text-xs text-muted-foreground">New Start Date</label>
                   <Input
                     type="date"
                     value={renewalData.startDate}
                     onChange={(e) => setRenewalData({ ...renewalData, startDate: e.target.value })}
-                    className="bg-[#F3F3F1] border-[#E5E5E1]"
+                    className="bg-muted border-border"
                     disabled={isSubmitting}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs text-[#717171]">New End Date</label>
+                  <label className="text-xs text-muted-foreground">New End Date</label>
                   <Input
                     type="date"
                     value={renewalData.endDate}
                     onChange={(e) => setRenewalData({ ...renewalData, endDate: e.target.value })}
-                    className="bg-[#F3F3F1] border-[#E5E5E1]"
+                    className="bg-muted border-border"
                     disabled={isSubmitting}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-[#717171]">New Contract Value (Nu.)</label>
+                <label className="text-xs text-muted-foreground">New Contract Value (Nu.)</label>
                 <Input
                   type="number"
                   placeholder={selectedAMC.amount || "50000"}
                   value={renewalData.amount}
                   onChange={(e) => setRenewalData({ ...renewalData, amount: e.target.value })}
-                  className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  className="bg-muted border-border"
                   disabled={isSubmitting}
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-[#717171]">Notes</label>
+                <label className="text-xs text-muted-foreground">Notes</label>
                 <Input
                   placeholder="Renewal notes..."
                   value={renewalData.notes}
                   onChange={(e) => setRenewalData({ ...renewalData, notes: e.target.value })}
-                  className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  className="bg-muted border-border"
                   disabled={isSubmitting}
                 />
               </div>
             </div>
 
-            <div className="p-4 border-t border-[#E5E5E1] flex justify-end gap-2">
+            <div className="p-4 border-t border-border flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowRenew(false)} disabled={isSubmitting}>Cancel</Button>
               <Button
                 className="bg-blue-500 hover:bg-blue-600 text-white"
@@ -995,7 +995,7 @@ export default function AMCPage() {
       {showClientCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between p-4 border-b border-[#E5E5E1]">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="font-semibold flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-emerald-600" />
                 Add New Client
@@ -1005,12 +1005,12 @@ export default function AMCPage() {
 
             <div className="p-4 space-y-4">
               <div className="space-y-2">
-                <label className="text-xs text-[#717171]">Client Name *</label>
+                <label className="text-xs text-muted-foreground">Client Name *</label>
                 <Input
                   value={newClientName}
                   onChange={(e) => setNewClientName(e.target.value)}
                   placeholder="Enter client company name"
-                  className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  className="bg-muted border-border"
                   disabled={creatingClient}
                   autoFocus
                   onKeyDown={(e) => {
@@ -1022,7 +1022,7 @@ export default function AMCPage() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-[#E5E5E1] flex justify-end gap-2">
+            <div className="p-4 border-t border-border flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowClientCreate(false)} disabled={creatingClient}>Cancel</Button>
               <Button
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"

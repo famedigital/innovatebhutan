@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldCheck, Loader2, Zap, Users, Building2 } from "lucide-react";
+import { ShieldCheck, Loader2, Zap, Building2 } from "lucide-react";
 import { toast } from "sonner";
+import { InstallAppButton } from "@/components/pwa/install-app-button";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -124,62 +125,68 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#FAFAFA] px-4">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(62,207,142,0.08),transparent_70%)] pointer-events-none" />
+    <div className="min-h-svh w-full flex items-center justify-center bg-background px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(10,95,78,0.08),transparent_70%)] pointer-events-none" />
 
-      <Card className="w-full max-w-md bg-white border-[#E5E5E1] shadow-lg relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#3ECF8E] to-transparent" />
+      <Card className="w-full max-w-md bg-card border-border shadow-lg relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary to-transparent" />
         
-        <CardHeader className="space-y-1 text-center pb-6">
-          <div className="flex justify-center mb-4">
-            <div className="w-14 h-14 rounded-xl bg-[#3ECF8E]/10 border border-[#3ECF8E]/20 flex items-center justify-center">
-              <Zap className="w-7 h-7 text-[#3ECF8E]" />
+        <CardHeader className="space-y-1 text-center pb-4">
+          <div className="flex justify-center mb-3">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Zap className="w-7 h-7 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight text-[#1A1A1A]">
+          <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
             {isSignUp ? "Create Account" : "Sign In"}
           </CardTitle>
-          <CardDescription className="text-[#717171]">
+          <CardDescription className="text-muted-foreground text-sm">
             {isSignUp 
-              ? "Register to access the ERP infrastructure." 
-              : "Enter your credentials to access the ERP."}
+              ? "Register for Innovates ERP access." 
+              : "Staff: use mobile for daily work. Desktop for deep detail."}
           </CardDescription>
         </CardHeader>
 
-        {/* Login Type Toggle */}
+        <div className="px-6 pb-3">
+          <InstallAppButton fullWidth variant="outline" className="border-primary/30 text-primary hover:bg-primary/5" />
+          <p className="text-[10px] text-center text-muted-foreground mt-2">
+            Install as an app for faster AMC, tickets &amp; client work on your phone.
+          </p>
+        </div>
+
         <div className="px-6 pb-4">
-          <div className="flex bg-[#F3F3F1] rounded-lg p-1">
+          <div className="flex bg-muted rounded-lg p-1">
             <button
               type="button"
               onClick={() => setLoginAs("admin")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${
                 loginAs === "admin" 
-                  ? "bg-white text-black shadow-sm" 
-                  : "text-[#717171]"
+                  ? "bg-background text-foreground shadow-sm" 
+                  : "text-muted-foreground"
               }`}
             >
               <ShieldCheck className="w-4 h-4" />
-              Admin
+              Staff / Admin
             </button>
             <button
               type="button"
               onClick={() => setLoginAs("client")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${
                 loginAs === "client" 
-                  ? "bg-white text-black shadow-sm" 
-                  : "text-[#717171]"
+                  ? "bg-background text-foreground shadow-sm" 
+                  : "text-muted-foreground"
               }`}
             >
               <Building2 className="w-4 h-4" />
-              Client Portal
+              Client
             </button>
           </div>
         </div>
 
         <form onSubmit={handleAuth}>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-[#717171] text-xs font-medium">Email</Label>
+              <Label htmlFor="email" className="text-muted-foreground text-xs font-medium">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -187,34 +194,36 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="border-[#E5E5E1] bg-[#FAFAFA] text-[#1A1A1A] placeholder:text-[#A3A3A3] focus:border-[#3ECF8E] focus:ring-[#3ECF8E]/20 transition-all h-10"
+                className="h-11"
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-[#717171] text-xs font-medium">Password</Label>
+              <Label htmlFor="password" className="text-muted-foreground text-xs font-medium">Password</Label>
               <Input
                 id="password"
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="border-[#E5E5E1] bg-[#FAFAFA] text-[#1A1A1A] placeholder:text-[#A3A3A3] focus:border-[#3ECF8E] focus:ring-[#3ECF8E]/20 transition-all h-10"
+                className="h-11"
+                autoComplete={isSignUp ? "new-password" : "current-password"}
               />
             </div>
 
             {loginAs === "client" && !isSignUp && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mt-4">
-                <p className="text-xs text-blue-700">
-                  🔐 Client Portal: Access your invoices, AMC contracts, and support tickets.
+              <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <p className="text-xs text-foreground/80">
+                  Client Portal: invoices, AMC contracts, and support tickets.
                 </p>
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex flex-col gap-6">
+          <CardFooter className="flex flex-col gap-4">
             <Button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-[#3ECF8E] hover:bg-[#32e612] text-black font-semibold h-10 transition-all"
+              className="w-full h-11 font-semibold"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -225,7 +234,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setIsSignUp(!isSignUp)}
-              className="text-xs font-medium text-[#717171] hover:text-[#3ECF8E] transition-colors"
+              className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
             >
               {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Create one"}
             </button>
@@ -233,7 +242,7 @@ export default function LoginPage() {
         </form>
       </Card>
       
-      <p className="absolute bottom-6 text-[10px] font-medium text-[#A3A3A3] tracking-wider">
+      <p className="absolute bottom-4 text-[10px] font-medium text-muted-foreground tracking-wider">
         INNOVATES BHUTAN ERP © 2026
       </p>
     </div>

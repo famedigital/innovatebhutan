@@ -2,6 +2,10 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Oswald } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
+import { PureThemeProvider } from "@/components/PureThemeProvider"
+import { Toaster } from "@/components/ui/sonner"
+import { NavigationDynamic } from "@/components/navigation-dynamic"
+import { PwaProvider } from "@/components/pwa/pwa-provider"
 
 const oswald = Oswald({ 
   subsets: ["latin"],
@@ -23,6 +27,15 @@ export const metadata: Metadata = {
   },
   description: "Bhutan's premier Full-Service IT Firm. We deliver end-to-end digital infrastructure, POS ecosystems, cloud architecture, and mission-critical enterprise software solutions for a high-performance economy.",
   generator: 'INNOVATES BHUTAN ERP',
+  applicationName: 'Innovates Bhutan ERP',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Innovates ERP',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   keywords: [
     'IT Firm Bhutan', 'digital infrastructure', 'enterprise software Bhutan', 
     'POS systems Thimphu', 'IT consulting Bhutan', 'automation services',
@@ -39,19 +52,20 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: 'https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/v1776705871/weblogo_os6cni.png',
-    apple: 'https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/v1776705871/weblogo_os6cni.png',
+    apple: 'https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/c_fit,w_180,h_180/v1776705871/weblogo_os6cni.png',
   },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#020617',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#0A5F4E' },
+    { media: '(prefers-color-scheme: dark)', color: '#0A5F4E' },
+  ],
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
 }
-
-import { PureThemeProvider } from "@/components/PureThemeProvider"
-import { Toaster } from "@/components/ui/sonner"
-import { NavigationDynamic } from "@/components/navigation-dynamic"
 
 export default function RootLayout({
   children,
@@ -62,8 +76,10 @@ export default function RootLayout({
     <html lang="en" className={`${oswald.variable} ${inter.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased bg-background text-foreground selection:bg-primary/30 selection:text-primary" suppressHydrationWarning>
         <PureThemeProvider>
-          <NavigationDynamic />
-          {children}
+          <PwaProvider>
+            <NavigationDynamic />
+            {children}
+          </PwaProvider>
         </PureThemeProvider>
         <Toaster position="bottom-right" theme="dark" closeButton />
         {process.env.NODE_ENV === 'production' && <Analytics />}

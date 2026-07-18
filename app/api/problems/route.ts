@@ -5,6 +5,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { problemService } from "@/lib/services/problemService";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from '@/lib/auth/api-auth';
+import { isApiError } from '@/lib/errors';
 
 /**
  * GET /api/problems
@@ -12,6 +14,8 @@ import { problemService } from "@/lib/services/problemService";
  */
 export async function GET(request: NextRequest) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const searchParams = request.nextUrl.searchParams;
     const filters = {
       clientId: searchParams.get('clientId') ? parseInt(searchParams.get('clientId')!) : undefined,
@@ -44,6 +48,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const body = await request.json();
 
     // AI categorization

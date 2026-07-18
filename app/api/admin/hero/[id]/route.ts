@@ -4,6 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from '@/lib/auth/api-auth';
+import { isApiError } from '@/lib/errors';
 import {
   getHeroContentById,
   updateHeroContent,
@@ -22,6 +24,8 @@ type RouteContext = {
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     // TODO: Add admin authentication check
     const { id } = await context.params;
     const heroContentId = parseInt(id);
@@ -61,6 +65,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
  */
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     // TODO: Add admin authentication check
     const { id } = await context.params;
     const heroContentId = parseInt(id);
@@ -103,6 +109,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
  */
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     // TODO: Add admin authentication check
     const { id } = await context.params;
     const heroContentId = parseInt(id);
@@ -142,6 +150,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     // TODO: Add admin authentication check
     const { id } = await context.params;
     const heroContentId = parseInt(id);

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reportService } from "@/lib/services/reportService";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from '@/lib/auth/api-auth';
+import { isApiError } from '@/lib/errors';
 
 // GET /api/reports/finance - Get finance KPIs and metrics
 export async function GET(request: NextRequest) {
   try {
+    const _auth = await requireApiAuth(request);
+    requireStaffOrAdmin(_auth.profile);
     const searchParams = request.nextUrl.searchParams;
 
     // Parse filters from query parameters

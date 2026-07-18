@@ -66,6 +66,17 @@ interface Payment {
   postingDate: Date;
 }
 
+interface JournalEntry {
+  id: number;
+  publicId: string;
+  voucherNo: string;
+  voucherType: string;
+  totalDebit: string;
+  totalCredit: string;
+  status?: string;
+  postingDate: Date;
+}
+
 interface PartyFormData {
   name: string;
   partyType: string;
@@ -89,14 +100,33 @@ const emptyPartyForm: PartyFormData = {
 export default function AccountsPage() {
   const [parties, setParties] = useState<Party[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<"parties" | "payments" | "journal">("parties");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [journalDialogOpen, setJournalDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingParty, setEditingParty] = useState<Party | null>(null);
   const [deletingParty, setDeletingParty] = useState<Party | null>(null);
   const [formData, setFormData] = useState<PartyFormData>(emptyPartyForm);
+  const [paymentForm, setPaymentForm] = useState({
+    paymentType: "receive",
+    partyType: "customer",
+    partyId: "",
+    amount: "",
+    paidAmount: "",
+    paymentMethod: "bank",
+    remarks: "",
+  });
+  const [journalForm, setJournalForm] = useState({
+    voucherType: "journal_entry",
+    debitAccountId: "",
+    creditAccountId: "",
+    amount: "",
+    remarks: "",
+  });
 
   useEffect(() => {
     fetchData();
@@ -117,6 +147,7 @@ export default function AccountsPage() {
       if (result.success) {
         if (activeTab === "parties") setParties(result.data || []);
         else if (activeTab === "payments") setPayments(result.data || []);
+        else setJournalEntries(result.data || []);
       } else {
         toast.error(result.error || "Failed to load data");
       }
@@ -127,10 +158,123 @@ export default function AccountsPage() {
     }
   };
 
+  const ensurePartiesLoaded = async () => {
+    if (parties.length > 0) return;
+    try {
+      const response = await fetch("/api/accounts/parties");
+      const result = await response.json();
+      if (result.success) setParties(result.data || []);
+    } catch {
+      /* ignore */
+    }
+  };
+
   const openCreateDialog = () => {
     setEditingParty(null);
     setFormData({ ...emptyPartyForm });
     setDialogOpen(true);
+  };
+
+  const openPaymentDialog = async () => {
+    await ensurePartiesLoaded();
+    setPaymentForm({
+      paymentType: "receive",
+      partyType: "customer",
+      partyId: "",
+      amount: "",
+      paidAmount: "",
+      paymentMethod: "bank",
+      remarks: "",
+    });
+    setPaymentDialogOpen(true);
+  };
+
+  const openJournalDialog = () => {
+    setJournalForm({
+      voucherType: "journal_entry",
+      debitAccountId: "",
+      creditAccountId: "",
+      amount: "",
+      remarks: "",
+    });
+    setJournalDialogOpen(true);
+  };
+
+  const handleCreatePayment = async () => {
+    const amount = Number(paymentForm.amount);
+    const paidAmount = Number(paymentForm.paidAmount || paymentForm.amount);
+    const partyId = Number(paymentForm.partyId);
+    if (!partyId || !amount) {
+      toast.error("Party and amount are required");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/accounts/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentType: paymentForm.paymentType,
+          partyType: paymentForm.partyType,
+          partyId,
+          amount,
+          paidAmount,
+          paymentMethod: paymentForm.paymentMethod,
+          remarks: paymentForm.remarks || undefined,
+          postingDate: new Date().toISOString(),
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success("Payment created");
+        setPaymentDialogOpen(false);
+        fetchData();
+      } else {
+        toast.error(result.error || "Failed to create payment");
+      }
+    } catch {
+      toast.error("Failed to create payment");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCreateJournal = async () => {
+    const amount = Number(journalForm.amount);
+    const debitAccountId = Number(journalForm.debitAccountId);
+    const creditAccountId = Number(journalForm.creditAccountId);
+    if (!amount || !debitAccountId || !creditAccountId) {
+      toast.error("Debit account, credit account, and amount are required");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/accounts/journal-entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postingDate: new Date().toISOString(),
+          voucherType: journalForm.voucherType,
+          remarks: journalForm.remarks || undefined,
+          accounts: [
+            { accountId: debitAccountId, debit: amount, credit: 0 },
+            { accountId: creditAccountId, debit: 0, credit: amount },
+          ],
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success("Journal entry created");
+        setJournalDialogOpen(false);
+        fetchData();
+      } else {
+        toast.error(result.error || "Failed to create journal entry");
+      }
+    } catch {
+      toast.error("Failed to create journal entry");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const openEditDialog = (party: Party) => {
@@ -253,10 +397,15 @@ export default function AccountsPage() {
               <Calculator className="w-4 h-4 mr-2" />
               Add Party
             </Button>
-          ) : (
-            <Button onClick={() => window.location.href = `/admin/accounts/${activeTab}/create`}>
+          ) : activeTab === "payments" ? (
+            <Button onClick={openPaymentDialog}>
               <Calculator className="w-4 h-4 mr-2" />
-              New {activeTab === "payments" ? "Payment" : "Entry"}
+              New Payment
+            </Button>
+          ) : (
+            <Button onClick={openJournalDialog}>
+              <Calculator className="w-4 h-4 mr-2" />
+              New Entry
             </Button>
           )}
         </div>
@@ -279,7 +428,7 @@ export default function AccountsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Customers</span>
-              <Building className="w-5 h-5 text-[#3ECF8E]" />
+              <Building className="w-5 h-5 text-primary" />
             </div>
             <p className="text-2xl font-bold mt-2">{customerCount}</p>
           </CardContent>
@@ -313,7 +462,7 @@ export default function AccountsPage() {
         <CardContent>
           {loading ? (
             <div className="flex justify-center py-8">
-              <RefreshCw className="w-6 h-6 animate-spin text-[#3ECF8E]" />
+              <RefreshCw className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : activeTab === "parties" ? (
             <Table>
@@ -394,7 +543,7 @@ export default function AccountsPage() {
                 )}
               </TableBody>
             </Table>
-          ) : (
+          ) : activeTab === "payments" ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -404,13 +553,12 @@ export default function AccountsPage() {
                   <TableHead>Paid</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead className="w-[70px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {payments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       No payments found.
                     </TableCell>
                   </TableRow>
@@ -427,25 +575,37 @@ export default function AccountsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>{new Date(payment.postingDate).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Calculator className="w-4 h-4 mr-2" />
-                              View Details
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Voucher No</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Debit</TableHead>
+                  <TableHead>Credit</TableHead>
+                  <TableHead>Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {journalEntries.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No journal entries found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  journalEntries.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="font-medium">{entry.voucherNo}</TableCell>
+                      <TableCell>{entry.voucherType}</TableCell>
+                      <TableCell>Nu.{Number(entry.totalDebit).toLocaleString()}</TableCell>
+                      <TableCell>Nu.{Number(entry.totalCredit).toLocaleString()}</TableCell>
+                      <TableCell>{new Date(entry.postingDate).toLocaleDateString()}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -569,6 +729,168 @@ export default function AccountsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New Payment</DialogTitle>
+            <DialogDescription>Record a payment received or paid</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Payment Type</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={paymentForm.paymentType}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, paymentType: e.target.value })}
+                >
+                  <option value="receive">Receive</option>
+                  <option value="pay">Pay</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Party Type</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={paymentForm.partyType}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, partyType: e.target.value, partyId: "" })}
+                >
+                  <option value="customer">Customer</option>
+                  <option value="supplier">Supplier</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Party *</Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={paymentForm.partyId}
+                onChange={(e) => setPaymentForm({ ...paymentForm, partyId: e.target.value })}
+              >
+                <option value="">Select party</option>
+                {parties
+                  .filter((p) => p.partyType === paymentForm.partyType)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Amount *</Label>
+                <Input
+                  type="number"
+                  value={paymentForm.amount}
+                  onChange={(e) =>
+                    setPaymentForm({
+                      ...paymentForm,
+                      amount: e.target.value,
+                      paidAmount: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Method</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={paymentForm.paymentMethod}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
+                >
+                  <option value="cash">Cash</option>
+                  <option value="bank">Bank</option>
+                  <option value="cheque">Cheque</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Remarks</Label>
+              <Textarea
+                value={paymentForm.remarks}
+                onChange={(e) => setPaymentForm({ ...paymentForm, remarks: e.target.value })}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreatePayment} disabled={submitting}>
+              {submitting ? "Saving..." : "Create Payment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={journalDialogOpen} onOpenChange={setJournalDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New Journal Entry</DialogTitle>
+            <DialogDescription>Balanced debit/credit voucher</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Voucher Type</Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={journalForm.voucherType}
+                onChange={(e) => setJournalForm({ ...journalForm, voucherType: e.target.value })}
+              >
+                <option value="journal_entry">Journal Entry</option>
+                <option value="bank_entry">Bank Entry</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Debit Account ID *</Label>
+                <Input
+                  type="number"
+                  value={journalForm.debitAccountId}
+                  onChange={(e) => setJournalForm({ ...journalForm, debitAccountId: e.target.value })}
+                  placeholder="Chart of accounts ID"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Credit Account ID *</Label>
+                <Input
+                  type="number"
+                  value={journalForm.creditAccountId}
+                  onChange={(e) => setJournalForm({ ...journalForm, creditAccountId: e.target.value })}
+                  placeholder="Chart of accounts ID"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Amount *</Label>
+              <Input
+                type="number"
+                value={journalForm.amount}
+                onChange={(e) => setJournalForm({ ...journalForm, amount: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Remarks</Label>
+              <Textarea
+                value={journalForm.remarks}
+                onChange={(e) => setJournalForm({ ...journalForm, remarks: e.target.value })}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setJournalDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateJournal} disabled={submitting}>
+              {submitting ? "Saving..." : "Create Entry"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

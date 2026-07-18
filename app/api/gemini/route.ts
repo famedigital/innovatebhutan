@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError } from '@/lib/auth/api-auth';
+import { isApiError } from '@/lib/errors';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -14,6 +16,8 @@ async function getSettings(keys: string[]) {
 
 export async function POST(req: NextRequest) {
   try {
+    const _auth = await requireApiAuth(req);
+    requireStaffOrAdmin(_auth.profile);
     const body = await req.json();
     const { prompt, systemPrompt } = body;
 
