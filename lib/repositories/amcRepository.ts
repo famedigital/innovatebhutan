@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { amcs, clients, services, invoices, tickets } from "@/db/schema";
+import { amcs, clients, services } from "@/db/schema";
 import { eq, and, desc, sql, count, gte, lte, lt, ne, isNotNull, or } from "drizzle-orm";
 import { dashboardCache, withCache, CacheTTL, hashFilters, listCache } from "@/lib/cache/repository-cache";
 
