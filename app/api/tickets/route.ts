@@ -21,9 +21,13 @@ export async function GET(req: NextRequest) {
       status: query.status,
       priority: query.priority,
       clientId: query.clientId,
+      assignedTo: query.assignedTo,
+      productKey: query.productKey,
+      queue: query.queue,
       search: query.search,
       limit: query.limit,
       offset,
+      profileId: authContext.profile.id,
     });
 
     return NextResponse.json({
@@ -37,7 +41,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     const errorResponse = formatApiError(error);
-    const statusCode = isApiError(error) ? (error as any).statusCode : 500;
+    const statusCode = isApiError(error) ? (error as { statusCode?: number }).statusCode || 500 : 500;
     return NextResponse.json(errorResponse, { status: statusCode });
   }
 }
@@ -52,15 +56,23 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const data = createTicketSchema.parse(body);
-    const ticket = await ticketService.createTicket(data, authContext.profile.id);
+    const result = await ticketService.createTicket(data, authContext.profile.id);
+
+    // startAndNotify returns { ticket, notify }
+    if (result && typeof result === "object" && "notify" in (result as object)) {
+      return NextResponse.json(
+        { success: true, data: result, message: "Ticket started" },
+        { status: 201 }
+      );
+    }
 
     return NextResponse.json(
-      { success: true, data: ticket, message: "Ticket created" },
+      { success: true, data: result, message: "Ticket created" },
       { status: 201 }
     );
   } catch (error) {
     const errorResponse = formatApiError(error);
-    const statusCode = isApiError(error) ? (error as any).statusCode : 500;
+    const statusCode = isApiError(error) ? (error as { statusCode?: number }).statusCode || 500 : 500;
     return NextResponse.json(errorResponse, { status: statusCode });
   }
 }

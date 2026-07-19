@@ -26,7 +26,49 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { addOneYear, AMC_GST_RATE, formatAmcDisplayDate, type RenewalStepKey, type RenewalStepState } from "@/lib/amc/renewal";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+
+async function uploadRenewalFile(params: {
+  file: Blob;
+  filename: string;
+  purpose: "amc-quotation" | "amc-payment";
+  amcId: number;
+}): Promise<{ url: string; folder?: string }> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error("Not signed in — refresh and try again");
+  }
+
+  const typed =
+    params.file.type && params.file.type !== "application/octet-stream"
+      ? params.file
+      : new File([params.file], params.filename, {
+          type: params.filename.toLowerCase().endsWith(".pdf")
+            ? "application/pdf"
+            : params.file.type || "application/octet-stream",
+        });
+
+  const fd = new FormData();
+  fd.append("file", typed, params.filename);
+  fd.append("purpose", params.purpose);
+  fd.append("amcId", String(params.amcId));
+
+  // trailingSlash: true — must include trailing slash or Next redirects and drops Authorization
+  const up = await fetch("/api/media/upload/", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${session.access_token}` },
+    body: fd,
+  });
+  const upData = await up.json();
+  if (!up.ok || !upData?.success || !upData?.url) {
+    throw new Error(upData?.error || `Upload failed (${up.status})`);
+  }
+  return { url: upData.url as string, folder: upData.folder as string | undefined };
+}
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -88,6 +130,7 @@ type RenewalStatus = {
     endDate?: string;
     amount?: string;
     quotationPdfUrl?: string;
+    quotationSharedAt?: string;
     payment?: { proofUrl?: string; proofNote?: string; paidAt?: string };
     rancelab?: {
       remitted: boolean;
@@ -220,6 +263,19 @@ export function AmcRenewalDesk({ amc, open, onOpenChange, onRenewed }: Props) {
     }
   };
 
+  const markQuotationShared = async (opts?: { pdfUrl?: string }) => {
+    if (!amc) return;
+    await fetch(`/api/amc/${amc.id}/renewal`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        opts?.pdfUrl
+          ? { quotationPdfUrl: opts.pdfUrl }
+          : { markShared: true }
+      ),
+    });
+  };
+
   const createQuotation = async () => {
     if (!amc) return;
     setSubmitting(true);
@@ -237,8 +293,9 @@ export function AmcRenewalDesk({ amc, open, onOpenChange, onRenewed }: Props) {
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || "Quotation failed");
-      toast.success("Quotation invoice created");
+      toast.success("Quotation created — download PDF or send via WhatsApp next");
       await loadStatus(amc.id);
+      setTab("quotation");
       onRenewed?.();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Quotation failed");
@@ -252,7 +309,18 @@ export function AmcRenewalDesk({ amc, open, onOpenChange, onRenewed }: Props) {
     setSubmitting(true);
     try {
       const amount = parseFloat(form.amount) || 0;
-      // Lazy-load jspdf only on click (keeps it out of Client Component SSR graph)
+      let design = null;
+      try {
+        const tplRes = await fetch(
+          "/api/invoice-templates?product=rancelab&active=true"
+        );
+        const tplData = await tplRes.json();
+        if (tplData.success && tplData.data?.design) {
+          design = tplData.data.design;
+        }
+      } catch {
+        /* use defaults inside renderer */
+      }
       const { buildAmcQuotationPdf } = await import("@/lib/amc/quotationPdf");
       const blob = await buildAmcQuotationPdf({
         clientName: amc.clientName || `Client #${amc.clientId}`,
@@ -261,32 +329,38 @@ export function AmcRenewalDesk({ amc, open, onOpenChange, onRenewed }: Props) {
         startDate: form.startDate,
         endDate: form.endDate,
         amount,
+        design,
       });
       const filename = `AMC-Quotation-${amc.contractNumber || amc.id}.pdf`;
       downloadBlob(blob, filename);
 
-      // Upload to media for WhatsApp link
+      // Upload to Cloudinary for WhatsApp link; always unlock Payment after download
       try {
-        const fd = new FormData();
-        fd.append("file", blob, filename);
-        const up = await fetch("/api/media/upload", { method: "POST", body: fd });
-        const upData = await up.json();
-        const url = upData?.url as string | undefined;
-        if (upData?.success && url) {
-          setPdfUrl(url);
-          await fetch(`/api/amc/${amc.id}/renewal`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ quotationPdfUrl: url }),
-          });
-          toast.success("PDF ready — uploaded for sharing");
-          await loadStatus(amc.id);
-        } else {
-          toast.success("PDF downloaded");
-        }
-      } catch {
-        toast.success("PDF downloaded (upload skipped)");
+        const uploaded = await uploadRenewalFile({
+          file: blob,
+          filename,
+          purpose: "amc-quotation",
+          amcId: amc.id,
+        });
+        setPdfUrl(uploaded.url);
+        await markQuotationShared({ pdfUrl: uploaded.url });
+        toast.success(
+          uploaded.folder
+            ? `PDF downloaded · Cloudinary (${uploaded.folder}) · Payment unlocked`
+            : "PDF downloaded · Payment unlocked"
+        );
+      } catch (uploadErr: unknown) {
+        console.error(uploadErr);
+        await markQuotationShared();
+        toast.success("PDF downloaded · Payment unlocked");
+        toast.error(
+          uploadErr instanceof Error
+            ? `Cloudinary upload: ${uploadErr.message}`
+            : "Cloudinary upload failed"
+        );
       }
+      await loadStatus(amc.id);
+      setTab("quotation");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "PDF failed");
     } finally {
@@ -294,7 +368,7 @@ export function AmcRenewalDesk({ amc, open, onOpenChange, onRenewed }: Props) {
     }
   };
 
-  const openWhatsApp = () => {
+  const openWhatsApp = async () => {
     if (!amc) return;
     const url = buildWhatsAppQuotationUrl({
       phoneOrGroupLink: amc.clientWhatsapp,
@@ -309,6 +383,14 @@ export function AmcRenewalDesk({ amc, open, onOpenChange, onRenewed }: Props) {
       toast.error("No WhatsApp number or group link on this client");
       return;
     }
+    try {
+      await markQuotationShared(pdfUrl ? { pdfUrl } : undefined);
+      await loadStatus(amc.id);
+      setTab("quotation");
+      toast.success("WhatsApp opened · Payment unlocked");
+    } catch {
+      /* still open WA even if meta patch fails */
+    }
     if (amc.clientWhatsappGroupLink) {
       toast.message("Group opened — paste the message and attach the PDF");
     }
@@ -322,21 +404,28 @@ export function AmcRenewalDesk({ amc, open, onOpenChange, onRenewed }: Props) {
     }
     setSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append("file", proofFile);
-      const up = await fetch("/api/media/upload", { method: "POST", body: fd });
-      const upData = await up.json();
-      const url = upData?.url as string | undefined;
-      if (!upData?.success || !url) throw new Error(upData?.error || "Upload failed");
+      const uploaded = await uploadRenewalFile({
+        file: proofFile,
+        filename: proofFile.name || `payment-proof-${amc.id}.jpg`,
+        purpose: "amc-payment",
+        amcId: amc.id,
+      });
 
       const res = await fetch(`/api/amc/${amc.id}/renewal/payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ proofUrl: url, proofNote: proofNote || undefined }),
+        body: JSON.stringify({
+          proofUrl: uploaded.url,
+          proofNote: proofNote || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || "Payment failed");
-      toast.success("Payment marked with proof");
+      toast.success(
+        uploaded.folder
+          ? `Payment saved · proof in ${uploaded.folder}`
+          : "Payment marked with proof"
+      );
       setProofFile(null);
       await loadStatus(amc.id);
       onRenewed?.();
@@ -514,15 +603,41 @@ export function AmcRenewalDesk({ amc, open, onOpenChange, onRenewed }: Props) {
 
               {status?.quotationInvoice ? (
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button variant="outline" className="flex-1" onClick={handleDownloadPdf}>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    disabled={submitting}
+                    onClick={handleDownloadPdf}
+                  >
                     <Download className="mr-2 h-4 w-4" />
                     Download PDF
                   </Button>
-                  <Button className="flex-1" onClick={openWhatsApp}>
+                  <Button
+                    className="flex-1"
+                    disabled={submitting}
+                    onClick={() => void openWhatsApp()}
+                  >
                     <MessageCircle className="mr-2 h-4 w-4" />
                     WhatsApp client
                   </Button>
                 </div>
+              ) : null}
+
+              {status?.quotationInvoice && !status.pipeline.quotationSharedAt ? (
+                <p className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900">
+                  Stay on Quotation — download the PDF or send via WhatsApp to unlock the Payment
+                  tab.
+                </p>
+              ) : null}
+
+              {status?.pipeline.quotationSharedAt && steps?.payment === "current" ? (
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => setTab("payment")}
+                >
+                  Continue to Payment
+                </Button>
               ) : null}
             </TabsContent>
 

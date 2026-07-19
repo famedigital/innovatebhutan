@@ -11,16 +11,17 @@ import {
   tickets,
   amcs,
   clients,
+  services,
 } from "@/db/schema";
 import {
   eq,
   and,
-  desc,
   sql,
   count,
   gte,
   lte,
   isNull,
+  asc,
 } from "drizzle-orm";
 import { reportCache, withCache, hashFilters } from "@/lib/cache/repository-cache";
 
@@ -138,8 +139,50 @@ export interface AMCReportKPIs {
   totalAnnualRevenue: number;
   renewalsThisMonth: number;
   renewalRate: number;
-  topClients: Array<{ clientId: number; clientName: string; amcCount: number; totalValue: number }>;
+  topClients: Array<{
+    clientId: number | null;
+    clientName: string;
+    amcCount: number;
+    totalValue: number;
+  }>;
   amcsByService: Record<string, number>;
+  /** Shape consumed by /admin/amc/reports UI */
+  summary: {
+    totalContracts: number;
+    activeContracts: number;
+    expiringContracts: number;
+    expiredContracts: number;
+    totalMonthlyRevenue: number;
+    totalAnnualValue: number;
+    upcomingRenewals: number;
+    averageContractValue: number;
+  };
+  byStatus: Array<{
+    status: string;
+    count: number;
+    totalValue: number;
+    percentage: number;
+  }>;
+  byClient: Array<{
+    clientName: string;
+    contractCount: number;
+    totalValue: number;
+    activeContracts: number;
+    monthlyRevenue: number;
+  }>;
+  renewalTimeline: Array<{
+    month: string;
+    contractsExpiring: number;
+    valueAtRisk: number;
+  }>;
+  expiryAlert: Array<{
+    contractNumber: string;
+    clientName: string;
+    serviceName: string;
+    endDate: string;
+    daysUntilExpiry: number;
+    value: number;
+  }>;
 }
 
 // ==================== REPORT REPOSITORY ====================
@@ -640,44 +683,63 @@ export class ReportRepository {
     if (filters.status) {
       conditions.push(eq(amcs.status, filters.status));
     }
+    // Date range filters contract end dates (renewal window), not createdAt
     if (filters.startDate) {
-      conditions.push(sql`${amcs.createdAt} >= ${filters.startDate}`);
+      conditions.push(gte(amcs.endDate, filters.startDate));
     }
     if (filters.endDate) {
-      conditions.push(sql`${amcs.createdAt} <= ${filters.endDate}`);
+      conditions.push(lte(amcs.endDate, filters.endDate));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const today = new Date();
-    const thirtyDaysFromNow = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thirtyDaysFromNow = new Date(today);
     thirtyDaysFromNow.setDate(today.getDate() + 30);
+    const sixMonthsFromNow = new Date(today);
+    sixMonthsFromNow.setMonth(today.getMonth() + 6);
 
-    const [statusStats, amountStats, expiringStats, clientStats, serviceStats] = await Promise.all([
-      // AMC status breakdown
+    const alertConditions = [
+      ...(conditions.length ? conditions : []),
+      gte(amcs.endDate, today),
+      lte(amcs.endDate, thirtyDaysFromNow),
+    ];
+    const timelineConditions = [
+      ...(conditions.length ? conditions : []),
+      gte(amcs.endDate, today),
+      lte(amcs.endDate, sixMonthsFromNow),
+    ];
+
+    const [
+      statusStats,
+      amountStats,
+      expiringStats,
+      clientStats,
+      serviceStats,
+      expiryRows,
+      timelineRows,
+    ] = await Promise.all([
       this.db
         .select({
           status: amcs.status,
           count: count(),
+          totalValue: sql<number>`COALESCE(SUM(${amcs.amount}::numeric), 0)`,
         })
         .from(amcs)
         .where(whereClause)
         .groupBy(amcs.status),
 
-      // Total revenue stats
       this.db
         .select({
-          totalValue: sql<number>`COALESCE(SUM(${amcs.amount}), 0)`,
-          activeValue: sql<number>`COALESCE(SUM(CASE WHEN ${amcs.status} = 'active' THEN ${amcs.amount} ELSE 0 END), 0)`,
+          totalValue: sql<number>`COALESCE(SUM(${amcs.amount}::numeric), 0)`,
+          activeValue: sql<number>`COALESCE(SUM(CASE WHEN ${amcs.status} = 'active' THEN ${amcs.amount}::numeric ELSE 0 END), 0)`,
         })
         .from(amcs)
         .where(whereClause),
 
-      // Expiring AMCs
       this.db
-        .select({
-          count: count(),
-        })
+        .select({ count: count() })
         .from(amcs)
         .where(
           and(
@@ -687,61 +749,158 @@ export class ReportRepository {
           )
         ),
 
-      // Top clients by AMC count and value
       this.db
         .select({
           clientId: amcs.clientId,
           clientName: clients.name,
           amcCount: count(),
-          totalValue: sql<number>`COALESCE(SUM(${amcs.amount}), 0)`,
+          totalValue: sql<number>`COALESCE(SUM(${amcs.amount}::numeric), 0)`,
+          activeContracts: sql<number>`COALESCE(SUM(CASE WHEN ${amcs.status} = 'active' THEN 1 ELSE 0 END), 0)`,
         })
         .from(amcs)
         .leftJoin(clients, eq(amcs.clientId, clients.id))
         .where(whereClause)
         .groupBy(amcs.clientId, clients.name)
-        .orderBy(sql`SUM(${amcs.amount}) DESC`)
-        .limit(5),
+        .orderBy(sql`COALESCE(SUM(${amcs.amount}::numeric), 0) DESC`)
+        .limit(15),
 
-      // AMCs by service
       this.db
         .select({
           serviceId: amcs.serviceId,
+          serviceName: services.name,
           count: count(),
         })
         .from(amcs)
-        .leftJoin(clients, eq(amcs.clientId, clients.id)) // Just to have a join for consistency
+        .leftJoin(services, eq(amcs.serviceId, services.id))
         .where(whereClause)
-        .groupBy(amcs.serviceId),
+        .groupBy(amcs.serviceId, services.name),
+
+      this.db
+        .select({
+          contractNumber: amcs.contractNumber,
+          clientName: clients.name,
+          serviceName: services.name,
+          endDate: amcs.endDate,
+          amount: amcs.amount,
+        })
+        .from(amcs)
+        .leftJoin(clients, eq(amcs.clientId, clients.id))
+        .leftJoin(services, eq(amcs.serviceId, services.id))
+        .where(and(...alertConditions))
+        .orderBy(asc(amcs.endDate))
+        .limit(50),
+
+      this.db
+        .select({
+          month: sql<string>`to_char(date_trunc('month', ${amcs.endDate}), 'YYYY-MM')`,
+          contractsExpiring: count(),
+          valueAtRisk: sql<number>`COALESCE(SUM(${amcs.amount}::numeric), 0)`,
+        })
+        .from(amcs)
+        .where(and(...timelineConditions))
+        .groupBy(sql`date_trunc('month', ${amcs.endDate})`)
+        .orderBy(sql`date_trunc('month', ${amcs.endDate}) ASC`),
     ]);
 
-    const byStatus = statusStats.reduce((acc, item) => {
-      acc[item.status || "unknown"] = Number(item.count);
-      return acc;
-    }, {} as Record<string, number>);
+    const byStatusMap = statusStats.reduce(
+      (acc, item) => {
+        acc[item.status || "unknown"] = Number(item.count);
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
+    const totalAMCs = Object.values(byStatusMap).reduce(
+      (sum, val) => sum + (val as number),
+      0
+    );
     const totalValue = Number(amountStats[0]?.totalValue) || 0;
-    const activeValue = Number(amountStats[0]?.activeValue) || 0;
+    const activeAMCs = byStatusMap.active || 0;
+    const expiringAMCs = Number(expiringStats[0]?.count) || 0;
+    const expiredAMCs = byStatusMap.expired || 0;
+    const cancelledAMCs = byStatusMap.cancelled || 0;
+    const totalMonthlyRevenue = Math.round(totalValue / 12);
+
+    const byStatus = statusStats.map((row) => {
+      const countNum = Number(row.count) || 0;
+      return {
+        status: row.status || "unknown",
+        count: countNum,
+        totalValue: Number(row.totalValue) || 0,
+        percentage: totalAMCs > 0 ? Math.round((countNum / totalAMCs) * 1000) / 10 : 0,
+      };
+    });
+
+    const byClient = clientStats.map((c) => {
+      const value = Number(c.totalValue) || 0;
+      return {
+        clientName: c.clientName || "Unknown",
+        contractCount: Number(c.amcCount) || 0,
+        totalValue: value,
+        activeContracts: Number(c.activeContracts) || 0,
+        monthlyRevenue: Math.round(value / 12),
+      };
+    });
+
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const expiryAlert = expiryRows.map((row) => {
+      const end = row.endDate ? new Date(row.endDate) : today;
+      const daysUntilExpiry = Math.ceil((end.getTime() - today.getTime()) / msPerDay);
+      return {
+        contractNumber: row.contractNumber || "—",
+        clientName: row.clientName || "Unknown",
+        serviceName: row.serviceName || "",
+        endDate: end.toISOString(),
+        daysUntilExpiry,
+        value: Number(row.amount) || 0,
+      };
+    });
+
+    const renewalTimeline = timelineRows.map((row) => ({
+      month: row.month,
+      contractsExpiring: Number(row.contractsExpiring) || 0,
+      valueAtRisk: Number(row.valueAtRisk) || 0,
+    }));
 
     return {
-      totalAMCs: Object.values(byStatus).reduce((sum: number, val) => sum + (val as number), 0),
-      activeAMCs: byStatus.active || 0,
-      expiringAMCs: Number(expiringStats[0]?.count) || 0,
-      expiredAMCs: byStatus.expired || 0,
-      cancelledAMCs: byStatus.cancelled || 0,
-      totalMonthlyRevenue: Math.round(totalValue / 12),
+      totalAMCs,
+      activeAMCs,
+      expiringAMCs,
+      expiredAMCs,
+      cancelledAMCs,
+      totalMonthlyRevenue,
       totalAnnualRevenue: totalValue,
-      renewalsThisMonth: 0, // Would need renewal tracking
-      renewalRate: 0, // Would need historical data
-      topClients: clientStats.map(c => ({
+      renewalsThisMonth: expiringAMCs,
+      renewalRate: 0,
+      topClients: clientStats.slice(0, 5).map((c) => ({
         clientId: c.clientId,
         clientName: c.clientName || "Unknown",
-        amcCount: Number(c.amcCount),
-        totalValue: Number(c.totalValue),
+        amcCount: Number(c.amcCount) || 0,
+        totalValue: Number(c.totalValue) || 0,
       })),
-      amcsByService: serviceStats.reduce((acc, item) => {
-        acc[`service_${item.serviceId}`] = Number(item.count);
-        return acc;
-      }, {} as Record<string, number>),
+      amcsByService: serviceStats.reduce(
+        (acc, item) => {
+          const key = item.serviceName || `service_${item.serviceId ?? "none"}`;
+          acc[key] = Number(item.count) || 0;
+          return acc;
+        },
+        {} as Record<string, number>
+      ),
+      summary: {
+        totalContracts: totalAMCs,
+        activeContracts: activeAMCs,
+        expiringContracts: expiringAMCs,
+        expiredContracts: expiredAMCs,
+        totalMonthlyRevenue,
+        totalAnnualValue: totalValue,
+        upcomingRenewals: expiringAMCs,
+        averageContractValue:
+          activeAMCs > 0 ? Math.round(totalValue / Math.max(activeAMCs, 1)) : 0,
+      },
+      byStatus,
+      byClient,
+      renewalTimeline,
+      expiryAlert,
     };
   }
 }

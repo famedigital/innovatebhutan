@@ -20,6 +20,8 @@ export type AmcRenewalPipeline = {
   quotationPdfUrl?: string;
   quotationSharedAt?: string;
   claimedByEmployeeId?: number;
+  quotationPdfNeedsRegen?: boolean;
+  quotationTemplateId?: number;
   payment?: {
     paidAt?: string;
     proofUrl?: string;
@@ -113,6 +115,8 @@ export function computeRenewalSteps(params: {
 }): Record<RenewalStepKey, RenewalStepState> {
   const { pipeline, invoiceStatus, alreadyRenewed } = params;
   const hasQuote = !!pipeline.quotationInvoiceId;
+  // Stay on Quotation until staff downloads PDF or opens WhatsApp
+  const quoteShared = !!pipeline.quotationSharedAt;
   const paid = invoiceStatus === "paid";
   const hasProof = !!pipeline.payment?.proofUrl;
   const remitted = !!pipeline.rancelab?.remitted;
@@ -121,7 +125,7 @@ export function computeRenewalSteps(params: {
     return { quotation: "done", payment: "done", rancelab: "done", license: "done" };
   }
 
-  if (!hasQuote) {
+  if (!hasQuote || !quoteShared) {
     return { quotation: "current", payment: "locked", rancelab: "locked", license: "locked" };
   }
   if (!paid || !hasProof) {

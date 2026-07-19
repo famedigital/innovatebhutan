@@ -394,7 +394,7 @@ export function ServicesEditor() {
         formData.append("file", file);
         formData.append("folder", "services");
 
-        const response = await fetch("/api/media/upload", {
+        const response = await fetch("/api/media/upload/", {
           method: "POST",
           body: formData,
         });

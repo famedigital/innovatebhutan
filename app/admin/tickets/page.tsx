@@ -1,14 +1,10 @@
-import { AdminPageHeader } from "@/components/admin/admin-page-header";
-import { TicketHub } from "./ticket-hub";
+import { TicketCallCentreDesk } from "@/components/admin/ticket-callcentre-desk";
 
 export default function TicketsPage() {
   return (
-    <div className="space-y-4">
-      <AdminPageHeader
-        title="Tickets"
-        description="Support tickets and client requests"
-      />
-      <TicketHub />
-    </div>
+    <TicketCallCentreDesk
+      title="Support tickets"
+      description="Call-centre desk for all products — log, assign, start, acknowledge, resolve"
+    />
   );
 }

@@ -27,10 +27,16 @@ const LINKS = [
     icon: ShieldCheck,
   },
   {
-    href: "/admin/tickets",
+    href: "/admin/products/rancelab/tickets",
     title: "Tickets",
-    description: "Support tickets for RanceLab clients",
+    description: "Call-centre desk for RanceLab clients",
     icon: Ticket,
+  },
+  {
+    href: "/admin/products/rancelab/invoice-design",
+    title: "Invoice design",
+    description: "Letterhead, numbering, GST — used by quotations & invoices",
+    icon: FileText,
   },
   {
     href: "/admin/clients",

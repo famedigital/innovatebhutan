@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Item, ItemActions, ItemContent, ItemDescription, ItemTitle,
+  Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle,
 } from "@/components/ui/item";
 import { ResponsiveDataList } from "@/components/admin/responsive-data-list";
 import { toast } from "sonner";
@@ -275,19 +275,19 @@ export function TicketHub() {
         </div>
       </div>
 
-      {/* Create Modal */}
+      {/* Create Modal — bottom sheet on mobile, scrollable body */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowCreate(false)} />
-          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="relative bg-background rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-md max-h-[92dvh] flex flex-col border">
+            <div className="flex items-center justify-between p-4 border-b shrink-0">
               <h3 className="font-semibold text-lg">Create New Ticket</h3>
               <Button variant="ghost" size="icon" onClick={() => setShowCreate(false)}>
                 <X className="w-5 h-5" />
               </Button>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 overflow-y-auto overscroll-contain min-h-0 flex-1">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Subject *</label>
                 <Input
@@ -382,14 +382,15 @@ export function TicketHub() {
                 />
               </div>
 
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" className="flex-1 border-border" onClick={() => setShowCreate(false)}>
-                  Cancel
-                </Button>
-                <Button className="flex-1" onClick={handleCreateTicket}>
-                  Create Ticket
-                </Button>
-              </div>
+            </div>
+
+            <div className="flex gap-2 p-4 border-t shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <Button variant="outline" className="flex-1" onClick={() => setShowCreate(false)}>
+                Cancel
+              </Button>
+              <Button className="flex-1" onClick={handleCreateTicket}>
+                Create Ticket
+              </Button>
             </div>
           </div>
         </div>
@@ -520,38 +521,53 @@ export function TicketHub() {
             })
           )
         }
-        mobileItems={filteredTickets.map((ticket) => (
-          <Item
-            key={ticket.id}
-            size="sm"
-            className="rounded-none border-0 cursor-pointer hover:bg-accent/50"
-            onClick={() => openTicketDetail(ticket.id)}
-          >
-            <ItemContent>
-              <ItemTitle className="w-full justify-between gap-2">
-                <span className="truncate">{ticket.subject}</span>
-                <Badge variant="secondary" className="shrink-0 text-[10px]">
-                  {ticket.status.replace("_", " ")}
-                </Badge>
-              </ItemTitle>
-              <ItemDescription>
-                #{ticket.id} · {ticket.clients?.name || "No client"} ·{" "}
-                {ticket.priority}
-                {ticket.sla_breach ? " · SLA breached" : ""}
-              </ItemDescription>
-            </ItemContent>
-            <ItemActions onClick={(e) => e.stopPropagation()}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => openTicketDetail(ticket.id)}
+        mobileItems={filteredTickets.map((ticket) => {
+          const clientLabel =
+            ticket.clients?.name || ticket.clientName || "No client";
+          return (
+            <Item
+              key={ticket.id}
+              size="sm"
+              className="flex-nowrap rounded-none border-0 cursor-pointer hover:bg-accent/50 active:bg-accent"
+              onClick={() => openTicketDetail(ticket.id)}
+            >
+              <ItemMedia variant="icon" className="bg-secondary shrink-0">
+                <span className="text-xs font-semibold">
+                  {clientLabel.charAt(0).toUpperCase()}
+                </span>
+              </ItemMedia>
+              <ItemContent className="min-w-0">
+                <ItemTitle className="w-full max-w-full justify-between gap-2">
+                  <span className="truncate min-w-0">{ticket.subject}</span>
+                  <Badge
+                    variant="secondary"
+                    className="shrink-0 text-[10px] capitalize"
+                  >
+                    {String(ticket.status || "").replace("_", " ")}
+                  </Badge>
+                </ItemTitle>
+                <ItemDescription className="truncate">
+                  #{ticket.id} · {clientLabel} · {ticket.priority}
+                  {ticket.sla_breach ? " · SLA breached" : ""}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions
+                className="shrink-0"
+                onClick={(e) => e.stopPropagation()}
               >
-                <Eye className="w-4 h-4" />
-              </Button>
-            </ItemActions>
-          </Item>
-        ))}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label="Open ticket"
+                  onClick={() => openTicketDetail(ticket.id)}
+                >
+                  <Eye className="w-4 h-4" />
+                </Button>
+              </ItemActions>
+            </Item>
+          );
+        })}
       />
 
       {/* Ticket Detail Modal */}

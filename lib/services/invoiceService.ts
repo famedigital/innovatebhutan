@@ -1,6 +1,8 @@
 import { invoiceRepository } from "@/lib/repositories/invoiceRepository";
 import type { CreateInvoiceInput, UpdateInvoiceInput, InvoiceStatus } from "@/lib/validations/invoice";
 import { notificationService } from "@/lib/services/notificationService";
+import { invoiceTemplateService } from "@/lib/services/invoiceTemplateService";
+import type { ProductKey } from "@/lib/invoices/templateDefaults";
 
 export interface CreateInvoiceDTO {
   clientId: number;
@@ -9,6 +11,7 @@ export interface CreateInvoiceDTO {
   dueDate: Date;
   items: Array<{ description: string; quantity: number; rate: number }>;
   notes?: string;
+  productKey?: ProductKey;
 }
 
 export interface UpdateInvoiceDTO {
@@ -37,22 +40,44 @@ export class InvoiceService {
   // ==================== INVOICE GENERATION ====================
 
   async generateInvoice(data: CreateInvoiceDTO) {
-    // Collision-safe invoice number: INV-YYYYMMDD-<seq>-<shortId>
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const productKey = data.productKey || "rancelab";
     const existing = await this.repository.listInvoices({ limit: 1, offset: 0 });
-    const seq = String((existing.total || 0) + 1).padStart(4, "0");
-    const shortId = Date.now().toString(36).slice(-4).toUpperCase();
-    let invoiceNumber = `INV-${dateStr}-${seq}-${shortId}`;
+    const seq = (existing.total || 0) + 1;
 
-    // Retry once if rare collision
-    const clash = await this.repository.getInvoiceByNumber(invoiceNumber);
-    if (clash) {
-      invoiceNumber = `INV-${dateStr}-${seq}-${Date.now().toString(36).toUpperCase()}`;
+    let invoiceNumber: string;
+    let templateId: number | undefined;
+    let templateSnapshot: unknown;
+
+    try {
+      const numbered = await invoiceTemplateService.nextInvoiceNumber(
+        productKey,
+        seq
+      );
+      invoiceNumber = numbered.invoiceNumber;
+      templateId = numbered.template.id;
+      templateSnapshot = numbered.design;
+
+      const clash = await this.repository.getInvoiceByNumber(invoiceNumber);
+      if (clash) {
+        const retry = await invoiceTemplateService.nextInvoiceNumber(
+          productKey,
+          seq + Date.now() % 100
+        );
+        invoiceNumber = retry.invoiceNumber;
+        templateId = retry.template.id;
+        templateSnapshot = retry.design;
+      }
+    } catch {
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const shortId = Date.now().toString(36).slice(-4).toUpperCase();
+      invoiceNumber = `INV-${dateStr}-${String(seq).padStart(4, "0")}-${shortId}`;
     }
 
-    // Calculate total
-    const total = data.items.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
-    const itemsWithAmount = data.items.map(item => ({
+    const total = data.items.reduce(
+      (sum, item) => sum + item.quantity * item.rate,
+      0
+    );
+    const itemsWithAmount = data.items.map((item) => ({
       ...item,
       amount: item.quantity * item.rate,
     }));
@@ -67,6 +92,9 @@ export class InvoiceService {
       items: itemsWithAmount,
       notes: data.notes,
       status: "draft",
+      productKey,
+      templateId: templateId ?? null,
+      templateSnapshot: templateSnapshot ?? null,
     });
   }
 

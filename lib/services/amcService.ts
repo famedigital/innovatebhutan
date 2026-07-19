@@ -355,6 +355,7 @@ export class AMCService {
       ]
         .filter(Boolean)
         .join("\n"),
+      productKey: "rancelab",
     });
 
     await invoiceService.markInvoiceAsSent(invoice.id);

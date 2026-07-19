@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   MessageSquare, Send, Clock, AlertCircle, CheckCircle2,
-  User, Calendar, Tag, Paperclip, X, RefreshCw
+  User, Calendar, Tag, X, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,7 @@ interface Ticket {
   client_whatsapp_group?: string | null;
   subject: string;
   description: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  status: 'open' | 'started' | 'in_progress' | 'resolved' | 'closed';
   priority: 'low' | 'medium' | 'high';
   assigned_to?: number;
   assigned_name?: string;
@@ -291,8 +291,9 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'open': return 'bg-green-50 text-green-600 border-green-200';
+      case 'started': return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'in_progress': return 'bg-blue-50 text-blue-600 border-blue-200';
-      case 'resolved': return 'bg-amber-50 text-amber-600 border-amber-200';
+      case 'resolved': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'closed': return 'bg-gray-50 text-gray-600 border-gray-200';
       default: return 'bg-gray-50 text-gray-600 border-gray-200';
     }
@@ -311,47 +312,57 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white border-[#E5E5E1] max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent
+        showCloseButton
+        className="!flex !flex-col gap-0 overflow-hidden p-0
+          w-[calc(100%-0.75rem)] sm:w-full max-w-3xl
+          h-[min(94dvh,920px)] max-h-[94dvh]
+          top-[3dvh] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]
+          rounded-xl"
+      >
         {loading ? (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-1 items-center justify-center py-16">
             <RefreshCw className="w-6 h-6 animate-spin text-[#3ECF8E]" />
           </div>
         ) : ticket ? (
           <>
-            <DialogHeader className="pb-4 border-b border-[#E5E5E1]">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <DialogTitle className="text-lg">{ticket.subject}</DialogTitle>
-                    <Badge className={`${getPriorityColor(ticket.priority)} text-[10px]`}>
+            <DialogHeader className="shrink-0 space-y-3 border-b px-4 pb-3 pt-4 pr-12 text-left sm:px-6">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <DialogTitle className="text-base sm:text-lg leading-snug break-words">
+                      {ticket.subject}
+                    </DialogTitle>
+                    <Badge className={`${getPriorityColor(ticket.priority)} text-[10px] shrink-0`}>
                       {ticket.priority}
                     </Badge>
+                    <Badge className={`${getStatusColor(ticket.status)} text-[10px] shrink-0 capitalize`}>
+                      {ticket.status.replace("_", " ")}
+                    </Badge>
                   </div>
-                  <DialogDescription className="flex items-center gap-3 text-xs">
-                    <span className="flex items-center gap-1">
-                      <User className="w-3 h-3" />
-                      {ticket.client_name || 'Unknown Client'}
+                  <DialogDescription className="sr-only">
+                    Ticket #{ticket.id} for {ticket.client_name || "client"}
+                  </DialogDescription>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span className="inline-flex min-w-0 items-center gap-1">
+                      <User className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{ticket.client_name || "Unknown Client"}</span>
                     </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="h-3 w-3 shrink-0" />
                       {new Date(ticket.created_at).toLocaleString()}
                     </span>
-                    {ticket.assigned_name && (
-                      <span className="flex items-center gap-1">
-                        <Tag className="w-3 h-3" />
+                    {ticket.assigned_name ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Tag className="h-3 w-3 shrink-0" />
                         {ticket.assigned_name}
                       </span>
-                    )}
-                  </DialogDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge className={`${getStatusColor(ticket.status)} text-[10px]`}>
-                    {ticket.status.replace('_', ' ')}
-                  </Badge>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <div>
                   <p className="text-[10px] uppercase text-muted-foreground mb-1">Assign staff</p>
                   <Select
@@ -391,8 +402,85 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
                 </div>
               </div>
 
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(ticket.status === "started" || ticket.status === "open") && (
+                  <Button
+                    size="sm"
+                    className="min-h-10"
+                    disabled={updating}
+                    onClick={async () => {
+                      setUpdating(true);
+                      try {
+                        const res = await fetch(`/api/tickets/${ticketId}/actions`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ action: "acknowledge" }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok || !data.success) throw new Error(data.error);
+                        toast.success("Acknowledged — On process");
+                        fetchTicketDetails();
+                        onTicketUpdate?.();
+                      } catch (e: unknown) {
+                        toast.error(e instanceof Error ? e.message : "Failed");
+                      } finally {
+                        setUpdating(false);
+                      }
+                    }}
+                  >
+                    Acknowledge → On process
+                  </Button>
+                )}
+                {ticket.status === "in_progress" && (
+                  <Button
+                    size="sm"
+                    className="min-h-10"
+                    disabled={updating}
+                    onClick={async () => {
+                      setUpdating(true);
+                      try {
+                        const res = await fetch(`/api/tickets/${ticketId}/actions`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ action: "resolve" }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok || !data.success) throw new Error(data.error);
+                        const notify = data.data?.notify;
+                        if (notify?.text) {
+                          try {
+                            await navigator.clipboard.writeText(notify.text);
+                          } catch {
+                            /* ignore */
+                          }
+                          if (notify.whatsappUrl || notify.groupLink) {
+                            window.open(
+                              notify.whatsappUrl || notify.groupLink,
+                              "_blank",
+                              "noopener,noreferrer"
+                            );
+                          }
+                          toast.success("Resolved — paste message in WhatsApp group");
+                        } else {
+                          toast.success("Resolved");
+                        }
+                        fetchTicketDetails();
+                        onTicketUpdate?.();
+                      } catch (e: unknown) {
+                        toast.error(e instanceof Error ? e.message : "Failed");
+                      } finally {
+                        setUpdating(false);
+                      }
+                    }}
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Mark resolved + notify group
+                  </Button>
+                )}
+              </div>
+
               {(ticket.client_whatsapp_group || ticket.client_whatsapp) && (
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2">
                   {ticket.client_whatsapp_group && (
                     <Button variant="outline" size="sm" asChild>
                       <a
@@ -418,56 +506,62 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
                 </div>
               )}
 
-              {/* SLA Warning */}
-              {slaInfo && ticket.status === 'open' && (
-                <Card className={`mt-3 ${slaInfo.isBreached ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
-                  <CardContent className="p-2 flex items-center gap-2">
-                    {slaInfo.isBreached ? (
-                      <AlertCircle className="w-4 h-4 text-red-600" />
-                    ) : (
-                      <Clock className="w-4 h-4 text-blue-600" />
-                    )}
-                    <span className="text-xs font-medium">
-                      {slaInfo.isBreached
-                        ? `SLA Breached! Overdue by ${Math.abs(slaInfo.hoursRemaining)} hours`
-                        : `${slaInfo.hoursRemaining} hours remaining until SLA deadline`}
-                    </span>
-                    <span className="text-[10px] text-[#717171] ml-auto">
-                      Deadline: {slaInfo.deadline.toLocaleString()}
+              {slaInfo && (ticket.status === "open" || ticket.status === "started") && (
+                <Card
+                  className={
+                    slaInfo.isBreached
+                      ? "bg-red-50 border-red-200"
+                      : "bg-blue-50 border-blue-200"
+                  }
+                >
+                  <CardContent className="flex flex-col gap-1 p-2 sm:flex-row sm:items-center sm:gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {slaInfo.isBreached ? (
+                        <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                      ) : (
+                        <Clock className="w-4 h-4 shrink-0 text-blue-600" />
+                      )}
+                      <span className="text-xs font-medium">
+                        {slaInfo.isBreached
+                          ? `SLA breached — overdue by ${Math.abs(slaInfo.hoursRemaining)}h`
+                          : `${slaInfo.hoursRemaining}h until SLA deadline`}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground sm:ml-auto">
+                      {slaInfo.deadline.toLocaleString()}
                     </span>
                   </CardContent>
                 </Card>
               )}
             </DialogHeader>
 
-            <div className="flex-1 overflow-auto flex flex-col">
-              {/* Messages */}
-              <div className="flex-1 overflow-auto p-4 space-y-3">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
                 {messages.length === 0 ? (
-                  <div className="text-center text-[#717171] py-8">
-                    <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <div className="py-8 text-center text-muted-foreground">
+                    <MessageSquare className="mx-auto mb-2 h-8 w-8 opacity-50" />
                     <p className="text-sm">No messages yet. Start the conversation!</p>
                   </div>
                 ) : (
                   messages.map((msg) => (
                     <div
                       key={msg.id}
-                      className={`flex ${msg.is_system ? 'justify-center' : 'justify-start'}`}
+                      className={`flex ${msg.is_system ? "justify-center" : "justify-start"}`}
                     >
                       {msg.is_system ? (
-                        <div className="bg-[#F3F3F1] px-3 py-1 rounded-full text-xs text-[#717171]">
+                        <div className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
                           {msg.message}
                         </div>
                       ) : (
-                        <div className="max-w-[80%]">
-                          <div className="flex items-center gap-2 mb-1">
+                        <div className="max-w-[90%] sm:max-w-[80%]">
+                          <div className="mb-1 flex flex-wrap items-center gap-2">
                             <span className="text-xs font-medium">{msg.sender_name}</span>
-                            <span className="text-[10px] text-[#717171]">
+                            <span className="text-[10px] text-muted-foreground">
                               {new Date(msg.created_at).toLocaleString()}
                             </span>
                           </div>
-                          <div className="bg-[#F3F3F1] rounded-lg p-3">
-                            <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                          <div className="rounded-lg bg-muted p-3">
+                            <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
                           </div>
                         </div>
                       )}
@@ -477,18 +571,18 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Follow-up + reply */}
-              <div className="p-4 border-t space-y-3">
+              <div className="shrink-0 space-y-3 border-t p-3 sm:p-4">
                 <div className="flex gap-2">
                   <Input
                     placeholder="Log a follow-up note…"
                     value={followUpNote}
                     onChange={(e) => setFollowUpNote(e.target.value)}
-                    className="flex-1 h-9"
+                    className="h-9 min-w-0 flex-1"
                   />
                   <Button
                     variant="outline"
                     size="sm"
+                    className="shrink-0"
                     onClick={postFollowUp}
                     disabled={sending || !followUpNote.trim()}
                   >
@@ -506,74 +600,60 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
                         sendMessage();
                       }
                     }}
-                    className="flex-1 min-h-[60px] resize-none"
+                    className="min-h-[56px] flex-1 resize-none"
                     disabled={sending}
                   />
                   <Button
                     onClick={sendMessage}
                     disabled={sending || !newMessage.trim()}
-                    className="self-end"
+                    className="shrink-0 self-end"
+                    size="icon"
+                    aria-label="Send message"
                   >
                     {sending ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <RefreshCw className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Send className="w-4 h-4" />
+                      <Send className="h-4 w-4" />
                     )}
                   </Button>
                 </div>
               </div>
             </div>
 
-            <DialogFooter className="pt-4 border-t border-[#E5E5E1]">
-              <div className="flex items-center gap-3 w-full">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[#717171]">Status:</span>
+            <DialogFooter className="shrink-0 border-t px-3 py-3 sm:px-6 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className="shrink-0 text-xs text-muted-foreground">Status</span>
                   <Select
                     value={ticket.status}
                     onValueChange={updateStatus}
                     disabled={updating}
                   >
-                    <SelectTrigger className="h-8 w-32">
+                    <SelectTrigger className="h-9 w-full sm:w-40">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="open">Open</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="started">Started</SelectItem>
+                      <SelectItem value="in_progress">On process</SelectItem>
                       <SelectItem value="resolved">Resolved</SelectItem>
                       <SelectItem value="closed">Closed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[#717171]">Priority:</span>
-                  <Select
-                    value={ticket.priority}
-                    onValueChange={updatePriority}
-                    disabled={updating}
-                  >
-                    <SelectTrigger className="h-8 w-28">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="ml-auto">
-                  <Button variant="outline" onClick={() => onOpenChange(false)}>
-                    Close
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  className="w-full sm:ml-auto sm:w-auto"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Close
+                </Button>
               </div>
             </DialogFooter>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-[#717171]">No ticket selected</p>
+          <div className="flex flex-1 items-center justify-center py-16">
+            <p className="text-muted-foreground">No ticket selected</p>
           </div>
         )}
       </DialogContent>

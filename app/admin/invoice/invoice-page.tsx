@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import {
   FileText, Plus, Search, Send, Eye, Trash2,
   Calendar, DollarSign, RefreshCw, CheckCircle, Clock,
-  AlertCircle, X, CreditCard, Ban, XCircle, AlertTriangle
+  AlertCircle, X, CreditCard, Ban, XCircle, AlertTriangle, Download
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,8 @@ interface Invoice {
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
   items: InvoiceItem[];
   notes?: string;
+  productKey?: string;
+  templateSnapshot?: Record<string, unknown>;
 }
 
 interface InvoiceItem {
@@ -877,6 +879,54 @@ export default function InvoicePageClient() {
 
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowDetail(false)}>Close</Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    if (!selectedInvoice) return;
+                    try {
+                      let design = selectedInvoice.templateSnapshot || null;
+                      if (!design) {
+                        const pk = selectedInvoice.productKey || "rancelab";
+                        const tplRes = await fetch(
+                          `/api/invoice-templates?product=${pk}&active=true`
+                        );
+                        const tplData = await tplRes.json();
+                        if (tplData.success) design = tplData.data?.design;
+                      }
+                      const { renderInvoicePdf } = await import(
+                        "@/lib/invoices/renderInvoicePdf"
+                      );
+                      const blob = await renderInvoicePdf({
+                        design: design as never,
+                        clientName:
+                          selectedInvoice.clientName ||
+                          `Client #${selectedInvoice.clientId}`,
+                        invoiceNumber: selectedInvoice.invoiceNumber,
+                        issueDate: selectedInvoice.issueDate,
+                        dueDate: selectedInvoice.dueDate,
+                        lines: (selectedInvoice.items || []).map((it) => ({
+                          description: it.description,
+                          quantity: it.quantity,
+                          rate: it.rate,
+                        })),
+                      });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `${selectedInvoice.invoiceNumber}.pdf`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast.success("PDF downloaded");
+                    } catch (e: unknown) {
+                      toast.error(
+                        e instanceof Error ? e.message : "PDF failed"
+                      );
+                    }
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download PDF
+                </Button>
                 {selectedInvoice.status === 'draft' && (
                   <Button
                     className="bg-blue-600 hover:bg-blue-700 text-white"

@@ -135,19 +135,31 @@ export const amcs = pgTable("amcs", {
 
 /**
  * 🎫 SUPPORT TICKETS
- * Automated support flow triage.
+ * Call-centre dispatch: open → started → in_progress → resolved → closed
  */
 export const tickets = pgTable("tickets", {
   id: serial("id").primaryKey(),
+  publicId: varchar("public_id", { length: 50 }).unique(),
   clientId: integer("client_id").references(() => clients.id),
   assignedTo: integer("assigned_to").references(() => profiles.id),
   subject: varchar("subject", { length: 255 }).notNull(),
   description: text("description"),
-  status: varchar("status", { length: 50 }).default("open"), // open, in_progress, resolved
+  status: varchar("status", { length: 50 }).default("open"), // open, started, in_progress, resolved, closed
   priority: varchar("priority", { length: 50 }).default("medium"), // low, medium, high
+  productKey: varchar("product_key", { length: 50 }), // rancelab | website | cctv
+  source: varchar("source", { length: 50 }).default("call_centre"), // call_centre | whatsapp | portal
+  acknowledgedAt: timestamp("acknowledged_at"),
+  acknowledgedBy: integer("acknowledged_by").references(() => profiles.id),
+  groupNotifiedAt: timestamp("group_notified_at"),
+  resolveNotifiedAt: timestamp("resolve_notified_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  publicIdx: index("idx_tickets_public").on(table.publicId),
+  productIdx: index("idx_tickets_product").on(table.productKey),
+  statusIdx: index("idx_tickets_status").on(table.status),
+  assignedIdx: index("idx_tickets_assigned").on(table.assignedTo),
+}));
 
 /**
  * 💬 TICKET THREADS
@@ -307,6 +319,10 @@ export const invoices = pgTable("invoices", {
   status: varchar("status", { length: 50 }).default("draft"), // draft, sent, paid, overdue, cancelled
   items: jsonb("items"), // Array of line items: [{ description, quantity, rate, amount }]
   notes: text("notes"),
+  templateId: integer("template_id"), // invoice_templates.id used when generated
+  templateSnapshot: jsonb("template_snapshot"), // design frozen at generation time
+  pdfUrl: text("pdf_url"), // Cloudinary URL after upload/regenerate
+  productKey: varchar("product_key", { length: 50 }), // rancelab | website | cctv
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
@@ -314,6 +330,7 @@ export const invoices = pgTable("invoices", {
   statusIdx: index("idx_invoices_status").on(table.status),
   invoiceNumberIdx: index("idx_invoices_number").on(table.invoiceNumber),
   dueDateIdx: index("idx_invoices_due").on(table.dueDate),
+  productIdx: index("idx_invoices_product").on(table.productKey),
 }));
 
 /**
@@ -2078,5 +2095,24 @@ export const botTrainingData = pgTable("bot_training_data", {
   activeIdx: index("idx_bot_training_active").on(table.isActive),
   qualityIdx: index("idx_bot_training_quality").on(table.quality),
   successRateIdx: index("idx_bot_training_success").on(table.successRate),
+}));
+
+/**
+ * 📄 INVOICE / QUOTATION TEMPLATES
+ * Versioned product letterheads (RanceLab, Website, CCTV). Active version drives new PDFs.
+ */
+export const invoiceTemplates = pgTable("invoice_templates", {
+  id: serial("id").primaryKey(),
+  productKey: varchar("product_key", { length: 50 }).notNull(), // rancelab | website | cctv
+  name: varchar("name", { length: 255 }).notNull(),
+  version: integer("version").notNull().default(1),
+  isActive: boolean("is_active").default(false),
+  design: jsonb("design").notNull(), // InvoiceTemplateDesign
+  createdBy: text("created_by"), // profiles.user_id
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  productIdx: index("idx_invoice_templates_product").on(table.productKey),
+  activeIdx: index("idx_invoice_templates_active").on(table.productKey, table.isActive),
 }));
 

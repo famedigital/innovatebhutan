@@ -79,10 +79,30 @@ export default function AMCReportsPage() {
     try {
       const params = new URLSearchParams();
       if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
-      if (dateRange?.from) params.append("startDate", dateRange.from.toISOString());
-      if (dateRange?.to) params.append("endDate", dateRange.to.toISOString());
+      if (dateRange?.from) {
+        const start = new Date(dateRange.from);
+        start.setHours(0, 0, 0, 0);
+        params.append("startDate", start.toISOString());
+      }
+      if (dateRange?.to || dateRange?.from) {
+        const end = new Date(dateRange.to || dateRange.from!);
+        end.setHours(23, 59, 59, 999);
+        params.append("endDate", end.toISOString());
+      }
 
-      const response = await fetch(`/api/reports/amc?${params}`);
+      const { createClient } = await import("@/utils/supabase/client");
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      // trailingSlash: true — keep slash so auth cookies / Bearer survive
+      const response = await fetch(`/api/reports/amc/?${params}`, {
+        credentials: "include",
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : undefined,
+      });
       const data = await response.json();
 
       if (data.success) {
@@ -280,7 +300,7 @@ export default function AMCReportsPage() {
         </CardContent>
       </Card>
 
-      {kpis && kpis.summary && (
+      {kpis && kpis.summary ? (
         <>
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -549,6 +569,12 @@ export default function AMCReportsPage() {
             </TabsContent>
           </Tabs>
         </>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-[#717171]">
+            No report data yet. Clear filters or pick a wider date range, then refresh.
+          </CardContent>
+        </Card>
       )}
     </div>
   );

@@ -8,9 +8,14 @@ import { validateId, validateRequest } from "@/lib/validations/validation";
 import { getRenewalPipeline, withRenewalPipeline } from "@/lib/amc/renewal";
 import { amcRepository } from "@/lib/repositories/amcRepository";
 
-const pdfMetaSchema = z.object({
-  quotationPdfUrl: z.string().url(),
-});
+const renewalMetaSchema = z
+  .object({
+    quotationPdfUrl: z.string().url().optional(),
+    markShared: z.boolean().optional(),
+  })
+  .refine((d) => !!d.quotationPdfUrl || d.markShared === true, {
+    message: "Provide quotationPdfUrl or markShared",
+  });
 
 /**
  * GET /api/amc/[id]/renewal — renewal pipeline status
@@ -71,13 +76,15 @@ export async function PATCH(
     if (!amc) throw new NotFoundError("AMC");
 
     const body = await req.json();
-    const validated = validateRequest(pdfMetaSchema, body);
+    const validated = validateRequest(renewalMetaSchema, body);
     const pipeline = getRenewalPipeline(amc.meta);
 
     const updated = await amcRepository.updateAMC(amcId, {
       meta: withRenewalPipeline(amc.meta, {
         ...pipeline,
-        quotationPdfUrl: validated.quotationPdfUrl,
+        ...(validated.quotationPdfUrl
+          ? { quotationPdfUrl: validated.quotationPdfUrl }
+          : {}),
         quotationSharedAt: new Date().toISOString(),
       }),
     });

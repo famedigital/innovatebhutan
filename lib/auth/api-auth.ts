@@ -3,7 +3,10 @@
  * Provides middleware functions for protecting API routes
  */
 
+import { eq } from 'drizzle-orm';
 import { createClient } from '@/utils/supabase/server';
+import { db } from '@/db';
+import { profiles } from '@/db/schema';
 import { AuthError } from '@/lib/errors/auth-error';
 import { AuthorizationError } from '@/lib/errors/auth-error';
 import { isApiError } from '@/lib/errors/api-error';
@@ -39,113 +42,133 @@ export interface AuthContext {
  * @throws AuthError if authentication fails
  */
 export async function requireApiAuth(request: Request): Promise<AuthContext> {
-  const supabase = await createClient();
+  // Prefer Bearer token when present (FormData uploads / mobile / SSR mismatches)
+  const authHeader = request.headers.get("authorization");
+  const bearer =
+    authHeader?.startsWith("Bearer ") || authHeader?.startsWith("bearer ")
+      ? authHeader.slice(7).trim()
+      : null;
 
-  // Step 1: Get authenticated user from Supabase Auth
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  let user: { id: string; email?: string } | null = null;
 
-  if (authError) {
-    console.error('[API Auth] Supabase auth error:', authError.message, authError);
-    throw new AuthError(`Authentication error: ${authError.message}`);
+  if (bearer) {
+    const { createClient: createJsClient } = await import("@supabase/supabase-js");
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const key =
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      "";
+    const tokenClient = createJsClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const {
+      data: { user: bearerUser },
+      error: bearerError,
+    } = await tokenClient.auth.getUser(bearer);
+    if (bearerError) {
+      console.error("[API Auth] Bearer auth error:", bearerError.message);
+    }
+    if (bearerUser) {
+      user = { id: bearerUser.id, email: bearerUser.email };
+    }
   }
 
   if (!user) {
-    console.error('[API Auth] No user found in session');
+    const cookieClient = await createClient();
+    const {
+      data: { user: cookieUser },
+      error: authError,
+    } = await cookieClient.auth.getUser();
+
+    if (authError) {
+      console.error("[API Auth] Supabase auth error:", authError.message, authError);
+      throw new AuthError(`Authentication error: ${authError.message}`);
+    }
+
+    if (cookieUser) {
+      user = { id: cookieUser.id, email: cookieUser.email };
+    }
+  }
+
+  if (!user) {
+    console.error("[API Auth] No user found in session");
     // Explicit opt-in only — never auto-elevate in production-like environments
     if (
-      process.env.NODE_ENV === 'development' &&
-      process.env.ALLOW_DEV_AUTH_BYPASS === 'true'
+      process.env.NODE_ENV === "development" &&
+      process.env.ALLOW_DEV_AUTH_BYPASS === "true"
     ) {
-      console.warn('[API Auth] DEV MODE: Using fallback admin user (ALLOW_DEV_AUTH_BYPASS)');
+      console.warn("[API Auth] DEV MODE: Using fallback admin user (ALLOW_DEV_AUTH_BYPASS)");
       return {
-        user: { id: 'dev-admin-id', email: 'dev@innovates.bt' },
+        user: { id: "dev-admin-id", email: "dev@innovates.bt" },
         profile: {
           id: 1,
-          userId: 'dev-admin-id',
-          fullName: 'Development Admin',
-          role: 'ADMIN',
+          userId: "dev-admin-id",
+          fullName: "Development Admin",
+          role: "ADMIN",
           createdAt: new Date(),
         },
       };
     }
-    throw new AuthError('Authentication required - no valid session');
+    throw new AuthError("Authentication required - no valid session");
   }
 
-  console.log('[API Auth] User authenticated:', { id: user.id, email: user.email });
+  console.log("[API Auth] User authenticated:", { id: user.id, email: user.email });
 
-  // Step 2: Fetch user profile from database
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', user.id)
-    .single();
-
-  if (profileError) {
-    console.error('[API Auth] Profile fetch error:', {
+  // Step 2: Fetch profile via Drizzle (bypasses RLS; JWT already verified above)
+  let profileRow: typeof profiles.$inferSelect | undefined;
+  try {
+    const rows = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, user.id))
+      .limit(1);
+    profileRow = rows[0];
+  } catch (profileError) {
+    console.error("[API Auth] Profile fetch error:", {
       userId: user.id,
-      error: profileError.message,
-      code: profileError.code,
-      details: profileError,
-      hint: 'This usually means the user profile does not exist or RLS policies are blocking access'
+      error: profileError instanceof Error ? profileError.message : profileError,
     });
+    throw new AuthError(
+      `User profile not found: ${
+        profileError instanceof Error ? profileError.message : "query failed"
+      }`
+    );
+  }
 
-    // Explicit opt-in only
+  if (!profileRow) {
+    console.error("[API Auth] Profile is null for user:", user.id);
+
     if (
-      process.env.NODE_ENV === 'development' &&
-      process.env.ALLOW_DEV_AUTH_BYPASS === 'true'
+      process.env.NODE_ENV === "development" &&
+      process.env.ALLOW_DEV_AUTH_BYPASS === "true"
     ) {
-      console.warn('[API Auth] DEV MODE: Profile not found, using fallback (ALLOW_DEV_AUTH_BYPASS)');
+      console.warn(
+        "[API Auth] DEV MODE: Profile is null, using fallback (ALLOW_DEV_AUTH_BYPASS)"
+      );
       return {
         user: { id: user.id, email: user.email },
         profile: {
           id: 1,
           userId: user.id,
-          fullName: 'Development Admin',
-          role: 'ADMIN',
+          fullName: "Development Admin",
+          role: "ADMIN",
           createdAt: new Date(),
         },
       };
     }
 
-    throw new AuthError(`User profile not found: ${profileError.message}`);
+    throw new AuthError("User profile not found - please contact administrator");
   }
 
-  if (!profile) {
-    console.error('[API Auth] Profile is null for user:', user.id);
-
-    if (
-      process.env.NODE_ENV === 'development' &&
-      process.env.ALLOW_DEV_AUTH_BYPASS === 'true'
-    ) {
-      console.warn('[API Auth] DEV MODE: Profile is null, using fallback (ALLOW_DEV_AUTH_BYPASS)');
-      return {
-        user: { id: user.id, email: user.email },
-        profile: {
-          id: 1,
-          userId: user.id,
-          fullName: 'Development Admin',
-          role: 'ADMIN',
-          createdAt: new Date(),
-        },
-      };
-    }
-
-    throw new AuthError('User profile not found - please contact administrator');
-  }
-
-  // Normalize role value (handle case sensitivity and whitespace)
   const normalizedProfile: UserProfile = {
-    id: profile.id,
-    userId: (profile as any).user_id || profile.userId, // Handle both snake_case and camelCase
-    fullName: (profile as any).full_name || profile.fullName, // Handle both snake_case and camelCase
-    role: (profile.role || 'CLIENT').toString().toUpperCase().trim(),
-    createdAt: (profile as any).created_at || profile.createdAt || new Date(),
+    id: profileRow.id,
+    userId: profileRow.userId,
+    fullName: profileRow.fullName,
+    role: (profileRow.role || "CLIENT").toString().toUpperCase().trim(),
+    createdAt: profileRow.createdAt || new Date(),
   };
 
-  console.log('[API Auth] Profile loaded:', {
+  console.log("[API Auth] Profile loaded:", {
     profileId: normalizedProfile.id,
     userId: normalizedProfile.userId,
     role: normalizedProfile.role,

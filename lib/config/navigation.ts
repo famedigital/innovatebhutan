@@ -57,6 +57,8 @@ export const navigationConfig: NavGroup[] = [
     title: "Products",
     items: [
       { title: "RanceLab", href: "/admin/products/rancelab", icon: Boxes },
+      { title: "Website", href: "/admin/products/website", icon: Globe },
+      { title: "CCTV", href: "/admin/products/cctv", icon: Package },
     ],
   },
   {
