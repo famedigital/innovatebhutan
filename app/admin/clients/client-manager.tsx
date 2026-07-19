@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -8,11 +8,15 @@ import {
   MoreVertical,
   Phone,
   RefreshCw,
+  UserPlus,
+  Users,
+  X,
 } from "lucide-react";
 import { TableCell, TableHead, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +24,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Item,
   ItemActions,
@@ -29,128 +47,331 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { ResponsiveDataList } from "@/components/admin/responsive-data-list";
-import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { EditClientModal } from "./edit-client-modal";
 
+type Ownership = {
+  clientId: number;
+  focal?: { employeeId: number; name: string };
+  backups: Array<{ employeeId: number; name: string }>;
+};
+
+type StaffMember = {
+  teamMemberId: number;
+  teamMemberName: string;
+};
+
+type ClientRow = {
+  id: number;
+  name: string;
+  whatsapp?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  active?: boolean;
+  tier?: string | null;
+  ownership?: Ownership;
+};
+
 export function ClientManager() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [clients, setClients] = useState<any[]>([]);
+  const [staffFilter, setStaffFilter] = useState<string>("all");
+  const [clients, setClients] = useState<ClientRow[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingClient, setEditingClient] = useState<any | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [editingClient, setEditingClient] = useState<ClientRow | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const supabase = createClient();
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkRole, setBulkRole] = useState<"focal-person" | "backup-team-member">(
+    "focal-person"
+  );
+  const [bulkStaffId, setBulkStaffId] = useState<string>("");
+  const [bulkBusy, setBulkBusy] = useState(false);
 
-  useEffect(() => {
-    fetchClients();
-
-    const channel = supabase
-      .channel("schema-db-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "clients" },
-        () => {
-          fetchClients();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from("clients")
-        .select(
-          `
-          *,
-          amcs(*)
-        `
-        )
-        .order("name", { ascending: true });
+      setLoading(true);
+      const [clientsRes, membersRes] = await Promise.all([
+        fetch("/api/clients"),
+        fetch("/api/team?view=members"),
+      ]);
+      const clientsJson = await clientsRes.json();
+      const membersJson = await membersRes.json();
 
-      if (error) throw error;
-      setClients(data || []);
+      if (!clientsJson.success) {
+        toast.error(clientsJson.error || "Failed to load clients");
+        return;
+      }
+
+      const list: ClientRow[] = clientsJson.data || [];
+      const memberList: StaffMember[] = membersJson.data || [];
+      setStaff(memberList);
+
+      const ids = list.map((c) => c.id);
+      let ownershipMap = new Map<number, Ownership>();
+      if (ids.length > 0) {
+        const ownRes = await fetch(
+          `/api/team?view=ownership&clientIds=${ids.join(",")}`
+        );
+        const ownJson = await ownRes.json();
+        if (ownJson.success && Array.isArray(ownJson.data)) {
+          ownershipMap = new Map(
+            ownJson.data.map((o: Ownership) => [o.clientId, o])
+          );
+        }
+      }
+
+      setClients(
+        list.map((c) => ({
+          ...c,
+          ownership: ownershipMap.get(c.id) || {
+            clientId: c.id,
+            backups: [],
+          },
+        }))
+      );
+      setSelected(new Set());
     } catch (err) {
-      console.error("Client Fetch Error:", err);
+      console.error("Client fetch error:", err);
+      toast.error("Failed to load clients");
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchClients();
+  }, [fetchClients]);
+
+  const filteredClients = useMemo(() => {
+    const q = searchTerm.toLowerCase().trim();
+    return clients.filter((client) => {
+      const matchesSearch =
+        !q ||
+        (client.name || "").toLowerCase().includes(q) ||
+        (client.whatsapp || "").includes(q) ||
+        (client.phone || "").includes(q);
+
+      if (!matchesSearch) return false;
+
+      if (staffFilter === "unassigned") {
+        return !client.ownership?.focal;
+      }
+      if (staffFilter.startsWith("staff:")) {
+        const id = parseInt(staffFilter.slice(6), 10);
+        const o = client.ownership;
+        return (
+          o?.focal?.employeeId === id ||
+          o?.backups?.some((b) => b.employeeId === id)
+        );
+      }
+      return true;
+    });
+  }, [clients, searchTerm, staffFilter]);
+
+  const allPageSelected =
+    filteredClients.length > 0 &&
+    filteredClients.every((c) => selected.has(c.id));
+
+  const toggleAllPage = (checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        filteredClients.forEach((c) => next.add(c.id));
+      } else {
+        filteredClients.forEach((c) => next.delete(c.id));
+      }
+      return next;
+    });
   };
 
-  const filteredClients = clients.filter((client) =>
-    (client.name || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleEditClient = (client: any) => {
-    setEditingClient(client);
-    setShowEditModal(true);
+  const toggleOne = (id: number, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
   };
 
   const handleDeleteClient = async (clientId: number) => {
     if (!confirm("Are you sure you want to delete this client?")) return;
-
     try {
       const response = await fetch(`/api/clients/${clientId}`, {
         method: "DELETE",
       });
-
       const result = await response.json();
-
       if (result.success) {
-        toast.success("Client deleted successfully");
+        toast.success("Client deleted");
         fetchClients();
       } else {
         toast.error(result.error || "Failed to delete client");
       }
-    } catch (error) {
-      console.error("Failed to delete client:", error);
+    } catch {
       toast.error("Failed to delete client");
     }
   };
 
-  const statusBadge = (status?: string) => {
-    if (!status) {
-      return (
-        <Badge variant="outline" className="text-muted-foreground">
-          Off-contract
-        </Badge>
-      );
+  const runBulkAssign = async () => {
+    if (!bulkStaffId || selected.size === 0) {
+      toast.error("Select staff and clients");
+      return;
     }
-    if (status === "active") {
+    setBulkBusy(true);
+    try {
+      const res = await fetch("/api/team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "bulk-assign",
+          clientIds: Array.from(selected),
+          teamMemberId: parseInt(bulkStaffId, 10),
+          role: bulkRole,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        toast.success(result.message || `Assigned ${result.assigned} clients`);
+        setBulkOpen(false);
+        setBulkStaffId("");
+        fetchClients();
+      } else {
+        toast.error(result.error || "Bulk assign failed");
+      }
+    } catch {
+      toast.error("Bulk assign failed");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const runClearAssignments = async () => {
+    if (selected.size === 0) return;
+    if (!confirm(`Clear staff assignments for ${selected.size} client(s)?`))
+      return;
+    try {
+      const res = await fetch("/api/team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "clear-assignments",
+          clientIds: Array.from(selected),
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        toast.success(result.message || "Assignments cleared");
+        fetchClients();
+      } else {
+        toast.error(result.error || "Failed to clear");
+      }
+    } catch {
+      toast.error("Failed to clear assignments");
+    }
+  };
+
+  const ownershipChips = (o?: Ownership) => {
+    if (!o?.focal && !o?.backups?.length) {
       return (
-        <Badge variant="outline" className="border-border bg-secondary">
-          Active
-        </Badge>
+        <span className="text-xs text-muted-foreground">Unassigned</span>
       );
     }
     return (
-      <Badge variant="outline" className="border-destructive/30 text-destructive">
-        {status}
-      </Badge>
+      <div className="flex flex-wrap gap-1">
+        {o.focal ? (
+          <Badge variant="secondary" className="text-[10px] font-normal">
+            Focal: {o.focal.name}
+          </Badge>
+        ) : null}
+        {o.backups?.slice(0, 2).map((b) => (
+          <Badge
+            key={b.employeeId}
+            variant="outline"
+            className="text-[10px] font-normal"
+          >
+            {b.name}
+          </Badge>
+        ))}
+        {(o.backups?.length || 0) > 2 ? (
+          <Badge variant="outline" className="text-[10px]">
+            +{o.backups!.length - 2}
+          </Badge>
+        ) : null}
+      </div>
     );
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search clients..."
+            placeholder="Search clients by name or phone…"
             className="pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        <Select value={staffFilter} onValueChange={setStaffFilter}>
+          <SelectTrigger className="w-full lg:w-56">
+            <SelectValue placeholder="Staff filter" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All clients</SelectItem>
+            <SelectItem value="unassigned">Unassigned only</SelectItem>
+            {staff.map((s) => (
+              <SelectItem key={s.teamMemberId} value={`staff:${s.teamMemberId}`}>
+                {s.teamMemberName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button variant="outline" onClick={fetchClients} size="sm">
           <RefreshCw className={`w-3 h-3 mr-2 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </div>
+
+      {selected.size > 0 ? (
+        <div className="sticky top-14 z-10 flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-sm animate-in slide-in-from-top-2 duration-200">
+          <span className="text-sm font-medium">
+            {selected.size} selected
+          </span>
+          <Button
+            size="sm"
+            onClick={() => {
+              setBulkRole("focal-person");
+              setBulkOpen(true);
+            }}
+          >
+            <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+            Assign focal
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setBulkRole("backup-team-member");
+              setBulkOpen(true);
+            }}
+          >
+            <Users className="w-3.5 h-3.5 mr-1.5" />
+            Assign backup
+          </Button>
+          <Button size="sm" variant="outline" onClick={runClearAssignments}>
+            Clear assignment
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSelected(new Set())}
+          >
+            <X className="w-3.5 h-3.5 mr-1" />
+            Clear selection
+          </Button>
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="h-64 flex items-center justify-center">
@@ -162,164 +383,149 @@ export function ClientManager() {
           empty={
             clients.length === 0
               ? "No clients yet. Add a client to get started."
-              : "No clients match your search."
+              : "No clients match your filters."
           }
           tableHeader={
             <>
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={allPageSelected}
+                  onCheckedChange={(v) => toggleAllPage(!!v)}
+                  aria-label="Select all on page"
+                />
+              </TableHead>
               <TableHead>Client</TableHead>
-              <TableHead>Hardware</TableHead>
-              <TableHead>AMC</TableHead>
-              <TableHead>Expiry</TableHead>
+              <TableHead>Staff</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </>
           }
-          tableBody={filteredClients.map((client) => {
-            const latestAMC = client.amcs?.[0];
-            return (
-              <TableRow key={client.id}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center text-xs font-semibold text-foreground">
-                      {(client.name || "?").charAt(0)}
-                    </div>
-                    <div>
-                      <Link
-                        href={`/admin/clients/${client.id}`}
-                        className="text-sm font-medium text-foreground hover:underline"
-                      >
-                        {client.name || "Unnamed Client"}
+          tableBody={filteredClients.map((client) => (
+            <TableRow
+              key={client.id}
+              data-state={selected.has(client.id) ? "selected" : undefined}
+              className="transition-colors"
+            >
+              <TableCell>
+                <Checkbox
+                  checked={selected.has(client.id)}
+                  onCheckedChange={(v) => toggleOne(client.id, !!v)}
+                  aria-label={`Select ${client.name}`}
+                />
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center text-xs font-semibold text-foreground">
+                    {(client.name || "?").charAt(0)}
+                  </div>
+                  <div>
+                    <Link
+                      href={`/admin/clients/${client.id}`}
+                      className="text-sm font-medium text-foreground hover:underline"
+                    >
+                      {client.name || "Unnamed Client"}
+                    </Link>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <Phone className="w-3 h-3" />
+                      {client.whatsapp || client.phone || "No phone"}
+                    </p>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>{ownershipChips(client.ownership)}</TableCell>
+              <TableCell>
+                <Badge variant="outline">
+                  {client.active === false ? "Inactive" : "Active"}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-right">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link href={`/admin/clients/${client.id}`}>
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Open hub
                       </Link>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <Phone className="w-3 h-3" />
-                        {client.whatsapp || "No phone"}
-                      </p>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {latestAMC?.hardware_details?.model || "—"}
-                </TableCell>
-                <TableCell>{statusBadge(latestAMC?.status)}</TableCell>
-                <TableCell className="text-sm text-muted-foreground font-mono">
-                  {latestAMC?.expiry_date || latestAMC?.end_date
-                    ? new Date(
-                        latestAMC.expiry_date || latestAMC.end_date
-                      ).toLocaleDateString()
-                    : "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    {client.whatsapp && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() =>
-                          window.open(`https://wa.me/${client.whatsapp}`, "_blank")
-                        }
-                      >
-                        <Phone className="w-4 h-4" />
-                      </Button>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/clients/${client.id}`}>
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            View details
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditClient(client)}>
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => handleDeleteClient(client.id)}
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-          mobileItems={filteredClients.map((client) => {
-            const latestAMC = client.amcs?.[0];
-            const expiry =
-              latestAMC?.expiry_date || latestAMC?.end_date
-                ? new Date(
-                    latestAMC.expiry_date || latestAMC.end_date
-                  ).toLocaleDateString()
-                : null;
-            return (
-              <Item
-                key={client.id}
-                size="sm"
-                className="rounded-none border-0 cursor-pointer hover:bg-accent/50"
-                onClick={() => {
-                  window.location.href = `/admin/clients/${client.id}`;
-                }}
-              >
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setEditingClient(client);
+                        setShowEditModal(true);
+                      }}
+                    >
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => handleDeleteClient(client.id)}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          ))}
+          mobileItems={filteredClients.map((client) => (
+            <Item
+              key={client.id}
+              size="sm"
+              className="rounded-none border-0"
+            >
+              <div className="flex items-start gap-2 w-full py-1">
+                <Checkbox
+                  className="mt-2"
+                  checked={selected.has(client.id)}
+                  onCheckedChange={(v) => toggleOne(client.id, !!v)}
+                />
+                <Link
+                  href={`/admin/clients/${client.id}`}
+                  className="flex flex-1 min-w-0 items-start gap-2"
+                >
                   <ItemMedia variant="icon" className="bg-secondary">
                     <span className="text-xs font-semibold">
                       {(client.name || "?").charAt(0)}
                     </span>
                   </ItemMedia>
                   <ItemContent>
-                    <ItemTitle className="w-full justify-between gap-2">
-                      <span className="truncate">
-                        {client.name || "Unnamed Client"}
-                      </span>
-                      {statusBadge(latestAMC?.status)}
-                    </ItemTitle>
+                    <ItemTitle>{client.name || "Unnamed"}</ItemTitle>
                     <ItemDescription>
-                      {[client.whatsapp || "No phone", expiry && `Expires ${expiry}`]
-                        .filter(Boolean)
-                        .join(" · ")}
+                      {client.whatsapp || client.phone || "No phone"}
                     </ItemDescription>
+                    <div className="mt-1">{ownershipChips(client.ownership)}</div>
                   </ItemContent>
-                  <ItemActions
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                  >
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/clients/${client.id}`}>View</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleEditClient(client)}
-                        >
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => handleDeleteClient(client.id)}
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </ItemActions>
-              </Item>
-            );
-          })}
+                </Link>
+                <ItemActions>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/admin/clients/${client.id}`}>Open</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setEditingClient(client);
+                          setShowEditModal(true);
+                        }}
+                      >
+                        Edit
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </ItemActions>
+              </div>
+            </Item>
+          ))}
         />
       )}
 
@@ -337,6 +543,45 @@ export function ClientManager() {
           }}
         />
       )}
+
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {bulkRole === "focal-person"
+                ? "Assign focal person"
+                : "Assign backup staff"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Apply to {selected.size} selected client
+            {selected.size === 1 ? "" : "s"}.
+          </p>
+          <Select value={bulkStaffId} onValueChange={setBulkStaffId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select staff member" />
+            </SelectTrigger>
+            <SelectContent>
+              {staff.map((s) => (
+                <SelectItem
+                  key={s.teamMemberId}
+                  value={String(s.teamMemberId)}
+                >
+                  {s.teamMemberName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={runBulkAssign} disabled={bulkBusy || !bulkStaffId}>
+              {bulkBusy ? "Assigning…" : "Assign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

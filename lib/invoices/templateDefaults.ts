@@ -1,6 +1,7 @@
 /** Shared invoice / quotation template design (product letterheads) */
 
-export type ProductKey = "rancelab" | "website" | "cctv";
+import type { ProductKey } from "@/lib/config/products";
+export type { ProductKey } from "@/lib/config/products";
 
 export type InvoiceTemplateDesign = {
   logoUrl?: string | null;
@@ -79,6 +80,24 @@ export const DEFAULT_CCTV_DESIGN: InvoiceTemplateDesign = {
 export function defaultDesignForProduct(productKey: ProductKey): InvoiceTemplateDesign {
   if (productKey === "website") return { ...DEFAULT_WEBSITE_DESIGN };
   if (productKey === "cctv") return { ...DEFAULT_CCTV_DESIGN };
+  if (productKey === "networking") {
+    return {
+      ...DEFAULT_CCTV_DESIGN,
+      documentTitle: "Networking Quotation",
+      numberPrefix: "NET",
+      dealerNotice:
+        "Innovates designs and maintains enterprise networks in the Kingdom of Bhutan.",
+    };
+  }
+  if (productKey === "pelbu_pos") {
+    return {
+      ...DEFAULT_RANCELAB_DESIGN,
+      documentTitle: "Pelbu POS Quotation",
+      numberPrefix: "PEL",
+      dealerNotice:
+        "Innovates is the authorized partner for Pelbu POS in the Kingdom of Bhutan.",
+    };
+  }
   return { ...DEFAULT_RANCELAB_DESIGN };
 }
 

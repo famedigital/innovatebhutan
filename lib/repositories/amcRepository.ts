@@ -9,6 +9,7 @@ type NewAMC = typeof amcs.$inferInsert;
 export interface AMCFilters {
   clientId?: number;
   serviceId?: number;
+  productKey?: string;
   status?: string;
   search?: string;
   /** Hybrid ownership: all | mine | unclaimed | today */
@@ -85,6 +86,9 @@ export class AMCRepository {
     if (filters.serviceId) {
       conditions.push(eq(amcs.serviceId, filters.serviceId));
     }
+    if (filters.productKey) {
+      conditions.push(eq(amcs.productKey, filters.productKey));
+    }
     if (filters.status) {
       conditions.push(eq(amcs.status, filters.status));
     }
@@ -135,6 +139,9 @@ export class AMCRepository {
     }
     if (filters.serviceId) {
       conditions.push(eq(amcs.serviceId, filters.serviceId));
+    }
+    if (filters.productKey) {
+      conditions.push(eq(amcs.productKey, filters.productKey));
     }
     // Status filter uses endDate so list stays correct even if DB status is stale
     if (filters.status === "cancelled") {

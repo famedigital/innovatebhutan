@@ -23,11 +23,11 @@ import {
   Package,
   Building,
   Calculator,
-  AlertTriangle,
-  MessagesSquare,
-  UserCog,
   BarChart3,
   Boxes,
+  ListTodo,
+  Shield,
+  UserCog,
 } from "lucide-react";
 
 export type UserRole = "ADMIN" | "STAFF" | "CLIENT";
@@ -46,54 +46,52 @@ export interface NavGroup {
   roles?: UserRole[];
 }
 
+/**
+ * Target ERP IA (~8 groups). Clients live under Work, not Master Data.
+ */
 export const navigationConfig: NavGroup[] = [
   {
     title: "Overview",
+    items: [{ title: "Dashboard", href: "/admin", icon: LayoutDashboard }],
+  },
+  {
+    title: "Work",
     items: [
-      { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
+      { title: "My Queue", href: "/admin/tickets?scope=mine", icon: ListTodo },
+      { title: "Clients", href: "/admin/clients", icon: Building2 },
+      { title: "Tickets", href: "/admin/tickets", icon: Ticket },
+      { title: "Projects", href: "/admin/projects", icon: FolderKanban },
     ],
   },
   {
     title: "Products",
     items: [
-      { title: "RanceLab", href: "/admin/products/rancelab", icon: Boxes },
-      { title: "Website", href: "/admin/products/website", icon: Globe },
-      { title: "CCTV", href: "/admin/products/cctv", icon: Package },
+      { title: "All Products", href: "/admin/products", icon: Boxes },
+      { title: "RanceLab", href: "/admin/products/rancelab", icon: Shield },
+      { title: "Pelbu POS", href: "/admin/products/pelbu-pos", icon: Package },
+      { title: "Services Catalog", href: "/admin/services", icon: Briefcase },
     ],
   },
   {
-    title: "Operations",
+    title: "Commercial",
     items: [
-      { title: "Projects", href: "/admin/projects", icon: FolderKanban },
+      { title: "AMC", href: "/admin/amc", icon: FileText },
       { title: "Orders", href: "/admin/orders", icon: ShoppingCart },
-      { title: "Support Tickets", href: "/admin/tickets", icon: Ticket },
-      { title: "Problems", href: "/admin/support/problems", icon: AlertTriangle },
-      { title: "Communications", href: "/admin/support/communications", icon: MessagesSquare },
-      { title: "Support Team", href: "/admin/support/team", icon: UserCog },
+      { title: "Invoices", href: "/admin/invoice", icon: FileText, roles: ["ADMIN"] },
     ],
   },
   {
-    title: "Financials",
+    title: "Finance",
     roles: ["ADMIN"],
     items: [
-      { title: "Invoices", href: "/admin/invoice", icon: FileText },
       { title: "Expenses", href: "/admin/expenses", icon: Receipt },
-      { title: "Transactions", href: "/admin/transactions", icon: ArrowUpDown },
+      { title: "Ledger", href: "/admin/transactions", icon: ArrowUpDown },
       { title: "Accounts", href: "/admin/accounts", icon: Calculator },
-      { title: "Finance Reports", href: "/admin/finance/reports", icon: BarChart3 },
+      { title: "Reports", href: "/admin/finance/reports", icon: BarChart3 },
     ],
   },
   {
-    title: "Inventory & Assets",
-    roles: ["ADMIN", "STAFF"],
-    items: [
-      { title: "Inventory", href: "/admin/inventory", icon: Package },
-      { title: "Procurement", href: "/admin/procurement", icon: ShoppingCart },
-      { title: "Fixed Assets", href: "/admin/assets", icon: Building },
-    ],
-  },
-  {
-    title: "Human Capital",
+    title: "People",
     roles: ["ADMIN"],
     items: [
       { title: "Employees", href: "/admin/employees", icon: Users },
@@ -103,17 +101,19 @@ export const navigationConfig: NavGroup[] = [
     ],
   },
   {
-    title: "Master Data",
+    title: "Stock",
     roles: ["ADMIN", "STAFF"],
     items: [
-      { title: "Services", href: "/admin/services", icon: Briefcase },
-      { title: "Clients", href: "/admin/clients", icon: Building2 },
+      { title: "Inventory", href: "/admin/inventory", icon: Package },
+      { title: "Procurement", href: "/admin/procurement", icon: ShoppingCart },
+      { title: "Fixed Assets", href: "/admin/assets", icon: Building },
     ],
   },
   {
     title: "System",
     roles: ["ADMIN"],
     items: [
+      { title: "Users & Roles", href: "/admin/users", icon: UserCog },
       { title: "Notifications", href: "/admin/notifications", icon: Bell },
       { title: "Audit Logs", href: "/admin/audit", icon: ScrollText },
       { title: "Settings", href: "/admin/settings", icon: Settings },
@@ -127,11 +127,6 @@ export const navigationConfig: NavGroup[] = [
       { title: "Website", href: "/admin/website", icon: Globe },
       { title: "Media", href: "/admin/media", icon: Image },
       { title: "Marketing", href: "/admin/marketing", icon: TrendingUp },
-    ],
-  },
-  {
-    title: "Support",
-    items: [
       { title: "WhatsApp", href: "/admin/whatsapp", icon: MessageSquare },
       { title: "Bot Training", href: "/admin/ai/bot-training", icon: Brain },
     ],

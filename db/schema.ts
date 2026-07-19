@@ -14,6 +14,8 @@ export const services = pgTable("services", {
   price: decimal("price", { precision: 12, scale: 2 }),
   currency: varchar("currency", { length: 10 }).default("Nu."),
   imageUrl: text("image_url"),
+  productKey: varchar("product_key", { length: 50 }),
+  billingType: varchar("billing_type", { length: 50 }).default("one_time"), // amc | one_time | training | development
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -118,6 +120,7 @@ export const amcs = pgTable("amcs", {
   amount: decimal("amount", { precision: 12, scale: 2 }), // Annual contract value
   hardwareDetails: jsonb("hardware_details"), // Model, Serial, Config
   servicesIncluded: jsonb("services_included"), // Array of service names/IDs included in contract
+  productKey: varchar("product_key", { length: 50 }), // rancelab | pelbu_pos | website | cctv | networking
   renewedFrom: integer("renewed_from"), // Track renewal lineage (previous contract) - references amcs.id
   renewedTo: integer("renewed_to"), // Forward reference (next contract) - references amcs.id
   status: varchar("status", { length: 50 }).default("active"), // active, expiring, expired, cancelled
@@ -2114,5 +2117,25 @@ export const invoiceTemplates = pgTable("invoice_templates", {
 }, (table) => ({
   productIdx: index("idx_invoice_templates_product").on(table.productKey),
   activeIdx: index("idx_invoice_templates_active").on(table.productKey, table.isActive),
+}));
+
+/**
+ * 📦 PRODUCTS CATALOG
+ * Sellable product lines (RanceLab, Pelbu POS, Website, CCTV, Networking).
+ */
+export const products = pgTable("products", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  billingTypes: jsonb("billing_types").$type<string[]>().default([]),
+  supportsAmc: boolean("supports_amc").default(true),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  keyIdx: index("idx_products_key").on(table.key),
+  activeIdx: index("idx_products_active").on(table.isActive),
 }));
 

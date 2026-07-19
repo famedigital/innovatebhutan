@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
-  Loader2, Plus, RefreshCw, Search, MessageSquare, CheckCircle2,
+  Loader2, Plus, RefreshCw, Search, MessageSquare, CheckCircle2, ArrowLeft,
 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,8 @@ export function TicketCallCentreDesk({
 }) {
   const [queue, setQueue] = useState<Queue>("all");
   const [search, setSearch] = useState("");
+  const [clientFilter, setClientFilter] = useState<string | null>(null);
+  const [returnClientId, setReturnClientId] = useState<string | null>(null);
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<Array<{ id: number; name: string }>>([]);
@@ -76,6 +79,7 @@ export function TicketCallCentreDesk({
       if (queue !== "all") params.set("queue", queue);
       if (productKey) params.set("productKey", productKey);
       if (search) params.set("search", search);
+      if (clientFilter) params.set("clientId", clientFilter);
       const res = await fetch(`/api/tickets?${params}`);
       const data = await res.json();
       if (!data.success) throw new Error(data.error || "Failed");
@@ -85,14 +89,25 @@ export function TicketCallCentreDesk({
     } finally {
       setLoading(false);
     }
-  }, [queue, productKey, search]);
+  }, [queue, productKey, search, clientFilter]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   useEffect(() => {
-    const tid = new URLSearchParams(window.location.search).get("ticketId");
+    const params = new URLSearchParams(window.location.search);
+    const cid = params.get("clientId");
+    if (cid) {
+      setClientFilter(cid);
+      setForm((f) => ({ ...f, clientId: cid }));
+    }
+    if (params.get("from") === "client" && cid) {
+      setReturnClientId(cid);
+    }
+    const scope = params.get("scope");
+    if (scope === "mine") setQueue("mine");
+    const tid = params.get("ticketId");
     if (tid) {
       const id = parseInt(tid);
       if (!isNaN(id)) {
@@ -223,9 +238,34 @@ export function TicketCallCentreDesk({
     <div className="space-y-4">
       <AdminPageHeader
         title={title}
-        description={description}
+        description={
+          clientFilter
+            ? `${description} · filtered to client #${clientFilter}`
+            : description
+        }
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          ...(returnClientId
+            ? [
+                { label: "Clients", href: "/admin/clients" },
+                {
+                  label: "Client",
+                  href: `/admin/clients/${returnClientId}?tab=tickets`,
+                },
+              ]
+            : []),
+          { label: "Tickets" },
+        ]}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {returnClientId ? (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/admin/clients/${returnClientId}?tab=tickets`}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to client
+                </Link>
+              </Button>
+            ) : null}
             <Button variant="outline" size="sm" onClick={() => void load()}>
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Refresh

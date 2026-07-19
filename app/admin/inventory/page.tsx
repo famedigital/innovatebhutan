@@ -80,6 +80,14 @@ export default function InventoryPage() {
   const [submitting, setSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [stockOpen, setStockOpen] = useState(false);
+  const [stockForm, setStockForm] = useState({
+    itemId: "",
+    warehouseId: "1",
+    quantity: "1",
+    operation: "receipt",
+    remarks: "",
+  });
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [deletingItem, setDeletingItem] = useState<Item | null>(null);
   const [formData, setFormData] = useState<ItemFormData>(emptyForm);
@@ -103,7 +111,7 @@ export default function InventoryPage() {
       }
     } catch (error) {
       console.error("Fetch error:", error);
-      toast.error("Failed to load inventory - tables may not exist yet");
+      toast.error("Failed to load inventory");
     } finally {
       setLoading(false);
     }
@@ -212,13 +220,20 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
+          <p className="text-xs text-muted-foreground mb-1">
+            <a href="/admin" className="hover:underline">Admin</a>
+            {" / "}
+            Stock
+            {" / "}
+            Inventory
+          </p>
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Inventory</h1>
-          <p className="text-sm text-muted-foreground">Stock & warehouse management</p>
+          <p className="text-sm text-muted-foreground">Items, stock levels, and movements</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => window.location.href = "/admin/inventory/warehouses"}>
-            <Warehouse className="w-4 h-4 mr-2" />
-            Warehouses
+          <Button variant="outline" onClick={() => setStockOpen(true)}>
+            <Package className="w-4 h-4 mr-2" />
+            Stock entry
           </Button>
           <Button variant="outline" onClick={fetchData}>
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -459,6 +474,121 @@ export default function InventoryPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={stockOpen} onOpenChange={setStockOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Stock entry</DialogTitle>
+            <DialogDescription>
+              Receipt or issue stock against an item (warehouse id required).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Item</Label>
+              <select
+                className="w-full rounded-md border px-3 py-2 text-sm"
+                value={stockForm.itemId}
+                onChange={(e) =>
+                  setStockForm({ ...stockForm, itemId: e.target.value })
+                }
+              >
+                <option value="">Select item…</option>
+                {items.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name} ({i.sku})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Operation</Label>
+              <select
+                className="w-full rounded-md border px-3 py-2 text-sm"
+                value={stockForm.operation}
+                onChange={(e) =>
+                  setStockForm({ ...stockForm, operation: e.target.value })
+                }
+              >
+                <option value="receipt">Receipt (in)</option>
+                <option value="issue">Issue (out)</option>
+                <option value="adjustment">Adjustment</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Warehouse ID</Label>
+                <Input
+                  value={stockForm.warehouseId}
+                  onChange={(e) =>
+                    setStockForm({ ...stockForm, warehouseId: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={stockForm.quantity}
+                  onChange={(e) =>
+                    setStockForm({ ...stockForm, quantity: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Remarks</Label>
+              <Input
+                value={stockForm.remarks}
+                onChange={(e) =>
+                  setStockForm({ ...stockForm, remarks: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStockOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={submitting}
+              onClick={async () => {
+                if (!stockForm.itemId) {
+                  toast.error("Select an item");
+                  return;
+                }
+                setSubmitting(true);
+                try {
+                  const res = await fetch("/api/inventory/stock/entry", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      operation: stockForm.operation,
+                      itemId: parseInt(stockForm.itemId, 10),
+                      warehouseId: parseInt(stockForm.warehouseId, 10) || 1,
+                      quantity: parseFloat(stockForm.quantity) || 1,
+                      remarks: stockForm.remarks || undefined,
+                    }),
+                  });
+                  const json = await res.json();
+                  if (!json.success) throw new Error(json.error || "Failed");
+                  toast.success("Stock entry recorded");
+                  setStockOpen(false);
+                } catch (e) {
+                  toast.error(
+                    e instanceof Error ? e.message : "Stock entry failed"
+                  );
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
+            >
+              {submitting ? "Saving…" : "Post entry"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -9,15 +9,17 @@ export default function ClientsPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Clients"
-        description="Manage client accounts and contacts"
+        description="Search, multi-select, and assign focal or backup staff across 200+ accounts"
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Clients" },
+        ]}
         actions={
           <>
             <BulkIngestionModal
               trigger={<Button variant="outline">Bulk Import</Button>}
             />
-            <NodeEnrollmentModal
-              trigger={<Button>Add Client</Button>}
-            />
+            <NodeEnrollmentModal trigger={<Button>Add Client</Button>} />
           </>
         }
       />

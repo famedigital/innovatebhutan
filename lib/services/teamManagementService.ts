@@ -116,6 +116,50 @@ export class TeamManagementService {
     }
   }
 
+  /**
+   * Assign one staff member to many clients as focal or backup.
+   */
+  async bulkAssignClients(
+    clientIds: number[],
+    teamMemberId: number,
+    role: repo.AssignmentRole
+  ): Promise<{ success: boolean; assigned: number; error?: string }> {
+    try {
+      if (!clientIds.length) {
+        return { success: false, assigned: 0, error: "No clients selected" };
+      }
+      if (!teamMemberId) {
+        return { success: false, assigned: 0, error: "Staff member required" };
+      }
+
+      let assigned = 0;
+      for (const clientId of clientIds) {
+        const row = await this.repository.upsertClientAssignment(
+          clientId,
+          teamMemberId,
+          role
+        );
+        if (row) assigned += 1;
+      }
+
+      return { success: assigned > 0, assigned };
+    } catch (error) {
+      console.error("Service error bulk assigning:", error);
+      return { success: false, assigned: 0, error: "Bulk assignment failed" };
+    }
+  }
+
+  async clearAssignments(
+    clientIds: number[]
+  ): Promise<{ success: boolean; cleared: number }> {
+    const cleared = await this.repository.clearClientAssignments(clientIds);
+    return { success: true, cleared };
+  }
+
+  async getOwnershipForClients(clientIds: number[]) {
+    return this.repository.getOwnershipForClients(clientIds);
+  }
+
   async getClientTeamMembers(clientId: number): Promise<TeamAssignment[]> {
     return await this.repository.getClientTeamMembers(clientId);
   }

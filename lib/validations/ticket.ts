@@ -8,7 +8,13 @@ export const ticketStatusSchema = z.enum([
   "closed",
 ]);
 export const ticketPrioritySchema = z.enum(["low", "medium", "high"]);
-export const ticketProductSchema = z.enum(["rancelab", "website", "cctv"]);
+export const ticketProductSchema = z.enum([
+  "rancelab",
+  "pelbu_pos",
+  "website",
+  "cctv",
+  "networking",
+]);
 export const ticketSourceSchema = z.enum(["call_centre", "whatsapp", "portal"]);
 
 export const createTicketSchema = z.object({

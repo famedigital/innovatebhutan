@@ -4,11 +4,19 @@
  */
 
 import { db } from "@/db";
-import { teamAssignments, clients, employees, problems } from "@/db/schema";
-import { eq, desc, and, or, sql, gte, lte } from "drizzle-orm";
+import { teamAssignments, employees, problems, profiles } from "@/db/schema";
+import { eq, desc, and, sql, inArray } from "drizzle-orm";
 
 export type TeamAssignment = typeof teamAssignments.$inferSelect;
 export type NewTeamAssignment = typeof teamAssignments.$inferInsert;
+
+export type AssignmentRole = "focal-person" | "backup-team-member" | "specialist";
+
+export type ClientOwnershipSummary = {
+  clientId: number;
+  focal?: { employeeId: number; name: string };
+  backups: Array<{ employeeId: number; name: string }>;
+};
 
 /**
  * Get all team assignments with optional filters
@@ -107,18 +115,25 @@ export async function getTeamWorkloadOverview(): Promise<Array<{
     const result = await db
       .select({
         teamMemberId: employees.id,
-        teamMemberName: sql<string>`COALESCE(${employees.designation}, 'Team Member')`,
+        teamMemberName: sql<string>`COALESCE(${profiles.fullName}, ${employees.designation}, ${employees.email}, 'Staff')`,
         currentWorkload: employees.currentWorkload,
         maxCapacity: employees.maxConcurrentProblems,
       })
       .from(employees)
-      .where(eq(employees.status, 'active'));
+      .leftJoin(profiles, eq(employees.profileId, profiles.id))
+      .where(eq(employees.status, "active"));
 
-    return result.map(member => ({
-      ...member,
-      utilizationRate: member.currentWorkload > 0
-        ? Math.round((member.currentWorkload / member.maxCapacity) * 100)
-        : 0
+    return result.map((member) => ({
+      teamMemberId: member.teamMemberId,
+      teamMemberName: member.teamMemberName || "Staff",
+      currentWorkload: member.currentWorkload ?? 0,
+      maxCapacity: member.maxCapacity ?? 5,
+      utilizationRate:
+        (member.currentWorkload ?? 0) > 0
+          ? Math.round(
+              ((member.currentWorkload ?? 0) / (member.maxCapacity || 1)) * 100
+            )
+          : 0,
     }));
   } catch (error) {
     console.error("Error fetching team workload overview:", error);
@@ -138,31 +153,186 @@ export async function getAvailableTeamMembers(skill?: string): Promise<Array<{
   specializations: string[];
 }>> {
   try {
-    let query = db
+    const conditions = [eq(employees.status, "active")];
+    if (skill) {
+      conditions.push(sql`${employees.skills} @> ${JSON.stringify([skill])}`);
+    }
+
+    const rows = await db
       .select({
         teamMemberId: employees.id,
-        teamMemberName: sql<string>`COALESCE(${employees.designation}, 'Team Member')`,
+        teamMemberName: sql<string>`COALESCE(${profiles.fullName}, ${employees.designation}, ${employees.email}, 'Staff')`,
         currentWorkload: employees.currentWorkload,
         maxCapacity: employees.maxConcurrentProblems,
         skills: employees.skills,
         specializations: employees.specializations,
       })
       .from(employees)
-      .where(and(
-        eq(employees.status, 'active'),
-        eq(employees.availability, 'available'),
-        sql`${employees.currentWorkload} < ${employees.maxConcurrentProblems}`
-      ));
+      .leftJoin(profiles, eq(employees.profileId, profiles.id))
+      .where(and(...conditions))
+      .orderBy(employees.currentWorkload);
 
-    // Add skill filter if provided
-    if (skill) {
-      query = query.where(sql`${employees.skills} @> ${JSON.stringify([skill])}`);
-    }
-
-    return await query.order(employees.currentWorkload);
+    return rows.map((r) => ({
+      teamMemberId: r.teamMemberId,
+      teamMemberName: r.teamMemberName || "Staff",
+      currentWorkload: r.currentWorkload ?? 0,
+      maxCapacity: r.maxCapacity ?? 5,
+      skills: (r.skills as string[]) || [],
+      specializations: (r.specializations as string[]) || [],
+    }));
   } catch (error) {
     console.error("Error fetching available team members:", error);
     return [];
+  }
+}
+
+/**
+ * Ownership summary for many clients (focal + backups with names)
+ */
+export async function getOwnershipForClients(
+  clientIds: number[]
+): Promise<ClientOwnershipSummary[]> {
+  if (clientIds.length === 0) return [];
+
+  try {
+    const rows = await db
+      .select({
+        clientId: teamAssignments.clientId,
+        teamMemberId: teamAssignments.teamMemberId,
+        role: teamAssignments.role,
+        isFocalPerson: teamAssignments.isFocalPerson,
+        isPrimaryBackup: teamAssignments.isPrimaryBackup,
+        name: sql<string>`COALESCE(${profiles.fullName}, ${employees.designation}, ${employees.email}, 'Staff')`,
+      })
+      .from(teamAssignments)
+      .innerJoin(employees, eq(teamAssignments.teamMemberId, employees.id))
+      .leftJoin(profiles, eq(employees.profileId, profiles.id))
+      .where(
+        and(
+          inArray(teamAssignments.clientId, clientIds),
+          eq(teamAssignments.isActive, true)
+        )
+      );
+
+    const map = new Map<number, ClientOwnershipSummary>();
+    for (const id of clientIds) {
+      map.set(id, { clientId: id, backups: [] });
+    }
+
+    for (const row of rows) {
+      const entry = map.get(row.clientId)!;
+      const person = { employeeId: row.teamMemberId, name: row.name || "Staff" };
+      if (row.isFocalPerson || row.role === "focal-person") {
+        entry.focal = person;
+      } else if (
+        row.isPrimaryBackup ||
+        row.role === "backup-team-member" ||
+        row.role === "specialist"
+      ) {
+        if (!entry.backups.some((b) => b.employeeId === person.employeeId)) {
+          entry.backups.push(person);
+        }
+      }
+    }
+
+    return Array.from(map.values());
+  } catch (error) {
+    console.error("Error fetching client ownership:", error);
+    return clientIds.map((clientId) => ({ clientId, backups: [] }));
+  }
+}
+
+/**
+ * Upsert assignment for one client; role focal-person clears other focals.
+ */
+export async function upsertClientAssignment(
+  clientId: number,
+  teamMemberId: number,
+  role: AssignmentRole
+): Promise<TeamAssignment | null> {
+  try {
+    const isFocal = role === "focal-person";
+    const isBackup = role === "backup-team-member";
+
+    if (isFocal) {
+      await db
+        .update(teamAssignments)
+        .set({ isFocalPerson: false, updatedAt: new Date() })
+        .where(
+          and(
+            eq(teamAssignments.clientId, clientId),
+            eq(teamAssignments.isFocalPerson, true)
+          )
+        );
+    }
+
+    const existing = await db
+      .select()
+      .from(teamAssignments)
+      .where(
+        and(
+          eq(teamAssignments.clientId, clientId),
+          eq(teamAssignments.teamMemberId, teamMemberId)
+        )
+      )
+      .limit(1);
+
+    if (existing[0]) {
+      const [updated] = await db
+        .update(teamAssignments)
+        .set({
+          role,
+          isFocalPerson: isFocal,
+          isPrimaryBackup: isBackup,
+          isActive: true,
+          validTo: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(teamAssignments.id, existing[0].id))
+        .returning();
+      return updated || null;
+    }
+
+    const [created] = await db
+      .insert(teamAssignments)
+      .values({
+        clientId,
+        teamMemberId,
+        role,
+        isFocalPerson: isFocal,
+        isPrimaryBackup: isBackup,
+        isActive: true,
+        workload: 1,
+        performanceScore: 80,
+      })
+      .returning();
+    return created || null;
+  } catch (error) {
+    console.error("Error upserting client assignment:", error);
+    return null;
+  }
+}
+
+/**
+ * Deactivate all active assignments for clients
+ */
+export async function clearClientAssignments(clientIds: number[]): Promise<number> {
+  if (clientIds.length === 0) return 0;
+  try {
+    const result = await db
+      .update(teamAssignments)
+      .set({ isActive: false, validTo: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          inArray(teamAssignments.clientId, clientIds),
+          eq(teamAssignments.isActive, true)
+        )
+      )
+      .returning({ id: teamAssignments.id });
+    return result.length;
+  } catch (error) {
+    console.error("Error clearing client assignments:", error);
+    return 0;
   }
 }
 
@@ -201,32 +371,19 @@ export async function updateTeamAssignment(
 }
 
 /**
- * Set focal person for client
+ * Set focal person for client (creates assignment if missing)
  */
 export async function setFocalPerson(
   clientId: number,
   teamMemberId: number
 ): Promise<boolean> {
   try {
-    // Remove existing focal person
-    await db
-      .update(teamAssignments)
-      .set({ isFocalPerson: false, updatedAt: new Date() })
-      .where(and(
-        eq(teamAssignments.clientId, clientId),
-        eq(teamAssignments.isFocalPerson, true)
-      ));
-
-    // Set new focal person
-    await db
-      .update(teamAssignments)
-      .set({ isFocalPerson: true, updatedAt: new Date() })
-      .where(and(
-        eq(teamAssignments.clientId, clientId),
-        eq(teamAssignments.teamMemberId, teamMemberId)
-      ));
-
-    return true;
+    const row = await upsertClientAssignment(
+      clientId,
+      teamMemberId,
+      "focal-person"
+    );
+    return !!row;
   } catch (error) {
     console.error("Error setting focal person:", error);
     return false;

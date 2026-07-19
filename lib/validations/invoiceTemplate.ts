@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-export const productKeySchema = z.enum(["rancelab", "website", "cctv"]);
+export const productKeySchema = z.enum([
+  "rancelab",
+  "pelbu_pos",
+  "website",
+  "cctv",
+  "networking",
+]);
 
 export const invoiceTemplateDesignSchema = z.object({
   logoUrl: z.string().nullable().optional(),

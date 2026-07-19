@@ -18,6 +18,7 @@ export type AMCStatus = "active" | "expiring" | "expired" | "cancelled";
 export interface CreateAMCDTO {
   clientId: number;
   serviceId?: number;
+  productKey?: string;
   contractNumber: string;
   startDate: Date;
   endDate: Date;
@@ -70,6 +71,7 @@ export class AMCService {
       publicId,
       clientId: data.clientId,
       serviceId: data.serviceId,
+      productKey: data.productKey || "rancelab",
       contractNumber: data.contractNumber,
       startDate: data.startDate,
       endDate: data.endDate,
@@ -355,7 +357,10 @@ export class AMCService {
       ]
         .filter(Boolean)
         .join("\n"),
-      productKey: "rancelab",
+      productKey:
+        (amc as { productKey?: string | null }).productKey ||
+        (amc.meta as { productKey?: string } | null)?.productKey ||
+        "rancelab",
     });
 
     await invoiceService.markInvoiceAsSent(invoice.id);

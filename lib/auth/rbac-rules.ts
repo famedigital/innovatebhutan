@@ -229,6 +229,7 @@ export function canAccessRoute(role: UserRole, route: string): boolean {
       '/admin/media',
       '/admin/marketing',
       '/admin/hero',
+      '/admin/users',
     ]
 
     if (adminOnlyRoutes.some(r => route === r || route.startsWith(r + '/'))) {

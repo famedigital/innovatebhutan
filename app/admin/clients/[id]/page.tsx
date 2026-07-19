@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Phone,
   Mail,
   MapPin,
@@ -18,6 +17,8 @@ import {
   RotateCcw,
   ExternalLink,
   MessageSquare,
+  UserPlus,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Separator } from "@/components/ui/separator";
 import { AmcRenewalDesk } from "@/components/admin/amc-renewal-desk";
@@ -84,6 +86,18 @@ interface ClientDetails {
   }>;
 }
 
+type TeamRow = {
+  id: number;
+  teamMemberId: number;
+  role: string;
+  isFocalPerson?: boolean;
+  isPrimaryBackup?: boolean;
+  isActive?: boolean;
+  name?: string;
+};
+
+type StaffMember = { teamMemberId: number; teamMemberName: string };
+
 function statusBadge(status: string) {
   const map: Record<string, string> = {
     active: "border-border bg-secondary",
@@ -105,11 +119,21 @@ function statusBadge(status: string) {
 export default function ClientDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const clientId = params.id ? parseInt(String(params.id)) : null;
+  const searchParams = useSearchParams();
+  const clientId = params.id ? parseInt(String(params.id), 10) : null;
+  const initialTab = searchParams.get("tab") || "overview";
 
   const [client, setClient] = useState<ClientDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState(initialTab);
   const [showEdit, setShowEdit] = useState(false);
+  const [team, setTeam] = useState<TeamRow[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [assignStaffId, setAssignStaffId] = useState("");
+  const [assignRole, setAssignRole] = useState<"focal-person" | "backup-team-member">(
+    "focal-person"
+  );
+  const [assignBusy, setAssignBusy] = useState(false);
   const [renewAmc, setRenewAmc] = useState<{
     id: number;
     clientId: number;
@@ -135,10 +159,20 @@ export default function ClientDetailPage() {
     if (!clientId) return;
     try {
       setLoading(true);
-      const response = await fetch(`/api/clients/${clientId}/details`);
-      const data = await response.json();
-      if (data.success) setClient(data.data);
-      else toast.error(data.error || "Failed to load client");
+      const [detailsRes, teamRes, membersRes] = await Promise.all([
+        fetch(`/api/clients/${clientId}/details`),
+        fetch(`/api/team?view=client&clientId=${clientId}`),
+        fetch(`/api/team?view=members`),
+      ]);
+      const details = await detailsRes.json();
+      const teamJson = await teamRes.json();
+      const membersJson = await membersRes.json();
+
+      if (details.success) setClient(details.data);
+      else toast.error(details.error || "Failed to load client");
+
+      if (teamJson.success) setTeam(teamJson.data || []);
+      if (membersJson.success) setStaff(membersJson.data || []);
     } catch {
       toast.error("Failed to load client");
     } finally {
@@ -149,6 +183,15 @@ export default function ClientDetailPage() {
   useEffect(() => {
     fetchClientDetails();
   }, [clientId]);
+
+  const onTabChange = (value: string) => {
+    setTab(value);
+    if (clientId) {
+      router.replace(`/admin/clients/${clientId}?tab=${value}`, {
+        scroll: false,
+      });
+    }
+  };
 
   const openRenew = (amc: NonNullable<ClientDetails["amcs"]>[number]) => {
     if (!client) return;
@@ -190,6 +233,7 @@ export default function ClientDetailPage() {
         setShowTicket(false);
         setTicketForm({ subject: "", description: "", priority: "medium" });
         fetchClientDetails();
+        onTabChange("tickets");
       } else {
         toast.error(result.error || "Failed to create ticket");
       }
@@ -197,6 +241,35 @@ export default function ClientDetailPage() {
       toast.error("Failed to create ticket");
     } finally {
       setCreatingTicket(false);
+    }
+  };
+
+  const assignStaff = async () => {
+    if (!clientId || !assignStaffId) return;
+    setAssignBusy(true);
+    try {
+      const res = await fetch("/api/team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "assign",
+          clientId,
+          teamMemberId: parseInt(assignStaffId, 10),
+          role: assignRole,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        toast.success("Staff assigned");
+        setAssignStaffId("");
+        fetchClientDetails();
+      } else {
+        toast.error(result.error || "Assign failed");
+      }
+    } catch {
+      toast.error("Assign failed");
+    } finally {
+      setAssignBusy(false);
     }
   };
 
@@ -213,10 +286,7 @@ export default function ClientDetailPage() {
       <div className="space-y-4 text-center py-12">
         <p className="text-muted-foreground">Client not found</p>
         <Button variant="outline" asChild>
-          <Link href="/admin/clients">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Clients
-          </Link>
+          <Link href="/admin/clients">Back to Clients</Link>
         </Button>
       </div>
     );
@@ -237,112 +307,105 @@ export default function ClientDetailPage() {
       return { ...amc, status, days };
     }) || [];
 
-  const activeAmcs = liveAmcs.filter((a) => a.status === "active" || a.status === "expiring");
-  const contractValue = activeAmcs.reduce((s, a) => s + (parseFloat(a.amount) || 0), 0);
+  const activeAmcs = liveAmcs.filter(
+    (a) => a.status === "active" || a.status === "expiring"
+  );
+  const contractValue = activeAmcs.reduce(
+    (s, a) => s + (parseFloat(a.amount) || 0),
+    0
+  );
+  const staffName = (id: number) =>
+    staff.find((s) => s.teamMemberId === id)?.teamMemberName || `Staff #${id}`;
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-1 sm:px-0">
-      <div className="flex items-start gap-3">
-        <Button variant="ghost" size="icon" className="shrink-0 mt-0.5" asChild>
-          <Link href="/admin/clients">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-        </Button>
-        <AdminPageHeader
-          className="flex-1"
-          title={client.name}
-          description={[client.contactPerson, client.industry, client.city]
+      <AdminPageHeader
+        title={client.name}
+        description={
+          [client.contactPerson, client.industry, client.city]
             .filter(Boolean)
-            .join(" · ") || "Client profile"}
-          actions={
-            <>
-              <Badge variant="outline">
-                {client.active ? "Active" : "Inactive"}
-              </Badge>
-              <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit
-              </Button>
-              <Button size="sm" onClick={() => setShowTicket(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                New ticket
-              </Button>
-            </>
-          }
-        />
-      </div>
+            .join(" · ") || "Client hub"
+        }
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Clients", href: "/admin/clients" },
+          { label: client.name },
+        ]}
+        actions={
+          <>
+            <Badge variant="outline">
+              {client.active ? "Active" : "Inactive"}
+            </Badge>
+            <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
+            </Button>
+            <Button size="sm" onClick={() => setShowTicket(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              New ticket
+            </Button>
+          </>
+        }
+      />
 
-      {/* Tools */}
-      <div className="flex flex-wrap gap-2">
-        {client.whatsapp && (
-          <Button variant="outline" size="sm" asChild>
-            <a href={`https://wa.me/${client.whatsapp}`} target="_blank" rel="noopener noreferrer">
-              <Phone className="w-4 h-4 mr-2" />
-              WhatsApp
-            </a>
-          </Button>
-        )}
-        {client.whatsappGroupLink && (
-          <Button variant="outline" size="sm" asChild>
-            <a href={client.whatsappGroupLink} target="_blank" rel="noopener noreferrer">
-              <Wifi className="w-4 h-4 mr-2" />
-              Group chat
-            </a>
-          </Button>
-        )}
-        {client.email && (
-          <Button variant="outline" size="sm" asChild>
-            <a href={`mailto:${client.email}`}>
-              <Mail className="w-4 h-4 mr-2" />
-              Email
-            </a>
-          </Button>
-        )}
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/admin/products/rancelab/amc?clientId=${client.id}`}>
-            <FileText className="w-4 h-4 mr-2" />
-            AMC desk
-          </Link>
-        </Button>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/admin/tickets?clientId=${client.id}`}>
-            <Ticket className="w-4 h-4 mr-2" />
-            Tickets
-          </Link>
-        </Button>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/admin/invoice?clientId=${client.id}`}>
-            <DollarSign className="w-4 h-4 mr-2" />
-            Invoices
-          </Link>
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card className="shadow-none">
           <CardContent className="p-3">
-            <p className="text-[10px] uppercase text-muted-foreground">Live contracts</p>
+            <p className="text-[10px] uppercase text-muted-foreground">
+              Live contracts
+            </p>
             <p className="text-xl font-semibold">{activeAmcs.length}</p>
           </CardContent>
         </Card>
         <Card className="shadow-none">
           <CardContent className="p-3">
-            <p className="text-[10px] uppercase text-muted-foreground">Contract value</p>
-            <p className="text-xl font-semibold">Nu. {(contractValue / 1000).toFixed(0)}k</p>
+            <p className="text-[10px] uppercase text-muted-foreground">
+              Contract value
+            </p>
+            <p className="text-xl font-semibold">
+              Nu. {(contractValue / 1000).toFixed(0)}k
+            </p>
           </CardContent>
         </Card>
-        <Card className="shadow-none col-span-2 sm:col-span-1">
+        <Card className="shadow-none">
           <CardContent className="p-3">
-            <p className="text-[10px] uppercase text-muted-foreground">Open tickets</p>
+            <p className="text-[10px] uppercase text-muted-foreground">
+              Open tickets
+            </p>
             <p className="text-xl font-semibold">
-              {client.tickets?.filter((t) => t.status === "open" || t.status === "in_progress").length || 0}
+              {client.tickets?.filter(
+                (t) => t.status === "open" || t.status === "in_progress"
+              ).length || 0}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-none">
+          <CardContent className="p-3">
+            <p className="text-[10px] uppercase text-muted-foreground">Staff</p>
+            <p className="text-sm font-medium truncate mt-1">
+              {team.find((t) => t.isFocalPerson || t.role === "focal-person")
+                ? staffName(
+                    team.find(
+                      (t) => t.isFocalPerson || t.role === "focal-person"
+                    )!.teamMemberId
+                  )
+                : "Unassigned"}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <Tabs value={tab} onValueChange={onTabChange} className="space-y-4">
+        <TabsList className="flex h-auto flex-wrap gap-1">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="ownership">Ownership</TabsTrigger>
+          <TabsTrigger value="amc">AMC</TabsTrigger>
+          <TabsTrigger value="tickets">Tickets</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="comms">Comms</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
           <Card className="shadow-none">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Contact</CardTitle>
@@ -370,7 +433,9 @@ export default function ClientDetailPage() {
                     <MapPin className="w-3 h-3" /> Location
                   </p>
                   <p className="font-medium">
-                    {[client.address, client.city, client.country].filter(Boolean).join(", ")}
+                    {[client.address, client.city, client.country]
+                      .filter(Boolean)
+                      .join(", ")}
                   </p>
                 </div>
               )}
@@ -382,134 +447,296 @@ export default function ClientDetailPage() {
               )}
             </CardContent>
           </Card>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => onTabChange("amc")}>
+              <FileText className="w-4 h-4 mr-2" />
+              AMC
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onTabChange("tickets")}
+            >
+              <Ticket className="w-4 h-4 mr-2" />
+              Tickets
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onTabChange("invoices")}
+            >
+              <DollarSign className="w-4 h-4 mr-2" />
+              Invoices
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+            >
+              <Link href={`/admin/amc?clientId=${client.id}&from=client`}>
+                Open AMC desk
+              </Link>
+            </Button>
+          </div>
+        </TabsContent>
 
-          <Card className="shadow-none">
-            <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base">AMC contracts</CardTitle>
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/admin/products/rancelab/amc">
-                  <Plus className="w-4 h-4 mr-1" />
-                  New
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {liveAmcs.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">No contracts yet</p>
-              ) : (
-                liveAmcs.map((amc) => (
-                  <div
-                    key={amc.id}
-                    className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-sm">{amc.contractNumber}</span>
-                        {statusBadge(amc.status)}
-                      </div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        Ends {new Date(amc.endDate).toLocaleDateString()}
-                        {" · "}
-                        Nu. {(parseFloat(amc.amount) || 0).toLocaleString()}
-                      </p>
-                    </div>
-                    {amc.status !== "cancelled" && !amc.renewedTo && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="shrink-0"
-                        onClick={() => openRenew(amc)}
-                      >
-                        <RotateCcw className="w-4 h-4 mr-2" />
-                        Renew
-                      </Button>
-                    )}
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-none">
-            <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base">Support tickets</CardTitle>
-              <Button size="sm" onClick={() => setShowTicket(true)}>
-                <Plus className="w-4 h-4 mr-1" />
-                Create
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {!client.tickets?.length ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">No tickets</p>
-              ) : (
-                client.tickets.slice(0, 8).map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className="w-full text-left flex items-center justify-between gap-2 rounded-md border p-3 hover:bg-accent/40"
-                    onClick={() => router.push(`/admin/tickets?ticketId=${t.id}`)}
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{t.subject}</p>
-                      <p className="text-xs text-muted-foreground">
-                        #{t.id} · {t.priority}
-                      </p>
-                    </div>
-                    {statusBadge(t.status)}
-                  </button>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
+        <TabsContent value="ownership" className="space-y-4">
           <Card className="shadow-none">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Recent invoices</CardTitle>
+              <CardTitle className="text-base">Assigned staff</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {!client.invoices?.length ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">No invoices</p>
+            <CardContent className="space-y-4">
+              {team.filter((t) => t.isActive !== false).length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No staff assigned yet.
+                </p>
               ) : (
-                client.invoices.slice(0, 6).map((inv) => (
-                  <Link
-                    key={inv.id}
-                    href={`/admin/invoice?invoiceId=${inv.id}`}
-                    className="flex items-center justify-between gap-2 rounded-md border p-3 text-sm transition-colors hover:bg-muted/50"
-                  >
-                    <div>
-                      <p className="font-medium text-primary underline-offset-2 group-hover:underline">
-                        {inv.invoiceNumber}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Due {new Date(inv.dueDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">
-                        Nu. {(parseFloat(inv.total) || 0).toLocaleString()}
-                      </p>
-                      {statusBadge(inv.status)}
-                    </div>
-                  </Link>
-                ))
+                <ul className="space-y-2">
+                  {team
+                    .filter((t) => t.isActive !== false)
+                    .map((t) => (
+                      <li
+                        key={t.id}
+                        className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                      >
+                        <span className="font-medium">
+                          {staffName(t.teamMemberId)}
+                        </span>
+                        <Badge variant="secondary">
+                          {t.isFocalPerson || t.role === "focal-person"
+                            ? "Focal"
+                            : t.isPrimaryBackup ||
+                                t.role === "backup-team-member"
+                              ? "Backup"
+                              : t.role}
+                        </Badge>
+                      </li>
+                    ))}
+                </ul>
               )}
+              <Separator />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Select value={assignStaffId} onValueChange={setAssignStaffId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select staff" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staff.map((s) => (
+                      <SelectItem
+                        key={s.teamMemberId}
+                        value={String(s.teamMemberId)}
+                      >
+                        {s.teamMemberName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={assignRole}
+                  onValueChange={(v) =>
+                    setAssignRole(v as "focal-person" | "backup-team-member")
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="focal-person">Focal person</SelectItem>
+                    <SelectItem value="backup-team-member">Backup</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={assignStaff}
+                  disabled={assignBusy || !assignStaffId}
+                >
+                  {assignRole === "focal-person" ? (
+                    <UserPlus className="w-4 h-4 mr-2" />
+                  ) : (
+                    <Users className="w-4 h-4 mr-2" />
+                  )}
+                  {assignBusy ? "Saving…" : "Assign"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
-        </div>
+        </TabsContent>
 
-        <aside className="space-y-4 lg:pl-2">
+        <TabsContent value="amc" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-muted-foreground">
+              Renew in-place — stay on this client hub
+            </p>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/admin/amc?clientId=${client.id}&from=client`}>
+                <Plus className="w-4 h-4 mr-1" />
+                AMC desk
+              </Link>
+            </Button>
+          </div>
+          {liveAmcs.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center border rounded-md">
+              No contracts yet
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {liveAmcs.map((amc) => (
+                <div
+                  key={amc.id}
+                  className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-sm">
+                        {amc.contractNumber}
+                      </span>
+                      {statusBadge(amc.status)}
+                    </div>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      Ends {new Date(amc.endDate).toLocaleDateString()}
+                      {" · "}
+                      Nu. {(parseFloat(amc.amount) || 0).toLocaleString()}
+                    </p>
+                  </div>
+                  {amc.status !== "cancelled" && !amc.renewedTo && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={() => openRenew(amc)}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Renew
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="tickets" className="space-y-4">
+          <div className="flex justify-end">
+            <Button size="sm" onClick={() => setShowTicket(true)}>
+              <Plus className="w-4 h-4 mr-1" />
+              Create
+            </Button>
+          </div>
+          {!client.tickets?.length ? (
+            <p className="text-sm text-muted-foreground py-8 text-center border rounded-md">
+              No tickets
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {client.tickets.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className="w-full text-left flex items-center justify-between gap-2 rounded-md border p-3 hover:bg-muted/50 transition-colors"
+                  onClick={() =>
+                    router.push(
+                      `/admin/tickets?ticketId=${t.id}&clientId=${client.id}&from=client`
+                    )
+                  }
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{t.subject}</p>
+                    <p className="text-xs text-muted-foreground">
+                      #{t.id} · {t.priority}
+                    </p>
+                  </div>
+                  {statusBadge(t.status)}
+                </button>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="invoices" className="space-y-4">
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/admin/invoice?clientId=${client.id}&from=client`}>
+                Invoice desk
+              </Link>
+            </Button>
+          </div>
+          {!client.invoices?.length ? (
+            <p className="text-sm text-muted-foreground py-8 text-center border rounded-md">
+              No invoices
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {client.invoices.map((inv) => (
+                <Link
+                  key={inv.id}
+                  href={`/admin/invoice?invoiceId=${inv.id}&clientId=${client.id}&from=client`}
+                  className="flex items-center justify-between gap-2 rounded-md border p-3 text-sm transition-colors hover:bg-muted/50"
+                >
+                  <div>
+                    <p className="font-medium">{inv.invoiceNumber}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Due {new Date(inv.dueDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">
+                      Nu. {(parseFloat(inv.total) || 0).toLocaleString()}
+                    </p>
+                    {statusBadge(inv.status)}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="comms" className="space-y-4">
           <Card className="shadow-none">
-            <CardHeader className="px-4 pb-2 pt-4 sm:px-6">
-              <CardTitle className="text-base">WhatsApp group</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">WhatsApp & email</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 px-4 pb-4 text-sm sm:px-6">
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {client.whatsapp && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a
+                      href={`https://wa.me/${client.whatsapp}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Phone className="w-4 h-4 mr-2" />
+                      WhatsApp
+                    </a>
+                  </Button>
+                )}
+                {client.whatsappGroupLink && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a
+                      href={client.whatsappGroupLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Wifi className="w-4 h-4 mr-2" />
+                      Group chat
+                    </a>
+                  </Button>
+                )}
+                {client.email && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={`mailto:${client.email}`}>
+                      <Mail className="w-4 h-4 mr-2" />
+                      Email
+                    </a>
+                  </Button>
+                )}
+              </div>
+              <Separator />
               {client.whatsappGroupLink ? (
                 <>
-                  <p className="text-muted-foreground break-all text-xs">
+                  <p className="text-xs text-muted-foreground break-all">
                     {client.whatsappGroupLink}
                   </p>
-                  <Button className="w-full" asChild>
+                  <Button className="w-full sm:w-auto" asChild>
                     <a
                       href={client.whatsappGroupLink}
                       target="_blank"
@@ -521,23 +748,18 @@ export default function ClientDetailPage() {
                   </Button>
                 </>
               ) : (
-                <p className="text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   No group link set. Edit the client to add one.
                 </p>
               )}
-              <Separator />
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowEdit(true)}
-              >
+              <Button variant="outline" onClick={() => setShowEdit(true)}>
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Update group link
               </Button>
             </CardContent>
           </Card>
-        </aside>
-      </div>
+        </TabsContent>
+      </Tabs>
 
       {showEdit && (
         <EditClientModal
@@ -591,7 +813,9 @@ export default function ClientDetailPage() {
               </Select>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">Description</label>
+              <label className="text-xs text-muted-foreground">
+                Description
+              </label>
               <Textarea
                 value={ticketForm.description}
                 onChange={(e) =>

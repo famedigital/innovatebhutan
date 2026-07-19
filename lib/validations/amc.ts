@@ -7,6 +7,7 @@ export const amcStatusSchema = z.enum(["active", "expiring", "expired", "cancell
 export const createAMCSchema = z.object({
   clientId: z.number().int().positive("Client ID is required"),
   serviceId: z.number().int().positive().optional(),
+  productKey: z.string().max(50).optional(),
   contractNumber: z.string().min(1, "Contract number is required").max(100, "Contract number too long"),
   startDate: z.coerce.date({ required_error: "Start date is required" }),
   endDate: z.coerce.date({ required_error: "End date is required" }),
@@ -73,6 +74,7 @@ export const rancelabRemittanceSchema = z.object({
 export const amcQuerySchema = z.object({
   clientId: z.coerce.number().int().positive().optional(),
   serviceId: z.coerce.number().int().positive().optional(),
+  productKey: z.string().max(50).optional(),
   status: amcStatusSchema.optional(),
   search: z.string().max(255).optional(),
   owner: z.enum(["all", "mine", "unclaimed", "today"]).optional().default("all"),

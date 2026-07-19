@@ -94,6 +94,19 @@ ERP APIs that exist in repo (representative):
 ## Canonical workflows (the “ERP brain”)
 These workflows define how data moves and what invariants must hold. If code diverges, **code should be changed to match the workflow** (unless you explicitly change the workflow here).
 
+### Client ownership (focal + backup)
+**Entities**: `team_assignments` (client ↔ employee), `profiles`, `employees`
+
+**Rules**:
+- Assignments via `/api/team` (`bulk-assign`, `assign`, `set-focal-person`, `clear-assignments`).
+- UI: `/admin/clients` multi-select bulk assign; hub tab **Ownership** on `/admin/clients/[id]`.
+- One focal person per client; backups via `backup-team-member`.
+
+### Multi-product catalog
+**Source**: `lib/config/products.ts` (+ migration `drizzle/0030_products_catalog.sql`).
+Keys: `rancelab`, `pelbu_pos`, `website`, `cctv`, `networking`.
+AMC / tickets / invoices carry `productKey`; product hubs are thin shells over shared desks.
+
 ### Projects workflow
 **Entities**: `projects`, `project_tasks`
 

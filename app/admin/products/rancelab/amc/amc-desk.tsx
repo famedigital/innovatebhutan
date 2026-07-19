@@ -91,6 +91,7 @@ export default function AmcDeskPage() {
   const [ownerFilter, setOwnerFilter] = useState<string>(
     searchParams.get("owner") || "all"
   );
+  const productKeyFilter = searchParams.get("productKey") || undefined;
   const [showCreate, setShowCreate] = useState(false);
   const [showClientCreate, setShowClientCreate] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
@@ -120,6 +121,7 @@ export default function AmcDeskPage() {
       if (ownerFilter && ownerFilter !== "all") params.append("owner", ownerFilter);
       const clientIdParam = searchParams.get("clientId");
       if (clientIdParam) params.append("clientId", clientIdParam);
+      if (productKeyFilter) params.append("productKey", productKeyFilter);
       params.append("limit", "50");
 
       const [amcsRes, clientsRes, servicesRes] = await Promise.all([
@@ -191,7 +193,7 @@ export default function AmcDeskPage() {
       setLoadingState('error');
       toast.error(err.message || 'Failed to load data');
     }
-  }, [statusFilter, ownerFilter, searchParams]);
+  }, [statusFilter, ownerFilter, searchParams, productKeyFilter]);
 
   useEffect(() => {
     fetchData();
@@ -221,6 +223,7 @@ export default function AmcDeskPage() {
         body: JSON.stringify({
           clientId: clientIdNum,
           serviceId: newAMC.serviceId ? parseInt(newAMC.serviceId) : undefined,
+          productKey: productKeyFilter || "rancelab",
           contractNumber: newAMC.contractNumber,
           startDate: newAMC.startDate,
           endDate: newAMC.endDate,
@@ -439,12 +442,27 @@ export default function AmcDeskPage() {
   return (
     <div className="space-y-4">
       <AdminPageHeader
-        title="RanceLab AMC"
+        title={productKeyFilter ? `AMC · ${productKeyFilter}` : "AMC"}
         description="Renewals stay in one modal · invoices roll up to master Invoices"
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Commercial" },
+          { label: "AMC" },
+        ]}
         actions={
           <>
+            {searchParams.get("from") === "client" &&
+            searchParams.get("clientId") ? (
+              <Button variant="outline" size="sm" asChild>
+                <Link
+                  href={`/admin/clients/${searchParams.get("clientId")}?tab=amc`}
+                >
+                  Back to client
+                </Link>
+              </Button>
+            ) : null}
             <Button variant="outline" size="sm" asChild>
-              <Link href="/admin/products/rancelab">Hub</Link>
+              <Link href="/admin/products">Products</Link>
             </Button>
             <Link href="/admin/amc/reports">
               <Button variant="outline" size="sm">

@@ -1,121 +1,194 @@
 /**
- * 👥 TEAM MANAGEMENT API ROUTES
- * REST API for AI-optimized team management
+ * TEAM MANAGEMENT API
+ * Workload, performance, and client ownership assignment
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { teamManagementService } from "@/lib/services/teamManagementService";
-import { requireApiAuth, requireStaffOrAdmin, formatApiError } from '@/lib/auth/api-auth';
-import { isApiError } from '@/lib/errors';
+import {
+  requireApiAuth,
+  requireStaffOrAdmin,
+  formatApiError,
+} from "@/lib/auth/api-auth";
+import { isApiError } from "@/lib/errors";
 
-/**
- * GET /api/team/workload
- * Get team workload overview
- */
 export async function GET(request: NextRequest) {
   try {
-    const _auth = await requireApiAuth(request);
-    requireStaffOrAdmin(_auth.profile);
-    const endpoint = request.nextUrl.pathname.split('/').pop();
+    const auth = await requireApiAuth(request);
+    requireStaffOrAdmin(auth.profile);
 
-    let data;
-    switch (endpoint) {
-      case 'workload':
-        data = await teamManagementService.getTeamWorkloadOverview();
-        break;
+    const { searchParams } = request.nextUrl;
+    const view = searchParams.get("view") || "workload";
+    const clientIdsParam = searchParams.get("clientIds");
 
-      case 'performance':
-        const searchParams = request.nextUrl.searchParams;
-        const teamMemberId = searchParams.get('teamMemberId');
-        data = await teamManagementService.getTeamPerformanceMetrics(
-          teamMemberId ? parseInt(teamMemberId) : undefined
-        );
-        break;
-
-      default:
-        data = await teamManagementService.getTeamWorkloadOverview();
+    if (view === "ownership" && clientIdsParam) {
+      const clientIds = clientIdsParam
+        .split(",")
+        .map((id) => parseInt(id.trim(), 10))
+        .filter((n) => !Number.isNaN(n));
+      const data = await teamManagementService.getOwnershipForClients(clientIds);
+      return NextResponse.json({ success: true, data });
     }
 
-    return NextResponse.json({
-      success: true,
-      data
-    });
+    if (view === "members") {
+      const data = await teamManagementService.getAvailableTeamMembers();
+      return NextResponse.json({ success: true, data });
+    }
+
+    if (view === "performance") {
+      const teamMemberId = searchParams.get("teamMemberId");
+      const data = await teamManagementService.getTeamPerformanceMetrics(
+        teamMemberId ? parseInt(teamMemberId, 10) : undefined
+      );
+      return NextResponse.json({ success: true, data });
+    }
+
+    if (view === "client" && searchParams.get("clientId")) {
+      const clientId = parseInt(searchParams.get("clientId")!, 10);
+      const data = await teamManagementService.getClientTeamMembers(clientId);
+      return NextResponse.json({ success: true, data });
+    }
+
+    const data = await teamManagementService.getTeamWorkloadOverview();
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error("API error fetching team data:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch team data" },
-      { status: 500 }
-    );
+    const status = isApiError(error) ? (error as { statusCode?: number }).statusCode || 500 : 500;
+    return NextResponse.json(formatApiError(error), { status });
   }
 }
 
-/**
- * POST /api/team/assign
- * AI-optimized team assignment
- */
 export async function POST(request: NextRequest) {
   try {
-    const _auth = await requireApiAuth(request);
-    requireStaffOrAdmin(_auth.profile);
+    const auth = await requireApiAuth(request);
+    requireStaffOrAdmin(auth.profile);
     const body = await request.json();
-    const action = body.action;
+    const action = body.action as string;
 
-    if (action === 'assign-best') {
-      // AI-optimized assignment
+    if (action === "bulk-assign") {
+      const clientIds: number[] = Array.isArray(body.clientIds)
+        ? body.clientIds.map((id: unknown) => Number(id)).filter((n: number) => !Number.isNaN(n))
+        : [];
+      const teamMemberId = Number(body.teamMemberId);
+      const role =
+        body.role === "backup-team-member" || body.role === "specialist"
+          ? body.role
+          : "focal-person";
+
+      const result = await teamManagementService.bulkAssignClients(
+        clientIds,
+        teamMemberId,
+        role
+      );
+
+      if (!result.success) {
+        return NextResponse.json(
+          { success: false, error: result.error || "Bulk assign failed" },
+          { status: 400 }
+        );
+      }
+
+      try {
+        const { db } = await import("@/db");
+        const { auditLogs } = await import("@/db/schema");
+        await db.insert(auditLogs).values({
+          operatorId: auth.profile.id,
+          action: "UPDATE",
+          entityType: "TEAM_ASSIGNMENT",
+          entityId: teamMemberId,
+          details: {
+            action: "bulk-assign",
+            clientIds,
+            role,
+            assigned: result.assigned,
+          },
+        });
+      } catch (e) {
+        console.warn("[team] audit skipped", e);
+      }
+
+      return NextResponse.json({
+        success: true,
+        assigned: result.assigned,
+        message: `Assigned ${result.assigned} client(s)`,
+      });
+    }
+
+    if (action === "clear-assignments") {
+      const clientIds: number[] = Array.isArray(body.clientIds)
+        ? body.clientIds.map((id: unknown) => Number(id)).filter((n: number) => !Number.isNaN(n))
+        : [];
+      const result = await teamManagementService.clearAssignments(clientIds);
+      return NextResponse.json({
+        success: true,
+        cleared: result.cleared,
+        message: `Cleared assignments on ${result.cleared} record(s)`,
+      });
+    }
+
+    if (action === "assign-best") {
       const result = await teamManagementService.assignBestTeamMember(
         body.clientId,
-        body.problemSeverity || 'medium'
+        body.problemSeverity || "medium"
       );
 
       return NextResponse.json({
         success: result.success,
         data: {
           teamMemberId: result.teamMemberId,
-          reason: result.reason
-        }
+          reason: result.reason,
+        },
       });
     }
 
-    if (action === 'set-focal-person') {
+    if (action === "set-focal-person") {
       const result = await teamManagementService.setFocalPerson(
         body.clientId,
         body.teamMemberId
       );
 
       if (!result.success) {
-        return NextResponse.json(
-          { error: result.error },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: result.error }, { status: 400 });
       }
 
       return NextResponse.json({
         success: true,
-        message: "Focal person updated successfully"
+        message: "Focal person updated successfully",
       });
     }
 
-    if (action === 'calculate-optimal') {
+    if (action === "assign") {
+      const role =
+        body.role === "backup-team-member" || body.role === "specialist"
+          ? body.role
+          : "focal-person";
+      const result = await teamManagementService.bulkAssignClients(
+        [Number(body.clientId)],
+        Number(body.teamMemberId),
+        role
+      );
+      if (!result.success) {
+        return NextResponse.json(
+          { success: false, error: result.error },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json({ success: true, assigned: result.assigned });
+    }
+
+    if (action === "calculate-optimal") {
       const result = await teamManagementService.calculateOptimalAssignment(
         body.clientId,
         body.problemData || {}
       );
 
-      return NextResponse.json({
-        success: true,
-        data: result
-      });
+      return NextResponse.json({ success: true, data: result });
     }
 
-    return NextResponse.json(
-      { error: "Invalid action" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
     console.error("API error in team management:", error);
-    return NextResponse.json(
-      { error: "Failed to process team management request" },
-      { status: 500 }
-    );
+    const status = isApiError(error) ? (error as { statusCode?: number }).statusCode || 500 : 500;
+    return NextResponse.json(formatApiError(error), { status });
   }
 }
