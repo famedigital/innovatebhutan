@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, RefreshCw, Plus, Eye, Trash2, X, MessageSquare, Clock, AlertTriangle } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Search, RefreshCw, Plus, Eye, Trash2, X, MessageSquare, AlertTriangle } from "lucide-react";
+import { TableCell, TableHead, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Item, ItemActions, ItemContent, ItemDescription, ItemTitle,
+} from "@/components/ui/item";
+import { ResponsiveDataList } from "@/components/admin/responsive-data-list";
 import { toast } from "sonner";
 import { TicketDetailModal } from "./ticket-detail-modal";
 
@@ -294,7 +297,7 @@ export function TicketHub() {
                 <Button variant="outline" className="flex-1 border-border" onClick={() => setShowCreate(false)}>
                   Cancel
                 </Button>
-                <Button className="flex-1 bg-primary hover:bg-[#34b27b] text-white" onClick={handleCreateTicket}>
+                <Button className="flex-1" onClick={handleCreateTicket}>
                   Create Ticket
                 </Button>
               </div>
@@ -303,122 +306,164 @@ export function TicketHub() {
         </div>
       )}
 
-      {/* Tickets Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border bg-muted">
-                <TableHead className="text-xs text-muted-foreground">ID</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Subject</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Client</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Priority</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Status</TableHead>
-                <TableHead className="text-xs text-muted-foreground">SLA</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Created</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTickets.length > 0 ? filteredTickets.map((ticket) => {
-                const slaDeadline = ticket.sla_deadline ? new Date(ticket.sla_deadline) : null;
-                const hoursRemaining = slaDeadline ? Math.round((slaDeadline.getTime() - Date.now()) / (1000 * 60 * 60)) : null;
+      <ResponsiveDataList
+        isEmpty={!loading && filteredTickets.length === 0}
+        empty={
+          <div className="flex flex-col items-center">
+            <MessageSquare className="w-8 h-8 mb-2 opacity-50" />
+            <p>No tickets found</p>
+          </div>
+        }
+        tableHeader={
+          <>
+            <TableHead className="text-xs text-muted-foreground">ID</TableHead>
+            <TableHead className="text-xs text-muted-foreground">Subject</TableHead>
+            <TableHead className="text-xs text-muted-foreground">Client</TableHead>
+            <TableHead className="text-xs text-muted-foreground">Priority</TableHead>
+            <TableHead className="text-xs text-muted-foreground">Status</TableHead>
+            <TableHead className="text-xs text-muted-foreground">SLA</TableHead>
+            <TableHead className="text-xs text-muted-foreground">Created</TableHead>
+            <TableHead className="text-xs text-muted-foreground">Actions</TableHead>
+          </>
+        }
+        tableBody={
+          loading ? (
+            <TableRow>
+              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                Loading...
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredTickets.map((ticket) => {
+              const slaDeadline = ticket.sla_deadline
+                ? new Date(ticket.sla_deadline)
+                : null;
+              const hoursRemaining = slaDeadline
+                ? Math.round(
+                    (slaDeadline.getTime() - Date.now()) / (1000 * 60 * 60)
+                  )
+                : null;
 
-                return (
-                  <TableRow key={ticket.id} className={`border-border hover:bg-muted ${ticket.sla_breach ? 'bg-red-50' : ''}`}>
-                    <TableCell className="text-xs font-mono text-muted-foreground">#{ticket.id}</TableCell>
-                    <TableCell className="text-sm font-medium">{ticket.subject}</TableCell>
-                    <TableCell className="text-sm">{ticket.clients?.name || '-'}</TableCell>
-                    <TableCell>
-                      <Badge className={`${
-                        ticket.priority === 'high' ? 'bg-red-50 text-red-600 border-red-200' :
-                        ticket.priority === 'medium' ? 'bg-amber-50 text-amber-600 border-amber-200' :
-                        'bg-blue-50 text-blue-600 border-blue-200'
-                      } text-[10px] px-2`}>
-                        {ticket.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`${
-                        ticket.status === 'open' ? 'bg-green-50 text-green-600 border-green-200' :
-                        ticket.status === 'in_progress' ? 'bg-blue-50 text-blue-600 border-blue-200' :
-                        ticket.status === 'resolved' ? 'bg-gray-50 text-gray-600 border-gray-200' :
-                        'bg-gray-100 text-gray-400 border-gray-200'
-                      } text-[10px] px-2`}>
-                        {ticket.status.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {ticket.status === 'open' ? (
-                        ticket.sla_breach ? (
-                          <Badge className="bg-red-100 text-red-700 border-red-300 text-[10px] flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" />
-                            Breached
-                          </Badge>
-                        ) : hoursRemaining !== null ? (
-                          <span className={`text-xs font-medium ${hoursRemaining < 4 ? 'text-red-600' : hoursRemaining < 12 ? 'text-amber-600' : 'text-green-600'}`}>
-                            {hoursRemaining}h left
-                          </span>
-                        ) : null
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => openTicketDetail(ticket.id)}
+              return (
+                <TableRow
+                  key={ticket.id}
+                  className={ticket.sla_breach ? "bg-destructive/5" : undefined}
+                >
+                  <TableCell className="text-xs font-mono text-muted-foreground">
+                    #{ticket.id}
+                  </TableCell>
+                  <TableCell className="text-sm font-medium">
+                    {ticket.subject}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {ticket.clients?.name || "-"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-[10px] px-2">
+                      {ticket.priority}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="text-[10px] px-2">
+                      {ticket.status.replace("_", " ")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {ticket.status === "open" ? (
+                      ticket.sla_breach ? (
+                        <Badge
+                          variant="outline"
+                          className="border-destructive/30 text-destructive text-[10px] flex items-center gap-1"
                         >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Select
-                          value={ticket.status}
-                          onValueChange={(v) => handleUpdateStatus(ticket.id, v)}
-                        >
-                          <SelectTrigger className="h-8 w-24 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white border-border">
-                            <SelectItem value="open">Open</SelectItem>
-                            <SelectItem value="in_progress">In Progress</SelectItem>
-                            <SelectItem value="resolved">Resolved</SelectItem>
-                            <SelectItem value="closed">Closed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500"
-                          onClick={() => handleDeleteTicket(ticket.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              }) : (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    {loading ? 'Loading...' : (
-                      <div className="flex flex-col items-center">
-                        <MessageSquare className="w-8 h-8 mb-2 opacity-50" />
-                        <p>No tickets found</p>
-                      </div>
+                          <AlertTriangle className="w-3 h-3" />
+                          Breached
+                        </Badge>
+                      ) : hoursRemaining !== null ? (
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {hoursRemaining}h left
+                        </span>
+                      ) : null
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
                     )}
                   </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {ticket.created_at
+                      ? new Date(ticket.created_at).toLocaleDateString()
+                      : "-"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => openTicketDetail(ticket.id)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Select
+                        value={ticket.status}
+                        onValueChange={(v) => handleUpdateStatus(ticket.id, v)}
+                      >
+                        <SelectTrigger className="h-8 w-24 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="open">Open</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="resolved">Resolved</SelectItem>
+                          <SelectItem value="closed">Closed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => handleDeleteTicket(ticket.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              );
+            })
+          )
+        }
+        mobileItems={filteredTickets.map((ticket) => (
+          <Item
+            key={ticket.id}
+            size="sm"
+            className="rounded-none border-0 cursor-pointer hover:bg-accent/50"
+            onClick={() => openTicketDetail(ticket.id)}
+          >
+            <ItemContent>
+              <ItemTitle className="w-full justify-between gap-2">
+                <span className="truncate">{ticket.subject}</span>
+                <Badge variant="secondary" className="shrink-0 text-[10px]">
+                  {ticket.status.replace("_", " ")}
+                </Badge>
+              </ItemTitle>
+              <ItemDescription>
+                #{ticket.id} · {ticket.clients?.name || "No client"} ·{" "}
+                {ticket.priority}
+                {ticket.sla_breach ? " · SLA breached" : ""}
+              </ItemDescription>
+            </ItemContent>
+            <ItemActions onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => openTicketDetail(ticket.id)}
+              >
+                <Eye className="w-4 h-4" />
+              </Button>
+            </ItemActions>
+          </Item>
+        ))}
+      />
 
       {/* Ticket Detail Modal */}
       <TicketDetailModal

@@ -366,13 +366,13 @@ export default function ProcurementPage() {
   const activeSuppliers = suppliers.filter((s) => s.isActive).length;
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Procurement</h1>
-          <p className="text-muted-foreground">Purchase orders & suppliers</p>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Procurement</h1>
+          <p className="text-sm text-muted-foreground">Purchase orders & suppliers</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={fetchData}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh

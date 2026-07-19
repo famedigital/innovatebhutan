@@ -270,19 +270,19 @@ export default function CommunicationsHubPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-black">Communication Hub</h1>
-          <p className="text-sm text-gray-500">Unified multi-channel communication management</p>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">Communications</h1>
+          <p className="text-sm text-muted-foreground">Multi-channel communication management</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="border-gray-200 hover:bg-gray-50">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline">
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
-              <Button className="bg-[#3ECF8E] hover:bg-[#34b27b] text-black">
+              <Button>
                 <Plus className="w-4 h-4 mr-2" />
                 New Communication
               </Button>

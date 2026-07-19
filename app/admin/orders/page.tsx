@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CreateOrderModal } from "./create-order-modal";
 import { OrderDetailModal } from "./order-detail-modal";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 interface Order {
   id: number;
@@ -156,22 +157,21 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-black">Orders</h1>
-          <p className="text-sm text-gray-500">Manage infrastructure deployment orders</p>
-        </div>
-        <Button
-          className="bg-black hover:bg-gray-800 text-white"
-          onClick={() => {
-            setEditOrder(null);
-            setShowCreateModal(true);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Order
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Orders"
+        description="Deployment and sales orders"
+        actions={
+          <Button
+            onClick={() => {
+              setEditOrder(null);
+              setShowCreateModal(true);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Order
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader>

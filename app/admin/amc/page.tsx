@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
-  FileText, Plus, Search, Calendar, DollarSign, User, RefreshCw,
-  AlertCircle, CheckCircle, Clock, X, Trash2, Eye, RotateCcw, BarChart3, Wifi, UserPlus, Upload
+  FileText, Plus, Search, AlertCircle, CheckCircle, Clock, Trash2, RotateCcw, BarChart3, Wifi, Upload, MoreVertical, MessageCircle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,20 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
+} from "@/components/ui/sheet";
+import {
+  TableCell, TableHead, TableRow
+} from "@/components/ui/table";
+import {
+  Item, ItemContent, ItemDescription, ItemActions, ItemMedia, ItemTitle
+} from "@/components/ui/item";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { ResponsiveDataList } from "@/components/admin/responsive-data-list";
 import { toast } from "sonner";
 import { BulkImportModal } from "./bulk-import-modal";
 
@@ -81,6 +94,7 @@ export default function AMCPage() {
   const [newClientName, setNewClientName] = useState("");
   const [creatingClient, setCreatingClient] = useState(false);
   const [selectedAMC, setSelectedAMC] = useState<AMC | null>(null);
+  const [detailAMC, setDetailAMC] = useState<AMC | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newAMC, setNewAMC] = useState({
     clientId: "",
@@ -423,11 +437,11 @@ export default function AMCPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-700';
-      case 'expired': return 'bg-red-100 text-red-700';
-      case 'expiring': return 'bg-orange-100 text-orange-700';
-      case 'cancelled': return 'bg-gray-100 text-gray-500';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'active': return 'border-border bg-secondary text-foreground';
+      case 'expired': return 'border-destructive/30 bg-destructive/10 text-destructive';
+      case 'expiring': return 'border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200';
+      case 'cancelled': return 'border-border bg-muted text-muted-foreground';
+      default: return 'border-border bg-muted text-muted-foreground';
     }
   };
 
@@ -473,70 +487,67 @@ export default function AMCPage() {
   }
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">AMC Contracts</h1>
-          <p className="text-sm text-muted-foreground">Manage Annual Maintenance Contracts with clients</p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/admin/amc/reports">
-            <Button variant="outline">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Reports
+    <div className="space-y-4">
+      <AdminPageHeader
+        title="AMC Contracts"
+        description="Annual maintenance contracts with clients"
+        actions={
+          <>
+            <Link href="/admin/amc/reports">
+              <Button variant="outline" size="sm">
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Reports
+              </Button>
+            </Link>
+            <Button
+              onClick={() => setShowBulkImport(true)}
+              variant="outline"
+              size="sm"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Bulk Import
             </Button>
-          </Link>
-          <Button
-            onClick={() => setShowBulkImport(true)}
-            variant="outline"
-            className="border-blue-500 text-blue-600 hover:bg-blue-50"
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            Bulk Import
-          </Button>
-          <Button
-            onClick={() => setShowCreate(true)}
-            className="bg-primary hover:bg-[#34b27b] text-white"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New AMC
-          </Button>
-        </div>
-      </div>
+            <Button onClick={() => setShowCreate(true)} size="sm">
+              <Plus className="w-4 h-4 mr-2" />
+              New AMC
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="p-3">
             <p className="text-[10px] text-muted-foreground uppercase">Active Contracts</p>
-            <p className="text-xl font-bold text-green-600">{activeAMCs}</p>
+            <p className="text-xl font-semibold text-foreground">{activeAMCs}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="p-3">
             <p className="text-[10px] text-muted-foreground uppercase">Expiring Soon</p>
-            <p className="text-xl font-bold text-orange-600">{expiringSoon}</p>
+            <p className="text-xl font-semibold text-amber-700 dark:text-amber-300">{expiringSoon}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="p-3">
             <p className="text-[10px] text-muted-foreground uppercase">Total Contract Value</p>
-            <p className="text-xl font-bold">Nu. {(totalValue / 1000).toFixed(1)}k</p>
+            <p className="text-xl font-semibold">Nu. {(totalValue / 1000).toFixed(1)}k</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="p-3">
             <p className="text-[10px] text-muted-foreground uppercase">Annual Revenue</p>
-            <p className="text-xl font-bold text-primary">Nu. {(totalValue / 12).toFixed(0)}k/mo</p>
+            <p className="text-xl font-semibold text-foreground">Nu. {(totalValue / 12).toFixed(0)}k/mo</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Expiring Soon Alert Section */}
       {expiringSoon > 0 && (
-        <Card className="border-orange-200 bg-orange-50">
+        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/30 shadow-none">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-orange-800">
+            <CardTitle className="text-sm font-medium flex items-center gap-2 text-amber-900 dark:text-amber-100">
               <AlertCircle className="w-4 h-4" />
               {expiringSoon} Contract{expiringSoon > 1 ? "s" : ""} Expiring Soon
             </CardTitle>
@@ -546,17 +557,12 @@ export default function AMCPage() {
               <Button
                 size="sm"
                 variant="outline"
-                className="bg-white border-orange-200 text-orange-700 hover:bg-orange-100"
                 onClick={() => setStatusFilter("expiring")}
               >
                 View Expiring
               </Button>
               <Link href="/admin/amc/reports">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="bg-white border-orange-200 text-orange-700 hover:bg-orange-100"
-                >
+                <Button size="sm" variant="outline">
                   Full Report
                 </Button>
               </Link>
@@ -567,29 +573,29 @@ export default function AMCPage() {
 
       {/* Clients loading warning */}
       {clients.length === 0 && (
-        <Card className="border-yellow-200 bg-yellow-50">
+        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/30 shadow-none">
           <CardContent className="p-3">
-            <div className="flex items-center gap-2 text-yellow-800">
+            <div className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
               <AlertCircle className="w-4 h-4" />
-              <p className="text-sm">No clients available. Please create a client first to create AMC contracts.</p>
+              <p className="text-sm">No clients available. Create a client first to add AMC contracts.</p>
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* Search & Filter */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search contracts..."
-            className="pl-9 bg-muted border-border"
+            className="pl-9"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 bg-muted border-border">
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -602,162 +608,266 @@ export default function AMCPage() {
         </Select>
       </div>
 
-      {/* AMC List - Modern Compact Dashboard */}
-      <Card className="border-gray-200/60 shadow-sm">
-        <CardContent className="p-0">
-          {filteredAMCs.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-                <FileText className="w-8 h-8 text-gray-300" />
-              </div>
-              <p className="text-sm font-medium text-gray-900">No AMC contracts found</p>
-              <p className="text-xs mt-1 text-gray-500">Create your first AMC contract to get started</p>
-            </div>
-          ) : (
-            <div>
-              {filteredAMCs.map((amc) => {
-                const daysLeft = amc.endDate ? Math.ceil((new Date(amc.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
-                const isExpiringSoon = daysLeft > 0 && daysLeft <= 30;
-                const isExpired = daysLeft < 0;
+      <ResponsiveDataList
+        isEmpty={filteredAMCs.length === 0}
+        empty="No AMC contracts found. Create your first contract to get started."
+        tableHeader={
+          <>
+            <TableHead>Client</TableHead>
+            <TableHead>Contract</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>End date</TableHead>
+            <TableHead className="text-right">Value</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </>
+        }
+        tableBody={filteredAMCs.map((amc) => {
+          const daysLeft = amc.endDate
+            ? Math.ceil(
+                (new Date(amc.endDate).getTime() - Date.now()) /
+                  (1000 * 60 * 60 * 24)
+              )
+            : 0;
+          const isExpiringSoon = daysLeft > 0 && daysLeft <= 30;
+          return (
+            <TableRow
+              key={amc.id}
+              className="cursor-pointer"
+              onClick={() => setDetailAMC(amc)}
+            >
+              <TableCell className="font-medium">
+                {amc.clientName || `Client #${amc.clientId}`}
+              </TableCell>
+              <TableCell className="font-mono text-xs text-muted-foreground">
+                {amc.contractNumber || `AMC-${amc.id}`}
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="outline" className={getStatusColor(amc.status)}>
+                    {amc.status?.replace("_", " ") || "Unknown"}
+                  </Badge>
+                  {isExpiringSoon && (
+                    <Badge variant="outline" className="border-amber-200 text-amber-800">
+                      Expiring
+                    </Badge>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                {amc.endDate
+                  ? new Date(amc.endDate).toLocaleDateString()
+                  : "N/A"}
+              </TableCell>
+              <TableCell className="text-right font-medium">
+                Nu. {(parseFloat(amc.amount || "0") || 0).toLocaleString()}
+              </TableCell>
+              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setDetailAMC(amc)}>
+                      View details
+                    </DropdownMenuItem>
+                    {amc.clientWhatsapp && (
+                      <DropdownMenuItem asChild>
+                        <a
+                          href={`https://wa.me/${amc.clientWhatsapp}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          WhatsApp
+                        </a>
+                      </DropdownMenuItem>
+                    )}
+                    {amc.status === "active" && (
+                      <DropdownMenuItem onClick={() => openRenewModal(amc)}>
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        Renew
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => deleteAMC(amc.id)}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+        mobileItems={filteredAMCs.map((amc) => {
+          const daysLeft = amc.endDate
+            ? Math.ceil(
+                (new Date(amc.endDate).getTime() - Date.now()) /
+                  (1000 * 60 * 60 * 24)
+              )
+            : 0;
+          const isExpiringSoon = daysLeft > 0 && daysLeft <= 30;
+          const metaBits = [
+            amc.endDate
+              ? `Ends ${new Date(amc.endDate).toLocaleDateString()}`
+              : null,
+            `Nu. ${(parseFloat(amc.amount || "0") || 0).toLocaleString()}`,
+            amc.clientMeta?.yearsWithUs
+              ? `${amc.clientMeta.yearsWithUs}y tenure`
+              : null,
+            amc.tickets?.length ? `${amc.tickets.length} tickets` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
 
-                return (
-                  <div
-                    key={amc.id}
-                    className="group border-b border-gray-100 last:border-0 hover:bg-gradient-to-r hover:from-gray-50/50 hover:to-transparent transition-all duration-200"
+          return (
+            <Item
+              key={amc.id}
+              variant="default"
+              size="sm"
+              className="rounded-none border-0 cursor-pointer hover:bg-accent/50"
+              onClick={() => setDetailAMC(amc)}
+            >
+              <ItemMedia variant="icon" className="bg-secondary">
+                <span className="text-xs font-semibold text-foreground">
+                  {amc.clientName?.charAt(0) || "C"}
+                </span>
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle className="w-full justify-between gap-2">
+                  <span className="truncate">
+                    {amc.clientName || `Client #${amc.clientId}`}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={`${getStatusColor(amc.status)} shrink-0`}
                   >
-                    <div className="p-4">
-                      <div className="flex items-center gap-4">
-                        {/* Modern Avatar */}
-                        <div className="relative">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 shadow-lg shadow-emerald-500/20 flex items-center justify-center text-white font-bold text-base">
-                            {amc.clientName?.charAt(0) || 'C'}
-                          </div>
-                          {amc.status === 'active' && (
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
-                          )}
-                        </div>
+                    {amc.status?.replace("_", " ") || "Unknown"}
+                  </Badge>
+                </ItemTitle>
+                <ItemDescription>
+                  {amc.contractNumber || `AMC-${amc.id}`}
+                  {isExpiringSoon ? " · Expiring soon" : ""}
+                  {metaBits ? ` · ${metaBits}` : ""}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions onClick={(e) => e.stopPropagation()}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setDetailAMC(amc)}>
+                      View details
+                    </DropdownMenuItem>
+                    {amc.clientWhatsapp && (
+                      <DropdownMenuItem asChild>
+                        <a
+                          href={`https://wa.me/${amc.clientWhatsapp}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          WhatsApp
+                        </a>
+                      </DropdownMenuItem>
+                    )}
+                    {amc.status === "active" && (
+                      <DropdownMenuItem onClick={() => openRenewModal(amc)}>
+                        Renew
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => deleteAMC(amc.id)}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </ItemActions>
+            </Item>
+          );
+        })}
+      />
 
-                        {/* Main Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Link
-                              href={`/admin/clients/${amc.clientId}`}
-                              className="font-semibold text-gray-900 hover:text-emerald-600 transition-colors hover:underline"
-                            >
-                              {amc.clientName || `Client #${amc.clientId}`}
-                            </Link>
-                            <Badge className={`${getStatusColor(amc.status)} text-[9px] px-2 py-0.5 h-auto font-semibold tracking-wide uppercase rounded-full`}>
-                              {amc.status?.replace('_', ' ') || 'Unknown'}
-                            </Badge>
-                            {isExpiringSoon && (
-                              <Badge className="bg-amber-500/10 text-amber-600 border-amber-200/50 text-[9px] px-2 py-0.5 h-auto font-semibold uppercase rounded-full">
-                                ⚡ Expiring
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-500 font-mono">{amc.contractNumber || `AMC-${amc.id}`}</p>
-                        </div>
-
-                        {/* Stats Grid */}
-                        <div className="hidden md:flex items-center gap-6">
-                          <div className="text-right">
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">End Date</p>
-                            <p className={`text-sm font-semibold ${isExpired ? 'text-red-500' : isExpiringSoon ? 'text-amber-500' : 'text-gray-700'}`}>
-                              {amc.endDate ? new Date(amc.endDate).toLocaleDateString() : 'N/A'}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Value</p>
-                            <p className="text-sm font-bold text-gray-900">Nu. {(parseFloat(amc.amount || '0') || 0).toLocaleString()}</p>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-2">
-                          {amc.clientWhatsapp && (
-                            <a
-                              href={`https://wa.me/${amc.clientWhatsapp}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 flex items-center justify-center text-white shadow-lg shadow-green-500/20 transition-all hover:scale-105"
-                              title="WhatsApp"
-                            >
-                              <Wifi className="w-4 h-4" />
-                            </a>
-                          )}
-                          {amc.status === 'active' && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => openRenewModal(amc)}
-                              disabled={isSubmitting}
-                              className="h-9 w-9 rounded-xl hover:bg-blue-50 transition-colors"
-                              title="Renew Contract"
-                            >
-                              <RotateCcw className="w-4 h-4 text-blue-600" />
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => deleteAMC(amc.id)}
-                            disabled={isSubmitting}
-                            className="h-9 w-9 rounded-xl hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Smart Details */}
-                      {(amc.clientWhatsappGroupLink || (amc.invoices && amc.invoices.length > 0) || (amc.tickets && amc.tickets.length > 0) || amc.clientMeta?.yearsWithUs) && (
-                        <div className="mt-4 pt-3 border-t border-gray-100">
-                          <div className="flex items-center gap-4">
-                            {amc.clientWhatsappGroupLink && (
-                              <a
-                                href={amc.clientWhatsappGroupLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 border border-green-200 text-xs font-medium text-green-700 transition-all hover:shadow-sm"
-                              >
-                                <Wifi className="w-3.5 h-3.5" />
-                                Group Chat
-                              </a>
-                            )}
-                            {amc.invoices && amc.invoices.length > 0 && (
-                              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs font-medium text-gray-600">
-                                <FileText className="w-3.5 h-3.5" />
-                                {amc.invoices.length} Invoice{amc.invoices.length > 1 ? 's' : ''}
-                              </div>
-                            )}
-                            {amc.tickets && amc.tickets.length > 0 && (
-                              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-xs font-medium text-amber-700">
-                                <AlertCircle className="w-3.5 h-3.5" />
-                                {amc.tickets.length} Ticket{amc.tickets.length > 1 ? 's' : ''}
-                              </div>
-                            )}
-                            {amc.clientMeta?.yearsWithUs && (
-                              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-xs font-medium text-blue-700">
-                                🏆 {amc.clientMeta.yearsWithUs} Year{amc.clientMeta.yearsWithUs > 1 ? 's' : ''}
-                              </div>
-                            )}
-                            {amc.clientMeta?.totalPaid && (
-                              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-700">
-                                💰 Nu. {amc.clientMeta.totalPaid.toLocaleString()}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+      <Sheet open={!!detailAMC} onOpenChange={(o) => !o && setDetailAMC(null)}>
+        <SheetContent className="sm:max-w-md overflow-y-auto">
+          {detailAMC && (
+            <>
+              <SheetHeader>
+                <SheetTitle>
+                  {detailAMC.clientName || `Client #${detailAMC.clientId}`}
+                </SheetTitle>
+                <SheetDescription>
+                  {detailAMC.contractNumber || `AMC-${detailAMC.id}`}
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6 space-y-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={getStatusColor(detailAMC.status)}>
+                    {detailAMC.status}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">End date</p>
+                    <p className="font-medium">
+                      {detailAMC.endDate
+                        ? new Date(detailAMC.endDate).toLocaleDateString()
+                        : "N/A"}
+                    </p>
                   </div>
-                );
-              })}
-            </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Value</p>
+                    <p className="font-medium">
+                      Nu.{" "}
+                      {(parseFloat(detailAMC.amount || "0") || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 pt-2">
+                  <Button asChild variant="outline">
+                    <Link href={`/admin/clients/${detailAMC.clientId}`}>
+                      Open client
+                    </Link>
+                  </Button>
+                  {detailAMC.clientWhatsapp && (
+                    <Button asChild variant="outline">
+                      <a
+                        href={`https://wa.me/${detailAMC.clientWhatsapp}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Wifi className="w-4 h-4 mr-2" />
+                        WhatsApp
+                      </a>
+                    </Button>
+                  )}
+                  {detailAMC.status === "active" && (
+                    <Button
+                      onClick={() => {
+                        openRenewModal(detailAMC);
+                        setDetailAMC(null);
+                      }}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Renew contract
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
           )}
-        </CardContent>
-      </Card>
+        </SheetContent>
+      </Sheet>
 
       {/* Create AMC Modal */}
       {showCreate && (

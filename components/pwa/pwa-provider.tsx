@@ -57,7 +57,7 @@ export function PwaProvider({ children }: { children: ReactNode }) {
     window.addEventListener("beforeinstallprompt", onBip);
     window.addEventListener("appinstalled", onInstalled);
 
-    if ("serviceWorker" in navigator) {
+    if ("serviceWorker" in navigator && window.isSecureContext) {
       navigator.serviceWorker.register("/sw.js").catch((err) => {
         console.warn("[PWA] SW registration failed:", err);
       });

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 interface Invoice {
   id: number;
@@ -391,21 +392,17 @@ export default function InvoicePage() {
   }
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Invoices</h1>
-          <p className="text-sm text-muted-foreground">Manage client invoices and payments</p>
-        </div>
-        <Button
-          onClick={() => setShowCreate(true)}
-          className="bg-primary hover:bg-[#34b27b] text-white"
-          disabled={clients.length === 0}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Invoice
-        </Button>
-      </div>
+    <div className="space-y-4">
+      <AdminPageHeader
+        title="Invoices"
+        description="Manage client invoices and payments"
+        actions={
+          <Button onClick={() => setShowCreate(true)} disabled={clients.length === 0}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Invoice
+          </Button>
+        }
+      />
 
       {clients.length === 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3">

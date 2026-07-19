@@ -209,13 +209,13 @@ export default function InventoryPage() {
   const lowStockCount = items.filter((i) => (i.reorderLevel || 0) < 10).length;
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Inventory</h1>
-          <p className="text-muted-foreground">Stock & warehouse management</p>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Inventory</h1>
+          <p className="text-sm text-muted-foreground">Stock & warehouse management</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => window.location.href = "/admin/inventory/warehouses"}>
             <Warehouse className="w-4 h-4 mr-2" />
             Warehouses

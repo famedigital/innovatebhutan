@@ -1,8 +1,5 @@
 import type { MetadataRoute } from "next";
 
-const ICON =
-  "https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/c_fit,w_512,h_512/v1776705871/weblogo_os6cni.png";
-
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Innovates Bhutan ERP",
@@ -13,33 +10,27 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait-primary",
-    background_color: "#FFFFFF",
+    background_color: "#F7F6F3",
     theme_color: "#0A5F4E",
     categories: ["business", "productivity"],
     icons: [
       {
-        src: ICON,
+        src: "/icons/icon-192.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: ICON,
+        src: "/icons/icon-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: ICON,
+        src: "/icons/icon-maskable-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
-      },
-      {
-        src: "/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
-        purpose: "any",
       },
     ],
   };

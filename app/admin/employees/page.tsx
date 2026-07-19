@@ -16,6 +16,7 @@ import {
 import { CreateEmployeeModal } from "./create-employee-modal";
 import { EditEmployeeModal } from "./edit-employee-modal";
 import { createClient } from "@/utils/supabase/client";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 interface Employee {
   id: number;
@@ -151,25 +152,23 @@ export default function EmployeesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Employees</h1>
-          <p className="text-sm text-muted-foreground">Manage your team members</p>
-        </div>
-        <Button onClick={() => setShowCreateModal(true)} className="gap-2">
-          <UserPlus className="w-4 h-4" />
-          Add Employee
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Employees"
+        description="Manage your team members"
+        actions={
+          <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+            <UserPlus className="w-4 h-4" />
+            Add Employee
+          </Button>
+        }
+      />
 
-      {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-4 gap-4">
-          <MetricCard title="Total" value={stats.totalEmployees} icon={Users} color="text-blue-600" />
-          <MetricCard title="Active" value={stats.activeEmployees} icon={Users} color="text-green-600" />
-          <MetricCard title="On Leave" value={stats.onLeaveEmployees} icon={Users} color="text-yellow-600" />
-          <MetricCard title="Inactive" value={stats.inactiveEmployees} icon={Users} color="text-gray-600" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <MetricCard title="Total" value={stats.totalEmployees} icon={Users} color="text-foreground" />
+          <MetricCard title="Active" value={stats.activeEmployees} icon={Users} color="text-foreground" />
+          <MetricCard title="On Leave" value={stats.onLeaveEmployees} icon={Users} color="text-amber-700" />
+          <MetricCard title="Inactive" value={stats.inactiveEmployees} icon={Users} color="text-muted-foreground" />
         </div>
       )}
 

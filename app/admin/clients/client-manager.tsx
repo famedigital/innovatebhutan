@@ -1,36 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Search,
   ExternalLink,
   MoreVertical,
-  ShieldCheck,
-  ShieldAlert,
-  ShieldClose,
   Phone,
-  Layout,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
+import { TableCell, TableHead, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
+import { ResponsiveDataList } from "@/components/admin/responsive-data-list";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { EditClientModal } from "./edit-client-modal";
@@ -43,15 +41,18 @@ export function ClientManager() {
   const [showEditModal, setShowEditModal] = useState(false);
   const supabase = createClient();
 
-  // 📡 Real-time Data Sync
   useEffect(() => {
     fetchClients();
 
     const channel = supabase
-      .channel('schema-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, () => {
-        fetchClients();
-      })
+      .channel("schema-db-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "clients" },
+        () => {
+          fetchClients();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -62,25 +63,26 @@ export function ClientManager() {
   const fetchClients = async () => {
     try {
       const { data, error } = await supabase
-        .from('clients')
-        .select(`
+        .from("clients")
+        .select(
+          `
           *,
           amcs(*)
-        `)
-        .order('name', { ascending: true });
+        `
+        )
+        .order("name", { ascending: true });
 
       if (error) throw error;
       setClients(data || []);
     } catch (err) {
       console.error("Client Fetch Error:", err);
-      // Fallback to empty if table doesn't exist yet
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredClients = clients.filter((client) =>
+    (client.name || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleEditClient = (client: any) => {
@@ -110,132 +112,217 @@ export function ClientManager() {
     }
   };
 
+  const statusBadge = (status?: string) => {
+    if (!status) {
+      return (
+        <Badge variant="outline" className="text-muted-foreground">
+          Off-contract
+        </Badge>
+      );
+    }
+    if (status === "active") {
+      return (
+        <Badge variant="outline" className="border-border bg-secondary">
+          Active
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="border-destructive/30 text-destructive">
+        {status}
+      </Badge>
+    );
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-200">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input 
-            placeholder="Search the node matrix..." 
-            className="pl-10 bg-white border-gray-200 text-black placeholder:text-gray-400 focus:border-green-500 transition-all font-bold"
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search clients..."
+            className="pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button 
-          variant="outline" 
-          onClick={fetchClients}
-          className="border-gray-200 hover:bg-gray-100 text-gray-600 font-black uppercase text-[10px] tracking-widest h-10 px-6"
-        >
-          <RefreshCw className={`w-3 h-3 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Sync Matrix
+        <Button variant="outline" onClick={fetchClients} size="sm">
+          <RefreshCw className={`w-3 h-3 mr-2 ${loading ? "animate-spin" : ""}`} />
+          Refresh
         </Button>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm min-h-[400px]">
-        {loading ? (
-          <div className="h-[400px] flex items-center justify-center">
-            <RefreshCw className="w-8 h-8 text-green-600 animate-spin" />
-          </div>
-        ) : clients.length === 0 ? (
-          <div className="h-[400px] flex flex-col items-center justify-center space-y-4">
-            <p className="text-gray-400 font-bold uppercase tracking-[0.2em] text-xs">Infrastructure Offline</p>
-            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-widest max-w-xs text-center leading-relaxed">
-              No live nodes detected. Ensure the SQL schema has been executed in the Supabase Dashboard.
-            </p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader className="bg-gray-50">
-              <TableRow className="border-b border-gray-100 hover:bg-transparent">
-                <TableHead className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 h-12 px-6">Enterprise Partner</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 h-12 px-6">Infrastructure Node</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 h-12 px-6">AMC Status</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 h-12 px-6">Latest Protocol</TableHead>
-                <TableHead className="text-right text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 h-12 px-6">Operations</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClients.map((client) => {
-                const latestAMC = client.amcs?.[0];
-                return (
-                  <TableRow key={client.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors group">
-                    <TableCell className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-green-50 border border-green-200 flex items-center justify-center text-[10px] font-black text-green-600">
-                          {client.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="text-sm font-black text-black">{client.name || 'Unnamed Client'}</p>
-                          <div className="flex items-center gap-1.5 mt-0.5 text-gray-500">
-                            <Phone className="w-3 h-3" />
-                            <span className="text-[10px] font-bold tracking-widest">{client.whatsapp || "No Phone"}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                       <div className="flex items-center gap-2">
-                         <Layout className="w-4 h-4 text-green-600 opacity-50" />
-                         <span className="text-xs font-bold text-gray-600">{latestAMC?.hardware_details?.model || "Standard Node"}</span>
-                       </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                       <Badge className={`${
-                         latestAMC?.status === 'active' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-600 border-red-200'
-                       } text-[10px] font-black uppercase tracking-widest`}>
-                         {latestAMC?.status || "Off-Contract"}
-                       </Badge>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-xs font-mono font-bold text-gray-500">
-                      {latestAMC?.expiry_date ? new Date(latestAMC.expiry_date).toLocaleDateString() : 'N/A'}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="w-8 h-8 rounded-lg hover:bg-green-50 hover:text-green-600 transition-all"
-                          onClick={() => window.open(`https://wa.me/${client.whatsapp}`, '_blank')}
-                        >
-                          <Phone className="w-4 h-4" />
+      {loading ? (
+        <div className="h-64 flex items-center justify-center">
+          <RefreshCw className="w-6 h-6 text-muted-foreground animate-spin" />
+        </div>
+      ) : (
+        <ResponsiveDataList
+          isEmpty={filteredClients.length === 0}
+          empty={
+            clients.length === 0
+              ? "No clients yet. Add a client to get started."
+              : "No clients match your search."
+          }
+          tableHeader={
+            <>
+              <TableHead>Client</TableHead>
+              <TableHead>Hardware</TableHead>
+              <TableHead>AMC</TableHead>
+              <TableHead>Expiry</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </>
+          }
+          tableBody={filteredClients.map((client) => {
+            const latestAMC = client.amcs?.[0];
+            return (
+              <TableRow key={client.id}>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center text-xs font-semibold text-foreground">
+                      {(client.name || "?").charAt(0)}
+                    </div>
+                    <div>
+                      <Link
+                        href={`/admin/clients/${client.id}`}
+                        className="text-sm font-medium text-foreground hover:underline"
+                      >
+                        {client.name || "Unnamed Client"}
+                      </Link>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Phone className="w-3 h-3" />
+                        {client.whatsapp || "No phone"}
+                      </p>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {latestAMC?.hardware_details?.model || "—"}
+                </TableCell>
+                <TableCell>{statusBadge(latestAMC?.status)}</TableCell>
+                <TableCell className="text-sm text-muted-foreground font-mono">
+                  {latestAMC?.expiry_date || latestAMC?.end_date
+                    ? new Date(
+                        latestAMC.expiry_date || latestAMC.end_date
+                      ).toLocaleDateString()
+                    : "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    {client.whatsapp && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() =>
+                          window.open(`https://wa.me/${client.whatsapp}`, "_blank")
+                        }
+                      >
+                        <Phone className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="w-4 h-4" />
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-all">
-                              <MoreVertical className="w-4 h-4 text-black" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white border-gray-200 text-black">
-                            <DropdownMenuItem className="focus:bg-green-50 focus:text-green-600 cursor-pointer text-[10px] font-black uppercase tracking-widest">
-                               <ExternalLink className="w-4 h-4 mr-2" /> View Detailed Logs
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="focus:bg-blue-50 focus:text-blue-600 cursor-pointer text-[10px] font-black uppercase tracking-widest"
-                              onClick={() => handleEditClient(client)}
-                            >
-                               Edit Client Details
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-gray-100" />
-                            <DropdownMenuItem
-                              className="text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer text-[10px] font-black uppercase tracking-widest"
-                              onClick={() => handleDeleteClient(client.id)}
-                            >
-                               Delete Client Node
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/clients/${client.id}`}>
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            View details
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditClient(client)}>
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => handleDeleteClient(client.id)}
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+          mobileItems={filteredClients.map((client) => {
+            const latestAMC = client.amcs?.[0];
+            const expiry =
+              latestAMC?.expiry_date || latestAMC?.end_date
+                ? new Date(
+                    latestAMC.expiry_date || latestAMC.end_date
+                  ).toLocaleDateString()
+                : null;
+            return (
+              <Item
+                key={client.id}
+                size="sm"
+                className="rounded-none border-0 cursor-pointer hover:bg-accent/50"
+                onClick={() => {
+                  window.location.href = `/admin/clients/${client.id}`;
+                }}
+              >
+                  <ItemMedia variant="icon" className="bg-secondary">
+                    <span className="text-xs font-semibold">
+                      {(client.name || "?").charAt(0)}
+                    </span>
+                  </ItemMedia>
+                  <ItemContent>
+                    <ItemTitle className="w-full justify-between gap-2">
+                      <span className="truncate">
+                        {client.name || "Unnamed Client"}
+                      </span>
+                      {statusBadge(latestAMC?.status)}
+                    </ItemTitle>
+                    <ItemDescription>
+                      {[client.whatsapp || "No phone", expiry && `Expires ${expiry}`]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/clients/${client.id}`}>View</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleEditClient(client)}
+                        >
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => handleDeleteClient(client.id)}
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </ItemActions>
+              </Item>
+            );
+          })}
+        />
+      )}
 
-      {/* Edit Client Modal */}
       {showEditModal && editingClient && (
         <EditClientModal
           client={editingClient}

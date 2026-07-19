@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CreateTransactionModal } from "./create-transaction-modal";
 import { TransactionDetailModal } from "./transaction-detail-modal";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 interface Transaction {
   id: number;
@@ -199,22 +200,21 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-black">Transactions</h1>
-          <p className="text-sm text-gray-500">Manage financial transactions and reconciliation</p>
-        </div>
-        <Button
-          className="bg-black hover:bg-gray-800 text-white"
-          onClick={() => {
-            setEditTransaction(null);
-            setShowCreateModal(true);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Transaction
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Transactions"
+        description="Financial transactions and reconciliation"
+        actions={
+          <Button
+            onClick={() => {
+              setEditTransaction(null);
+              setShowCreateModal(true);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Transaction
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader>

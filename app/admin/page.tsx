@@ -135,7 +135,7 @@ export default function AdminPage() {
             href={a.href}
             className="rounded-xl border bg-card p-3 active:scale-[0.98] transition-transform"
           >
-            <a.icon className="w-5 h-5 text-primary mb-2" />
+            <a.icon className="w-5 h-5 text-muted-foreground mb-2" />
             <p className="text-sm font-medium leading-tight">{a.label}</p>
             <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">{a.sub}</p>
           </a>
@@ -149,28 +149,28 @@ export default function AdminPage() {
           value={stats.clients.toString()} 
           icon={Users} 
           trend="Live" 
-          color="text-primary"
+          color="text-foreground"
         />
         <MetricCard 
           title="Tickets" 
           value={stats.tickets.toString()} 
           icon={Ticket} 
           trend={stats.tickets > 0 ? "Needs attention" : "All clear"} 
-          color={stats.tickets > 0 ? "text-destructive" : "text-primary"}
+          color={stats.tickets > 0 ? "text-destructive" : "text-foreground"}
         />
         <MetricCard 
           title="Revenue" 
           value={`${(stats.revenue / 1000).toFixed(1)}k`} 
           icon={DollarSign} 
           trend="This month" 
-          color="text-primary"
+          color="text-foreground"
         />
         <MetricCard 
           title="Projects" 
           value={stats.projects.toString()} 
           icon={Briefcase} 
           trend="Active" 
-          color="text-primary"
+          color="text-foreground"
         />
       </div>
 
@@ -225,7 +225,7 @@ export default function AdminPage() {
                 <Briefcase className="w-4 h-4 mr-2" />
                 New Project
               </Button>
-              <Button className="w-full justify-start bg-primary hover:bg-[#34b27b] text-white h-11" onClick={() => window.location.href = '/admin/whatsapp'}>
+              <Button className="w-full justify-start h-11" onClick={() => window.location.href = '/admin/whatsapp'}>
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Send WhatsApp
               </Button>

@@ -148,7 +148,7 @@ export default function LoginPage() {
         </CardHeader>
 
         <div className="px-6 pb-3">
-          <InstallAppButton fullWidth variant="outline" className="border-primary/30 text-primary hover:bg-primary/5" />
+          <InstallAppButton fullWidth variant="outline" showFallback />
           <p className="text-[10px] text-center text-muted-foreground mt-2">
             Install as an app for faster AMC, tickets &amp; client work on your phone.
           </p>

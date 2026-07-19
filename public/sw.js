@@ -1,6 +1,13 @@
 /* Innovates Bhutan ERP — Service Worker */
-const CACHE = "innovates-erp-v1";
-const PRECACHE = ["/", "/login/", "/admin/", "/offline/", "/icon.svg"];
+const CACHE = "innovates-erp-v2";
+const PRECACHE = [
+  "/",
+  "/login/",
+  "/admin/",
+  "/offline/",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -23,12 +30,10 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  // Never cache API or auth
   if (url.pathname.startsWith("/api/") || url.pathname.includes("supabase")) {
     return;
   }
 
-  // Network-first for navigations; cache fallback to offline page
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
@@ -45,7 +50,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Stale-while-revalidate for static assets
   event.respondWith(
     caches.match(request).then((cached) => {
       const fetched = fetch(request)

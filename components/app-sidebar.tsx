@@ -49,8 +49,8 @@ export function AppSidebar() {
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <div className="flex items-center gap-2 px-2 py-1">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#3ECF8E]">
-              <Zap className="h-5 w-5 text-white" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
+              <Zap className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="text-lg font-semibold tracking-tight">
               innovates.bt
@@ -91,8 +91,8 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#3ECF8E]">
-                <span className="text-sm font-medium text-white">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
+                <span className="text-sm font-medium text-foreground">
                   {profile?.fullName?.charAt(0).toUpperCase() || "U"}
                 </span>
               </div>

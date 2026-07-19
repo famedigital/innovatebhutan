@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CreateExpenseModal } from "./create-expense-modal";
 import { ExpenseDetailModal } from "./expense-detail-modal";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 interface Expense {
   id: number;
@@ -199,22 +200,21 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-black">Expenses</h1>
-          <p className="text-sm text-gray-500">Manage employee expenses and reimbursements</p>
-        </div>
-        <Button
-          className="bg-black hover:bg-gray-800 text-white"
-          onClick={() => {
-            setEditExpense(null);
-            setShowCreateModal(true);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Expense
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Expenses"
+        description="Employee expenses and reimbursements"
+        actions={
+          <Button
+            onClick={() => {
+              setEditExpense(null);
+              setShowCreateModal(true);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Expense
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader>

@@ -16,6 +16,7 @@ import {
 import { CheckInModal } from "./check-in-modal";
 import { CheckOutModal } from "./check-out-modal";
 import { createClient } from "@/utils/supabase/client";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 interface AttendanceRecord {
   id: number;
@@ -100,23 +101,16 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Attendance</h1>
-          <p className="text-sm text-muted-foreground">Track employee check-ins and check-outs</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setShowCheckInModal(true)} className="gap-2">
+      <AdminPageHeader
+        title="Attendance"
+        description="Track employee check-ins and check-outs"
+        actions={
+          <Button onClick={() => setShowCheckInModal(true)} className="gap-2">
             <Clock className="w-4 h-4" />
             Check In
           </Button>
-          <Button onClick={() => setShowCheckInModal(true)} className="gap-2">
-            <LogOut className="w-4 h-4" />
-            Check Out
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Filters */}
       <Card>

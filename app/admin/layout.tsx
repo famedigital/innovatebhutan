@@ -78,7 +78,7 @@ export default function AdminLayout({
       <SidebarInset className="min-h-svh">
         <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-3 sm:px-6 bg-background z-20 sticky top-0">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            <SidebarTrigger className="-ml-1 md:inline-flex" />
+            <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-semibold truncate">Innovates ERP</span>
               <span className="text-[10px] text-muted-foreground md:hidden">

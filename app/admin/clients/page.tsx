@@ -1,34 +1,26 @@
-import { ClientManager } from "./client-manager";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
+import { ClientManager } from "./client-manager";
 import { NodeEnrollmentModal } from "./node-enrollment-modal";
 import { BulkIngestionModal } from "./bulk-ingestion-modal";
 
 export default function ClientsPage() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-black">Clients</h1>
-          <p className="text-sm text-gray-500">Manage enterprise client nodes</p>
-        </div>
-        <div className="flex gap-3">
-          <NodeEnrollmentModal 
-            trigger={
-              <Button className="bg-black hover:bg-gray-800 text-white">
-                Add Client
-              </Button>
-            } 
-          />
-          <BulkIngestionModal 
-            trigger={
-              <Button variant="outline" className="border-gray-200 hover:bg-gray-50">
-                Bulk Import
-              </Button>
-            } 
-          />
-        </div>
-      </div>
-
+      <AdminPageHeader
+        title="Clients"
+        description="Manage client accounts and contacts"
+        actions={
+          <>
+            <BulkIngestionModal
+              trigger={<Button variant="outline">Bulk Import</Button>}
+            />
+            <NodeEnrollmentModal
+              trigger={<Button>Add Client</Button>}
+            />
+          </>
+        }
+      />
       <ClientManager />
     </div>
   );

@@ -586,14 +586,14 @@ export function ProjectHub() {
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-[#E5E5E1] bg-[#F3F3F1]">
-                <TableHead className="text-xs text-[#717171]">Project</TableHead>
-                <TableHead className="text-xs text-[#717171]">Client</TableHead>
-                <TableHead className="text-xs text-[#717171]">Lead</TableHead>
-                <TableHead className="text-xs text-[#717171]">Status</TableHead>
-                <TableHead className="text-xs text-[#717171]">Progress</TableHead>
-                <TableHead className="text-xs text-[#717171]">Budget</TableHead>
-                <TableHead className="text-xs text-[#717171]">Start Date</TableHead>
+              <TableRow className="border-border bg-muted">
+                <TableHead className="text-xs text-muted-foreground">Project</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Client</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Lead</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Status</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Progress</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Budget</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Start Date</TableHead>
                 <TableHead className="text-xs text-[#717171]">Actions</TableHead>
               </TableRow>
             </TableHeader>

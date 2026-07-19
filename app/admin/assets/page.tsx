@@ -228,13 +228,13 @@ export default function AssetsPage() {
   const activeAssets = assets.filter((a) => a.status === "active").length;
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Fixed Assets</h1>
-          <p className="text-muted-foreground">Asset register & depreciation</p>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Fixed Assets</h1>
+          <p className="text-sm text-muted-foreground">Asset register & depreciation</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => window.location.href = "/admin/assets/depreciation"}>
             <TrendingDown className="w-4 h-4 mr-2" />
             Run Depreciation

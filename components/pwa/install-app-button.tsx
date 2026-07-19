@@ -1,7 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { Download, CheckCircle2, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { usePwa } from "@/components/pwa/pwa-provider";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -11,6 +19,8 @@ type Props = {
   variant?: "default" | "outline" | "secondary" | "ghost";
   size?: "default" | "sm" | "lg" | "icon";
   fullWidth?: boolean;
+  /** When true, show muted hint even if install prompt is unavailable */
+  showFallback?: boolean;
 };
 
 export function InstallAppButton({
@@ -18,8 +28,10 @@ export function InstallAppButton({
   variant = "outline",
   size = "default",
   fullWidth,
+  showFallback = false,
 }: Props) {
   const { canInstall, isStandalone, install } = usePwa();
+  const [iosOpen, setIosOpen] = useState(false);
   const isIOS =
     typeof navigator !== "undefined" &&
     /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -39,42 +51,69 @@ export function InstallAppButton({
     );
   }
 
-  const handleClick = async () => {
-    if (canInstall) {
-      const ok = await install();
-      if (ok) toast.success("Innovates ERP installed on this device");
-      return;
-    }
+  // Browser can show native install prompt
+  if (canInstall) {
+    return (
+      <Button
+        type="button"
+        variant={variant}
+        size={size}
+        onClick={async () => {
+          const ok = await install();
+          if (ok) toast.success("Innovates ERP installed");
+        }}
+        className={cn(fullWidth && "w-full", "border-premium/50", className)}
+      >
+        <Download className="w-4 h-4 mr-2" />
+        Install app
+      </Button>
+    );
+  }
 
-    if (isIOS) {
-      toast.message("Install on iPhone", {
-        description: "Tap Share → Add to Home Screen to install the ERP app.",
-        duration: 6000,
-      });
-      return;
-    }
+  // iOS: guide Add to Home Screen
+  if (isIOS) {
+    return (
+      <>
+        <Button
+          type="button"
+          variant={variant}
+          size={size}
+          onClick={() => setIosOpen(true)}
+          className={cn(fullWidth && "w-full", "border-premium/50", className)}
+        >
+          <Share className="w-4 h-4 mr-2" />
+          Add to Home Screen
+        </Button>
+        <Dialog open={iosOpen} onOpenChange={setIosOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Install on iPhone</DialogTitle>
+              <DialogDescription>
+                Safari does not support a one-tap install button. Use Share instead.
+              </DialogDescription>
+            </DialogHeader>
+            <ol className="list-decimal pl-5 space-y-2 text-sm text-foreground">
+              <li>Tap the Share button in Safari</li>
+              <li>Scroll and tap Add to Home Screen</li>
+              <li>Confirm Add — Innovates ERP opens like an app</li>
+            </ol>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
 
-    toast.message("Install available soon", {
-      description:
-        "Open this site in Chrome/Edge on your phone, then use the browser menu → Install app.",
-      duration: 6000,
-    });
-  };
+  if (!showFallback) return null;
 
   return (
     <Button
       type="button"
-      variant={variant}
+      variant="ghost"
       size={size}
-      onClick={handleClick}
-      className={cn(fullWidth && "w-full", className)}
+      disabled
+      className={cn(fullWidth && "w-full", "text-muted-foreground", className)}
     >
-      {isIOS && !canInstall ? (
-        <Share className="w-4 h-4 mr-2" />
-      ) : (
-        <Download className="w-4 h-4 mr-2" />
-      )}
-      {canInstall ? "Install ERP App" : isIOS ? "Add to Home Screen" : "Install ERP App"}
+      Open in Chrome to install
     </Button>
   );
 }
