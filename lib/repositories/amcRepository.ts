@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { amcs, clients, services, invoices, tickets } from "@/db/schema";
-import { eq, and, desc, sql, count, gte, lte, isNotNull, or } from "drizzle-orm";
+import { eq, and, desc, sql, count, gte, lte, lt, ne, isNotNull, or } from "drizzle-orm";
 import { dashboardCache, withCache, CacheTTL, hashFilters, listCache } from "@/lib/cache/repository-cache";
 
 export type AMC = typeof amcs.$inferSelect;
@@ -132,8 +132,28 @@ export class AMCRepository {
     if (filters.serviceId) {
       conditions.push(eq(amcs.serviceId, filters.serviceId));
     }
-    if (filters.status) {
-      conditions.push(eq(amcs.status, filters.status));
+    // Status filter uses endDate so list stays correct even if DB status is stale
+    if (filters.status === "cancelled") {
+      conditions.push(eq(amcs.status, "cancelled"));
+    } else if (filters.status === "expired") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      conditions.push(ne(amcs.status, "cancelled"));
+      conditions.push(lt(amcs.endDate, today));
+    } else if (filters.status === "expiring") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const soon = new Date(today);
+      soon.setDate(soon.getDate() + 30);
+      conditions.push(ne(amcs.status, "cancelled"));
+      conditions.push(gte(amcs.endDate, today));
+      conditions.push(lte(amcs.endDate, soon));
+    } else if (filters.status === "active") {
+      const soon = new Date();
+      soon.setHours(0, 0, 0, 0);
+      soon.setDate(soon.getDate() + 30);
+      conditions.push(ne(amcs.status, "cancelled"));
+      conditions.push(sql`${amcs.endDate} > ${soon}`);
     }
     if (filters.search) {
       conditions.push(
@@ -185,44 +205,24 @@ export class AMCRepository {
         .where(whereClause),
     ]);
 
-    // Fetch related invoices and tickets for each AMC
-    const amcsWithData = await Promise.all(
-      amcsData.map(async (amc) => {
-        // Fetch recent invoices for this client
-        const clientInvoices = await this.db
-          .select({
-            id: invoices.id,
-            invoiceNumber: invoices.invoiceNumber,
-            total: invoices.total,
-            status: invoices.status,
-            dueDate: invoices.dueDate,
-          })
-          .from(invoices)
-          .where(eq(invoices.clientId, amc.clientId))
-          .orderBy(desc(invoices.createdAt))
-          .limit(5);
-
-        // Fetch recent tickets for this client
-        const clientTickets = await this.db
-          .select({
-            id: tickets.id,
-            subject: tickets.subject,
-            status: tickets.status,
-            priority: tickets.priority,
-            createdAt: tickets.createdAt,
-          })
-          .from(tickets)
-          .where(eq(tickets.clientId, amc.clientId))
-          .orderBy(desc(tickets.createdAt))
-          .limit(5);
-
-        return {
-          ...amc,
-          invoices: clientInvoices,
-          tickets: clientTickets,
-        };
-      })
-    );
+    // Keep list fast: skip per-row invoice/ticket fetches (was N+1 and timed out on Vercel)
+    const amcsWithData = amcsData.map((amc) => ({
+      ...amc,
+      invoices: [] as Array<{
+        id: number;
+        invoiceNumber: string;
+        total: string;
+        status: string;
+        dueDate: Date;
+      }>,
+      tickets: [] as Array<{
+        id: number;
+        subject: string;
+        status: string;
+        priority: string;
+        createdAt: Date;
+      }>,
+    }));
 
     const result = {
       amcs: amcsWithData,

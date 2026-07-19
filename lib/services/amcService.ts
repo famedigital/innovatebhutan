@@ -121,41 +121,15 @@ export class AMCService {
   }
 
   async listAMCs(filters: AMCFilters = {}) {
-    // Load without status filter first when we need accurate date-derived statuses,
-    // then apply filter after sync. For cancelled-only filters, keep as-is.
-    const wantsStatus = filters.status && filters.status !== "cancelled";
-    const fetchFilters = wantsStatus
-      ? { ...filters, status: undefined }
-      : filters;
+    const result = await this.repository.listAMCsWithDetails(filters);
 
-    const result = await this.repository.listAMCsWithDetails(fetchFilters);
-    const synced = [];
+    // Derive display status from endDate in-memory (no per-row DB writes — those caused Vercel 504s)
+    const amcs = result.amcs.map((amc) => {
+      if (amc.status === "cancelled" || amc.renewedTo) return amc;
+      return { ...amc, status: this.calculateStatus(amc.endDate) };
+    });
 
-    for (const amc of result.amcs) {
-      if (amc.status === "cancelled" || amc.renewedTo) {
-        synced.push(amc);
-        continue;
-      }
-
-      const computed = this.calculateStatus(amc.endDate);
-      if (computed !== amc.status) {
-        try {
-          await this.repository.updateAMCStatus(amc.id, computed);
-        } catch {
-          // Still return computed status for UI even if persist fails
-        }
-        synced.push({ ...amc, status: computed });
-      } else {
-        synced.push(amc);
-      }
-    }
-
-    let amcs = synced;
-    if (filters.status) {
-      amcs = synced.filter((a) => a.status === filters.status);
-    }
-
-    return { ...result, amcs, total: amcs.length };
+    return { ...result, amcs };
   }
 
   // ==================== STATUS MANAGEMENT ====================

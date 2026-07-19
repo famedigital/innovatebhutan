@@ -124,7 +124,7 @@ export default function AMCPage() {
       // Fetch AMCs with filters
       const params = new URLSearchParams();
       if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
-      params.append("limit", "100");
+      params.append("limit", "50");
 
       const [amcsRes, clientsRes, servicesRes] = await Promise.all([
         fetch(`/api/amc?${params}`),
