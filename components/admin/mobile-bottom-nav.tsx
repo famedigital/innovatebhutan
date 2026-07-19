@@ -15,7 +15,7 @@ import { MobileMoreDrawer } from "@/components/admin/mobile-more-drawer";
 
 const TABS = [
   { href: "/admin", label: "Home", icon: LayoutDashboard, exact: true },
-  { href: "/admin/amc", label: "AMC", icon: ShieldCheck },
+  { href: "/admin/products/rancelab", label: "RanceLab", icon: ShieldCheck },
   { href: "/admin/tickets", label: "Tickets", icon: Ticket },
   { href: "/admin/clients", label: "Clients", icon: Building2 },
 ] as const;

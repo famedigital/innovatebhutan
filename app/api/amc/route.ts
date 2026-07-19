@@ -34,11 +34,20 @@ export async function GET(req: NextRequest) {
     const queryParams = validateQueryParams(amcQuerySchema, searchParams);
     const page = queryParams.page ?? 1;
     const limit = queryParams.limit ?? 20;
-    const { page: _, limit: __, ...filters } = queryParams;
+    const { page: _, limit: __, owner, ...filters } = queryParams;
     const offset = (page - 1) * limit;
+
+    let focalEmployeeId: number | undefined;
+    if (owner && owner !== "all") {
+      const { getEmployeeIdByProfileId } = await import("@/lib/amc/ownership");
+      const empId = await getEmployeeIdByProfileId(authContext.profile.id);
+      if (empId) focalEmployeeId = empId;
+    }
 
     const result = await amcService.listAMCs({
       ...filters,
+      owner: owner || "all",
+      focalEmployeeId,
       limit,
       offset,
     });

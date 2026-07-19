@@ -17,6 +17,15 @@ export type AmcRenewalPipeline = {
   startDate?: string;
   endDate?: string;
   amount?: string;
+  quotationPdfUrl?: string;
+  quotationSharedAt?: string;
+  claimedByEmployeeId?: number;
+  payment?: {
+    paidAt?: string;
+    proofUrl?: string;
+    proofNote?: string;
+    acknowledgedBy?: number;
+  };
   rancelab?: RancelabRemittance;
 };
 
@@ -105,6 +114,7 @@ export function computeRenewalSteps(params: {
   const { pipeline, invoiceStatus, alreadyRenewed } = params;
   const hasQuote = !!pipeline.quotationInvoiceId;
   const paid = invoiceStatus === "paid";
+  const hasProof = !!pipeline.payment?.proofUrl;
   const remitted = !!pipeline.rancelab?.remitted;
 
   if (alreadyRenewed) {
@@ -114,7 +124,7 @@ export function computeRenewalSteps(params: {
   if (!hasQuote) {
     return { quotation: "current", payment: "locked", rancelab: "locked", license: "locked" };
   }
-  if (!paid) {
+  if (!paid || !hasProof) {
     return { quotation: "done", payment: "current", rancelab: "locked", license: "locked" };
   }
   if (!remitted) {

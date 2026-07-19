@@ -75,6 +75,7 @@ export const amcQuerySchema = z.object({
   serviceId: z.coerce.number().int().positive().optional(),
   status: amcStatusSchema.optional(),
   search: z.string().max(255).optional(),
+  owner: z.enum(["all", "mine", "unclaimed", "today"]).optional().default("all"),
   expiringWithinDays: z.coerce.number().int().positive().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),

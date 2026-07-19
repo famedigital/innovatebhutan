@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/select";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Separator } from "@/components/ui/separator";
-import { AmcDetailSheet } from "@/components/admin/amc-detail-sheet";
+import { AmcRenewalDesk } from "@/components/admin/amc-renewal-desk";
 import { toast } from "sonner";
 import { EditClientModal } from "../edit-client-modal";
 
@@ -115,6 +115,7 @@ export default function ClientDetailPage() {
     clientId: number;
     clientName?: string;
     clientWhatsapp?: string;
+    clientWhatsappGroupLink?: string;
     contractNumber: string;
     startDate: string;
     endDate: string;
@@ -156,6 +157,7 @@ export default function ClientDetailPage() {
       clientId: client.id,
       clientName: client.name,
       clientWhatsapp: client.whatsapp,
+      clientWhatsappGroupLink: client.whatsappGroupLink,
       contractNumber: amc.contractNumber,
       startDate: amc.startDate,
       endDate: amc.endDate,
@@ -297,7 +299,7 @@ export default function ClientDetailPage() {
           </Button>
         )}
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/admin/amc?clientId=${client.id}`}>
+          <Link href={`/admin/products/rancelab/amc?clientId=${client.id}`}>
             <FileText className="w-4 h-4 mr-2" />
             AMC desk
           </Link>
@@ -385,7 +387,7 @@ export default function ClientDetailPage() {
             <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base">AMC contracts</CardTitle>
               <Button variant="outline" size="sm" asChild>
-                <Link href="/admin/amc">
+                <Link href="/admin/products/rancelab/amc">
                   <Plus className="w-4 h-4 mr-1" />
                   New
                 </Link>
@@ -548,7 +550,7 @@ export default function ClientDetailPage() {
         />
       )}
 
-      <AmcDetailSheet
+      <AmcRenewalDesk
         amc={renewAmc}
         open={!!renewAmc}
         onOpenChange={(o) => !o && setRenewAmc(null)}

@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { amcs, clients, services } from "@/db/schema";
-import { eq, and, desc, sql, count, gte, lte, lt, ne, isNotNull, or } from "drizzle-orm";
+import { amcs, clients, services, teamAssignments } from "@/db/schema";
+import { eq, and, desc, sql, count, gte, lte, lt, ne } from "drizzle-orm";
 import { dashboardCache, withCache, CacheTTL, hashFilters, listCache } from "@/lib/cache/repository-cache";
 
 export type AMC = typeof amcs.$inferSelect;
@@ -11,6 +11,10 @@ export interface AMCFilters {
   serviceId?: number;
   status?: string;
   search?: string;
+  /** Hybrid ownership: all | mine | unclaimed | today */
+  owner?: "all" | "mine" | "unclaimed" | "today";
+  /** employees.id for mine/today filters */
+  focalEmployeeId?: number;
   limit?: number;
   offset?: number;
 }
@@ -161,6 +165,52 @@ export class AMCRepository {
       );
     }
 
+    // Hybrid ownership filters (team_assignments.focal)
+    const owner = filters.owner || "all";
+    if (owner === "mine" && filters.focalEmployeeId) {
+      conditions.push(
+        sql`${amcs.clientId} IN (
+          SELECT ${teamAssignments.clientId} FROM ${teamAssignments}
+          WHERE ${teamAssignments.teamMemberId} = ${filters.focalEmployeeId}
+            AND ${teamAssignments.isFocalPerson} = true
+            AND ${teamAssignments.isActive} = true
+        )`
+      );
+    } else if (owner === "unclaimed") {
+      conditions.push(
+        sql`${amcs.clientId} NOT IN (
+          SELECT ${teamAssignments.clientId} FROM ${teamAssignments}
+          WHERE ${teamAssignments.isFocalPerson} = true
+            AND ${teamAssignments.isActive} = true
+        )`
+      );
+    } else if (owner === "today") {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const soon = new Date(todayStart);
+      soon.setDate(soon.getDate() + 30);
+      conditions.push(ne(amcs.status, "cancelled"));
+      conditions.push(sql`${amcs.renewedTo} IS NULL`);
+      conditions.push(lte(amcs.endDate, soon));
+      if (filters.focalEmployeeId) {
+        conditions.push(
+          sql`(
+            ${amcs.clientId} IN (
+              SELECT ${teamAssignments.clientId} FROM ${teamAssignments}
+              WHERE ${teamAssignments.teamMemberId} = ${filters.focalEmployeeId}
+                AND ${teamAssignments.isFocalPerson} = true
+                AND ${teamAssignments.isActive} = true
+            )
+            OR ${amcs.clientId} NOT IN (
+              SELECT ${teamAssignments.clientId} FROM ${teamAssignments}
+              WHERE ${teamAssignments.isFocalPerson} = true
+                AND ${teamAssignments.isActive} = true
+            )
+          )`
+        );
+      }
+    }
+
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Run both queries in parallel
@@ -196,7 +246,9 @@ export class AMCRepository {
         .leftJoin(clients, eq(amcs.clientId, clients.id))
         .leftJoin(services, eq(amcs.serviceId, services.id))
         .where(whereClause)
-        .orderBy(desc(amcs.createdAt))
+        .orderBy(
+          owner === "today" ? amcs.endDate : desc(amcs.createdAt)
+        )
         .limit(filters.limit || 50)
         .offset(filters.offset || 0),
 

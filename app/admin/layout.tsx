@@ -178,7 +178,8 @@ export default function AdminLayout({
               </div>
               <div className="p-2 grid grid-cols-2 gap-1">
                 {[
-                  { label: "AMC", href: "/admin/amc" },
+                  { label: "RanceLab", href: "/admin/products/rancelab" },
+                  { label: "AMC", href: "/admin/products/rancelab/amc" },
                   { label: "Tickets", href: "/admin/tickets" },
                   { label: "Clients", href: "/admin/clients" },
                   { label: "Projects", href: "/admin/projects" },

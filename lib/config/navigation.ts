@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   FolderKanban,
   ShoppingCart,
-  ShieldCheck,
   Ticket,
   FileText,
   Receipt,
@@ -28,6 +27,7 @@ import {
   MessagesSquare,
   UserCog,
   BarChart3,
+  Boxes,
 } from "lucide-react";
 
 export type UserRole = "ADMIN" | "STAFF" | "CLIENT";
@@ -54,11 +54,16 @@ export const navigationConfig: NavGroup[] = [
     ],
   },
   {
+    title: "Products",
+    items: [
+      { title: "RanceLab", href: "/admin/products/rancelab", icon: Boxes },
+    ],
+  },
+  {
     title: "Operations",
     items: [
       { title: "Projects", href: "/admin/projects", icon: FolderKanban },
       { title: "Orders", href: "/admin/orders", icon: ShoppingCart },
-      { title: "AMC", href: "/admin/amc", icon: ShieldCheck },
       { title: "Support Tickets", href: "/admin/tickets", icon: Ticket },
       { title: "Problems", href: "/admin/support/problems", icon: AlertTriangle },
       { title: "Communications", href: "/admin/support/communications", icon: MessagesSquare },

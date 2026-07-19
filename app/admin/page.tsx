@@ -125,7 +125,7 @@ export default function AdminPage() {
       {/* Staff mobile quick actions — 2-column cards */}
       <div className="grid grid-cols-2 gap-2 md:hidden">
         {[
-          { href: "/admin/amc/", label: "AMC renewals", sub: "Cash cow desk", icon: CheckCircle2 },
+          { href: "/admin/products/rancelab/amc?owner=today", label: "AMC renewals", sub: "RanceLab desk", icon: CheckCircle2 },
           { href: "/admin/tickets/", label: "Tickets", sub: "Open support", icon: Ticket },
           { href: "/admin/clients/", label: "Clients", sub: "RanceLab & more", icon: Users },
           { href: "/admin/projects/", label: "Projects", sub: "Delivery", icon: Briefcase },

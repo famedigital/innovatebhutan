@@ -399,6 +399,9 @@ export class AMCService {
     if (!invoice || invoice.status !== "paid") {
       throw new Error("Mark the quotation invoice as paid before recording remittance.");
     }
+    if (!pipeline.payment?.proofUrl) {
+      throw new Error("Upload payment proof before recording RanceLab remittance.");
+    }
 
     if (remittance.remitted) {
       if (!remittance.amount || !remittance.date) {
@@ -445,6 +448,10 @@ export class AMCService {
     const invoice = await invoiceService.getInvoiceById(pipeline.quotationInvoiceId);
     if (!invoice || invoice.status !== "paid") {
       throw new Error("Receive client payment (mark quotation invoice as paid) before renewing the license.");
+    }
+
+    if (!pipeline.payment?.proofUrl) {
+      throw new Error("Upload payment proof before renewing the license.");
     }
 
     if (!pipeline.rancelab?.remitted) {
