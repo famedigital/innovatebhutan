@@ -85,7 +85,22 @@ function isPublicPage(pathname: string) {
     '/login',
     '/client',
     '/directory',
-    '/api/directory'
+    '/api/directory',
+    '/offline',
   ];
-  return publicPages.some(page => pathname === page || pathname.startsWith(page + '/'));
+  if (publicPages.some(page => pathname === page || pathname.startsWith(page + '/'))) {
+    return true;
+  }
+  // PWA assets must be public (no auth redirect → HTML masquerading as JSON)
+  if (
+    pathname === '/manifest.webmanifest' ||
+    pathname === '/manifest.json' ||
+    pathname === '/sw.js' ||
+    pathname.startsWith('/icons/') ||
+    pathname === '/icon.svg' ||
+    pathname === '/offline/'
+  ) {
+    return true;
+  }
+  return false;
 }

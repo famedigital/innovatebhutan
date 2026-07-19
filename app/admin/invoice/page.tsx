@@ -23,11 +23,11 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 interface Invoice {
   id: number;
-  invoice_number: string;
-  client_id: number;
-  client_name?: string;
-  issue_date: string;
-  due_date: string;
+  invoiceNumber: string;
+  clientId: number;
+  clientName?: string;
+  issueDate: string;
+  dueDate: string;
   total: number;
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
   items: InvoiceItem[];
@@ -116,7 +116,19 @@ export default function InvoicePage() {
         setLoadingState('error');
       } else {
         console.log('[Invoice Page] Invoices loaded successfully:', invoicesRes.data.data?.length || 0);
-        setInvoices(invoicesRes.data.data || []);
+        const rows = (invoicesRes.data.data || []).map((inv: any) => ({
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber ?? inv.invoice_number ?? "",
+          clientId: inv.clientId ?? inv.client_id,
+          clientName: inv.clientName ?? inv.client_name,
+          issueDate: inv.issueDate ?? inv.issue_date,
+          dueDate: inv.dueDate ?? inv.due_date,
+          total: Number(inv.total) || 0,
+          status: inv.status,
+          items: inv.items || [],
+          notes: inv.notes,
+        }));
+        setInvoices(rows);
         setLoadingState('success');
       }
 
@@ -325,8 +337,10 @@ export default function InvoicePage() {
   };
 
   const filteredInvoices = invoices.filter(inv => {
-    const matchesSearch = inv.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.client_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const number = (inv.invoiceNumber || "").toLowerCase();
+    const client = (inv.clientName || "").toLowerCase();
+    const q = searchTerm.toLowerCase();
+    const matchesSearch = !q || number.includes(q) || client.includes(q);
     const matchesStatus = statusFilter === "all" || inv.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -491,16 +505,16 @@ export default function InvoicePage() {
                   </td>
                 </tr>
               ) : filteredInvoices.map((inv) => {
-                const daysUntilDue = getDaysUntilDue(inv.due_date, inv.status);
+                const daysUntilDue = getDaysUntilDue(inv.dueDate, inv.status);
                 return (
                   <tr key={inv.id} className="border-b border-border hover:bg-muted">
-                    <td className="p-3 text-sm font-medium">{inv.invoice_number}</td>
-                    <td className="p-3 text-sm">{inv.client_name || 'Unknown Client'}</td>
-                    <td className="p-3 text-sm text-muted-foreground">{new Date(inv.issue_date).toLocaleDateString()}</td>
+                    <td className="p-3 text-sm font-medium">{inv.invoiceNumber}</td>
+                    <td className="p-3 text-sm">{inv.clientName || 'Unknown Client'}</td>
+                    <td className="p-3 text-sm text-muted-foreground">{new Date(inv.issueDate).toLocaleDateString()}</td>
                     <td className="p-3 text-sm">
                       <div className="flex items-center gap-1">
                         <span className={daysUntilDue !== null && daysUntilDue < 0 ? "text-red-600" : "text-muted-foreground"}>
-                          {new Date(inv.due_date).toLocaleDateString()}
+                          {new Date(inv.dueDate).toLocaleDateString()}
                         </span>
                         {daysUntilDue !== null && daysUntilDue < 0 && (
                           <Badge className="bg-red-100 text-red-700 text-[9px] px-1">Overdue</Badge>
@@ -735,9 +749,9 @@ export default function InvoicePage() {
           {selectedInvoice && (
             <>
               <DialogHeader>
-                <DialogTitle>{selectedInvoice.invoice_number}</DialogTitle>
+                <DialogTitle>{selectedInvoice.invoiceNumber}</DialogTitle>
                 <DialogDescription>
-                  {selectedInvoice.client_name} • {new Date(selectedInvoice.issue_date).toLocaleDateString()}
+                  {selectedInvoice.clientName} • {new Date(selectedInvoice.issueDate).toLocaleDateString()}
                 </DialogDescription>
               </DialogHeader>
 
@@ -745,11 +759,11 @@ export default function InvoicePage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Issue Date</p>
-                    <p className="text-sm font-medium">{new Date(selectedInvoice.issue_date).toLocaleDateString()}</p>
+                    <p className="text-sm font-medium">{new Date(selectedInvoice.issueDate).toLocaleDateString()}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Due Date</p>
-                    <p className="text-sm font-medium">{new Date(selectedInvoice.due_date).toLocaleDateString()}</p>
+                    <p className="text-sm font-medium">{new Date(selectedInvoice.dueDate).toLocaleDateString()}</p>
                   </div>
                 </div>
 
