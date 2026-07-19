@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
-  FileText, Plus, Search, AlertCircle, CheckCircle, Clock, Trash2, RotateCcw, BarChart3, Wifi, Upload, MoreVertical, MessageCircle
+  FileText, Plus, Search, AlertCircle, CheckCircle, Clock, Trash2, RotateCcw, BarChart3, Wifi, Upload, MoreVertical, MessageCircle, RefreshCw
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
