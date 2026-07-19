@@ -1,20 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Building2, User, Phone, Mail, MapPin, Globe,
-  FileText, Clock, DollarSign, AlertCircle, Wifi, Calendar,
-  Shield, TrendingUp, Award, ExternalLink, Edit, Plus
+  ArrowLeft,
+  Phone,
+  Mail,
+  MapPin,
+  FileText,
+  DollarSign,
+  Ticket,
+  Wifi,
+  Calendar,
+  Edit,
+  Plus,
+  RotateCcw,
+  ExternalLink,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { EditClientModal } from "../edit-client-modal";
 
-interface Client {
+interface ClientDetails {
   id: number;
   name: string;
   active: boolean;
@@ -24,27 +53,11 @@ interface Client {
   whatsapp?: string;
   whatsappGroupId?: string;
   whatsappGroupLink?: string;
-  logoUrl?: string;
   address?: string;
   city?: string;
   country?: string;
   industry?: string;
-  companySize?: string;
-  tier?: string;
-  slaLevel?: string;
-  responseTimeTarget?: number;
   notes?: string;
-  tags?: string[];
-  meta?: {
-    yearsWithUs?: number;
-    totalPaid?: number;
-    [key: string]: any;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface ClientDetails extends Client {
   amcs?: Array<{
     id: number;
     contractNumber: string;
@@ -52,6 +65,7 @@ interface ClientDetails extends Client {
     endDate: string;
     amount: string;
     status: string;
+    renewedTo?: number | null;
   }>;
   invoices?: Array<{
     id: number;
@@ -69,458 +83,609 @@ interface ClientDetails extends Client {
   }>;
 }
 
+function statusBadge(status: string) {
+  const map: Record<string, string> = {
+    active: "border-border bg-secondary",
+    expiring: "border-amber-200 text-amber-800 bg-amber-50",
+    expired: "border-destructive/30 text-destructive",
+    cancelled: "text-muted-foreground",
+    paid: "border-border bg-secondary",
+    open: "border-border bg-secondary",
+    in_progress: "border-amber-200 text-amber-800",
+    resolved: "text-muted-foreground",
+  };
+  return (
+    <Badge variant="outline" className={map[status] || ""}>
+      {status?.replace("_", " ")}
+    </Badge>
+  );
+}
+
 export default function ClientDetailPage() {
   const params = useParams();
-  const clientId = params.id ? parseInt(params.id) : null;
+  const router = useRouter();
+  const clientId = params.id ? parseInt(String(params.id)) : null;
 
   const [client, setClient] = useState<ClientDetails | null>(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (clientId) {
-      fetchClientDetails();
-    }
-  }, [clientId]);
+  const [showEdit, setShowEdit] = useState(false);
+  const [renewAmc, setRenewAmc] = useState<{
+    id: number;
+    contractNumber: string;
+    endDate: string;
+    amount: string;
+  } | null>(null);
+  const [renewing, setRenewing] = useState(false);
+  const [renewForm, setRenewForm] = useState({
+    startDate: "",
+    endDate: "",
+    amount: "",
+    notes: "",
+  });
+  const [showTicket, setShowTicket] = useState(false);
+  const [creatingTicket, setCreatingTicket] = useState(false);
+  const [ticketForm, setTicketForm] = useState({
+    subject: "",
+    description: "",
+    priority: "medium",
+  });
 
   const fetchClientDetails = async () => {
+    if (!clientId) return;
     try {
       setLoading(true);
-
-      // Fetch client details with all related data
       const response = await fetch(`/api/clients/${clientId}/details`);
       const data = await response.json();
-
-      if (data.success) {
-        setClient(data.data);
-      } else {
-        toast.error(data.error || "Failed to load client details");
-      }
-    } catch (error) {
-      console.error("Failed to fetch client details:", error);
-      toast.error("Failed to load client details");
+      if (data.success) setClient(data.data);
+      else toast.error(data.error || "Failed to load client");
+    } catch {
+      toast.error("Failed to load client");
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchClientDetails();
+  }, [clientId]);
+
+  const openRenew = (amc: NonNullable<ClientDetails["amcs"]>[number]) => {
+    const start = new Date(amc.endDate);
+    start.setDate(start.getDate() + 1);
+    const end = new Date(start);
+    end.setFullYear(end.getFullYear() + 1);
+    setRenewForm({
+      startDate: start.toISOString().slice(0, 10),
+      endDate: end.toISOString().slice(0, 10),
+      amount: amc.amount || "",
+      notes: `Renewal of ${amc.contractNumber}`,
+    });
+    setRenewAmc(amc);
+  };
+
+  const submitRenew = async () => {
+    if (!renewAmc) return;
+    setRenewing(true);
+    try {
+      const res = await fetch(`/api/amc/${renewAmc.id}/renew`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: renewForm.startDate,
+          endDate: renewForm.endDate,
+          amount: renewForm.amount,
+          copyHardwareDetails: true,
+          copyServicesIncluded: true,
+          notes: renewForm.notes,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        toast.success("Contract renewed — draft invoice created");
+        setRenewAmc(null);
+        fetchClientDetails();
+      } else {
+        toast.error(result.error || "Renewal failed");
+      }
+    } catch {
+      toast.error("Renewal failed");
+    } finally {
+      setRenewing(false);
+    }
+  };
+
+  const submitTicket = async () => {
+    if (!clientId || !ticketForm.subject.trim()) {
+      toast.error("Subject is required");
+      return;
+    }
+    setCreatingTicket(true);
+    try {
+      const res = await fetch("/api/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId,
+          subject: ticketForm.subject,
+          description: ticketForm.description,
+          priority: ticketForm.priority,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        toast.success("Ticket created");
+        setShowTicket(false);
+        setTicketForm({ subject: "", description: "", priority: "medium" });
+        fetchClientDetails();
+      } else {
+        toast.error(result.error || "Failed to create ticket");
+      }
+    } catch {
+      toast.error("Failed to create ticket");
+    } finally {
+      setCreatingTicket(false);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
+        Loading client…
       </div>
     );
   }
 
   if (!client) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-gray-500">Client not found</p>
-        <Link href="/admin/clients">
-          <Button variant="outline" className="mt-4">
+      <div className="space-y-4 text-center py-12">
+        <p className="text-muted-foreground">Client not found</p>
+        <Button variant="outline" asChild>
+          <Link href="/admin/clients">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Clients
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-50 text-green-700 border-green-200';
-      case 'expired': return 'bg-red-50 text-red-700 border-red-200';
-      case 'expiring': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'paid': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'pending': return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'overdue': return 'bg-red-50 text-red-700 border-red-200';
-      case 'open': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'in_progress': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'resolved': return 'bg-green-50 text-green-700 border-green-200';
-      default: return 'bg-gray-50 text-gray-700 border-gray-200';
-    }
-  };
+  const liveAmcs =
+    client.amcs?.map((amc) => {
+      const end = new Date(amc.endDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const days = Math.ceil((end.getTime() - today.getTime()) / 86400000);
+      let status = amc.status;
+      if (status !== "cancelled" && !amc.renewedTo) {
+        if (days < 0) status = "expired";
+        else if (days <= 30) status = "expiring";
+        else status = "active";
+      }
+      return { ...amc, status, days };
+    }) || [];
 
-  const activeAMCs = client.amcs?.filter(a => a.status === 'active') || [];
-  const totalContractValue = activeAMCs.reduce((sum, amc) => sum + (parseFloat(amc.amount) || 0), 0);
+  const activeAmcs = liveAmcs.filter((a) => a.status === "active" || a.status === "expiring");
+  const contractValue = activeAmcs.reduce((s, a) => s + (parseFloat(a.amount) || 0), 0);
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <div className="space-y-6">
+      <div className="flex items-start gap-3">
+        <Button variant="ghost" size="icon" className="shrink-0 mt-0.5" asChild>
           <Link href="/admin/clients">
-            <Button variant="ghost" size="icon" className="rounded-xl">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
+            <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 shadow-lg shadow-emerald-500/20 flex items-center justify-center text-white font-bold text-2xl">
-              {client.name.charAt(0)}
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
-              <p className="text-sm text-gray-500">
-                {client.contactPerson && `Contact: ${client.contactPerson}`}
-                {client.contactPerson && client.industry && " • "}
-                {client.industry && `Industry: ${client.industry}`}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge className={`${client.active ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-700 border-gray-200'} px-3 py-1`}>
-            {client.active ? 'Active' : 'Inactive'}
-          </Badge>
-          <Button variant="outline" size="sm" className="rounded-xl">
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
+        </Button>
+        <AdminPageHeader
+          className="flex-1"
+          title={client.name}
+          description={[client.contactPerson, client.industry, client.city]
+            .filter(Boolean)
+            .join(" · ") || "Client profile"}
+          actions={
+            <>
+              <Badge variant="outline">
+                {client.active ? "Active" : "Inactive"}
+              </Badge>
+              <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+              <Button size="sm" onClick={() => setShowTicket(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                New ticket
+              </Button>
+            </>
+          }
+        />
+      </div>
+
+      {/* Tools */}
+      <div className="flex flex-wrap gap-2">
+        {client.whatsapp && (
+          <Button variant="outline" size="sm" asChild>
+            <a href={`https://wa.me/${client.whatsapp}`} target="_blank" rel="noopener noreferrer">
+              <Phone className="w-4 h-4 mr-2" />
+              WhatsApp
+            </a>
           </Button>
-        </div>
+        )}
+        {client.whatsappGroupLink && (
+          <Button variant="outline" size="sm" asChild>
+            <a href={client.whatsappGroupLink} target="_blank" rel="noopener noreferrer">
+              <Wifi className="w-4 h-4 mr-2" />
+              Group chat
+            </a>
+          </Button>
+        )}
+        {client.email && (
+          <Button variant="outline" size="sm" asChild>
+            <a href={`mailto:${client.email}`}>
+              <Mail className="w-4 h-4 mr-2" />
+              Email
+            </a>
+          </Button>
+        )}
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/admin/amc?clientId=${client.id}`}>
+            <FileText className="w-4 h-4 mr-2" />
+            AMC desk
+          </Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/admin/tickets?clientId=${client.id}`}>
+            <Ticket className="w-4 h-4 mr-2" />
+            Tickets
+          </Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/admin/invoice?clientId=${client.id}`}>
+            <DollarSign className="w-4 h-4 mr-2" />
+            Invoices
+          </Link>
+        </Button>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-gray-200/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Active AMCs</p>
-                <p className="text-lg font-bold text-gray-900">{activeAMCs.length}</p>
-              </div>
-            </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Card className="shadow-none">
+          <CardContent className="p-3">
+            <p className="text-[10px] uppercase text-muted-foreground">Live contracts</p>
+            <p className="text-xl font-semibold">{activeAmcs.length}</p>
           </CardContent>
         </Card>
-
-        <Card className="border-gray-200/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Contract Value</p>
-                <p className="text-lg font-bold text-gray-900">Nu. {(totalContractValue / 1000).toFixed(0)}k</p>
-              </div>
-            </div>
+        <Card className="shadow-none">
+          <CardContent className="p-3">
+            <p className="text-[10px] uppercase text-muted-foreground">Contract value</p>
+            <p className="text-xl font-semibold">Nu. {(contractValue / 1000).toFixed(0)}k</p>
           </CardContent>
         </Card>
-
-        <Card className="border-gray-200/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
-                <Award className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Client Tier</p>
-                <p className="text-lg font-bold text-gray-900 capitalize">{client.tier || 'Bronze'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-gray-200/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Years With Us</p>
-                <p className="text-lg font-bold text-gray-900">{client.meta?.yearsWithUs || 'New'}</p>
-              </div>
-            </div>
+        <Card className="shadow-none col-span-2 sm:col-span-1">
+          <CardContent className="p-3">
+            <p className="text-[10px] uppercase text-muted-foreground">Open tickets</p>
+            <p className="text-xl font-semibold">
+              {client.tickets?.filter((t) => t.status === "open" || t.status === "in_progress").length || 0}
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Details Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Contact Information */}
-          <Card className="border-gray-200/60">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Contact Information
-              </CardTitle>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Card className="shadow-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Contact</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {client.contactPerson && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Contact Person</p>
-                    <p className="text-sm font-medium">{client.contactPerson}</p>
-                  </div>
-                )}
-                {client.email && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Email</p>
-                    <a href={`mailto:${client.email}`} className="text-sm font-medium text-blue-600 hover:underline">
-                      {client.email}
-                    </a>
-                  </div>
-                )}
-                {client.phone && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Phone</p>
-                    <a href={`tel:${client.phone}`} className="text-sm font-medium text-gray-900">
-                      {client.phone}
-                    </a>
-                  </div>
-                )}
-                {client.whatsapp && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">WhatsApp</p>
-                    <a
-                      href={`https://wa.me/${client.whatsapp}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-medium text-green-600 hover:underline inline-flex items-center gap-1"
-                    >
-                      <Wifi className="w-3 h-3" />
-                      {client.whatsapp}
-                    </a>
-                  </div>
-                )}
+            <CardContent className="grid gap-3 sm:grid-cols-2 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Person</p>
+                <p className="font-medium">{client.contactPerson || "—"}</p>
               </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Phone</p>
+                <p className="font-medium">{client.phone || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Email</p>
+                <p className="font-medium break-all">{client.email || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">WhatsApp</p>
+                <p className="font-medium">{client.whatsapp || "—"}</p>
+              </div>
+              {(client.address || client.city) && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <MapPin className="w-3 h-3" /> Location
+                  </p>
+                  <p className="font-medium">
+                    {[client.address, client.city, client.country].filter(Boolean).join(", ")}
+                  </p>
+                </div>
+              )}
+              {client.notes && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-muted-foreground">Notes</p>
+                  <p className="text-muted-foreground">{client.notes}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* AMC Contracts */}
-          <Card className="border-gray-200/60">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  AMC Contracts
-                </div>
-                <Link href={`/admin/amc?clientId=${client.id}`}>
-                  <Button variant="outline" size="sm" className="rounded-lg h-8">
-                    View All
-                  </Button>
+          <Card className="shadow-none">
+            <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-base">AMC contracts</CardTitle>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/admin/amc">
+                  <Plus className="w-4 h-4 mr-1" />
+                  New
                 </Link>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {client.amcs && client.amcs.length > 0 ? (
-                <div className="space-y-3">
-                  {client.amcs.map((amc) => (
-                    <div key={amc.id} className="p-3 rounded-xl border border-gray-200 hover:border-emerald-200 hover:bg-emerald-50/50 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-sm">{amc.contractNumber}</span>
-                            <Badge className={`${getStatusColor(amc.status)} text-[9px] px-2 py-0.5 h-auto rounded-full uppercase`}>
-                              {amc.status}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {new Date(amc.endDate).toLocaleDateString()}
-                            </span>
-                            <span className="font-semibold text-emerald-600">
-                              Nu. {parseFloat(amc.amount).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-400">
-                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No AMC contracts</p>
-                  <Link href="/admin/amc" className="text-xs text-emerald-600 hover:underline">
-                    Create one →
-                  </Link>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Invoices */}
-          <Card className="border-gray-200/60">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                Recent Invoices
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {client.invoices && client.invoices.length > 0 ? (
-                <div className="space-y-2">
-                  {client.invoices.map((invoice) => (
-                    <div key={invoice.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                      <div>
-                        <p className="text-sm font-medium">{invoice.invoiceNumber}</p>
-                        <p className="text-xs text-gray-500">Due: {new Date(invoice.dueDate).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold">Nu. {parseFloat(invoice.total).toLocaleString()}</p>
-                        <Badge className={`${getStatusColor(invoice.status)} text-[9px] px-2 py-0.5 h-auto rounded-full uppercase`}>
-                          {invoice.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-gray-400 text-sm">
-                  No invoices yet
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Support Tickets */}
-          <Card className="border-gray-200/60">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" />
-                Support Tickets
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {client.tickets && client.tickets.length > 0 ? (
-                <div className="space-y-2">
-                  {client.tickets.map((ticket) => (
-                    <div key={ticket.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                      <div>
-                        <p className="text-sm font-medium truncate max-w-xs">{ticket.subject}</p>
-                        <p className="text-xs text-gray-500">{new Date(ticket.createdAt).toLocaleDateString()}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className="text-[9px] px-2 py-0.5 h-auto rounded-full uppercase" variant={
-                          ticket.priority === 'high' ? 'destructive' :
-                          ticket.priority === 'medium' ? 'default' : 'secondary'
-                        }>
-                          {ticket.priority}
-                        </Badge>
-                        <Badge className={`${getStatusColor(ticket.status)} text-[9px] px-2 py-0.5 h-auto rounded-full uppercase`}>
-                          {ticket.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-gray-400 text-sm">
-                  No support tickets - All good!
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <Card className="border-gray-200/60">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
+              </Button>
             </CardHeader>
             <CardContent className="space-y-2">
-              {client.whatsappGroupLink && (
-                <a
-                  href={client.whatsappGroupLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-xl bg-green-50 hover:bg-green-100 border border-green-200 transition-colors"
-                >
-                  <Wifi className="w-5 h-5 text-green-600" />
-                  <span className="text-sm font-medium text-green-700">WhatsApp Group</span>
-                  <ExternalLink className="w-4 h-4 text-green-600 ml-auto" />
-                </a>
+              {liveAmcs.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">No contracts yet</p>
+              ) : (
+                liveAmcs.map((amc) => (
+                  <div
+                    key={amc.id}
+                    className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-sm">{amc.contractNumber}</span>
+                        {statusBadge(amc.status)}
+                      </div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        Ends {new Date(amc.endDate).toLocaleDateString()}
+                        {" · "}
+                        Nu. {(parseFloat(amc.amount) || 0).toLocaleString()}
+                      </p>
+                    </div>
+                    {amc.status !== "cancelled" && !amc.renewedTo && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0"
+                        onClick={() => openRenew(amc)}
+                      >
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        Renew
+                      </Button>
+                    )}
+                  </div>
+                ))
               )}
-              <Link href={`/admin/amc?clientId=${client.id}`}>
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer">
-                  <FileText className="w-5 h-5 text-emerald-600" />
-                  <span className="text-sm font-medium text-emerald-700">New AMC Contract</span>
-                  <Plus className="w-4 h-4 text-emerald-600 ml-auto" />
-                </div>
-              </Link>
             </CardContent>
           </Card>
 
-          {/* Location & Details */}
-          <Card className="border-gray-200/60">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Location
-              </CardTitle>
+          <Card className="shadow-none">
+            <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-base">Support tickets</CardTitle>
+              <Button size="sm" onClick={() => setShowTicket(true)}>
+                <Plus className="w-4 h-4 mr-1" />
+                Create
+              </Button>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {client.address && (
-                <div>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">Address</p>
-                  <p className="text-sm">{client.address}</p>
-                </div>
-              )}
-              {(client.city || client.country) && (
-                <div>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">City</p>
-                  <p className="text-sm">{client.city}{client.city && client.country && ', '}{client.country}</p>
-                </div>
+            <CardContent className="space-y-2">
+              {!client.tickets?.length ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">No tickets</p>
+              ) : (
+                client.tickets.slice(0, 8).map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className="w-full text-left flex items-center justify-between gap-2 rounded-md border p-3 hover:bg-accent/40"
+                    onClick={() => router.push(`/admin/tickets?ticketId=${t.id}`)}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{t.subject}</p>
+                      <p className="text-xs text-muted-foreground">
+                        #{t.id} · {t.priority}
+                      </p>
+                    </div>
+                    {statusBadge(t.status)}
+                  </button>
+                ))
               )}
             </CardContent>
           </Card>
 
-          {/* Service Details */}
-          <Card className="border-gray-200/60">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                Service Details
-              </CardTitle>
+          <Card className="shadow-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Recent invoices</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {client.slaLevel && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">SLA Level</span>
-                  <span className="text-sm font-medium capitalize">{client.slaLevel}</span>
-                </div>
-              )}
-              {client.responseTimeTarget && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Response Time</span>
-                  <span className="text-sm font-medium">{client.responseTimeTarget} min</span>
-                </div>
-              )}
-              {client.companySize && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Company Size</span>
-                  <span className="text-sm font-medium capitalize">{client.companySize}</span>
-                </div>
-              )}
-              {client.meta?.totalPaid && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Total Paid</span>
-                  <span className="text-sm font-bold text-emerald-600">Nu. {client.meta.totalPaid.toLocaleString()}</span>
-                </div>
+            <CardContent className="space-y-2">
+              {!client.invoices?.length ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">No invoices</p>
+              ) : (
+                client.invoices.slice(0, 6).map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="flex items-center justify-between gap-2 rounded-md border p-3 text-sm"
+                  >
+                    <div>
+                      <p className="font-medium">{inv.invoiceNumber}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Due {new Date(inv.dueDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">
+                        Nu. {(parseFloat(inv.total) || 0).toLocaleString()}
+                      </p>
+                      {statusBadge(inv.status)}
+                    </div>
+                  </div>
+                ))
               )}
             </CardContent>
           </Card>
+        </div>
 
-          {/* Notes */}
-          {client.notes && (
-            <Card className="border-gray-200/60">
-              <CardHeader>
-                <CardTitle className="text-base font-semibold">Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 whitespace-pre-wrap">{client.notes}</p>
-              </CardContent>
-            </Card>
-          )}
+        <div className="space-y-4">
+          <Card className="shadow-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">WhatsApp group</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {client.whatsappGroupLink ? (
+                <>
+                  <p className="text-muted-foreground break-all text-xs">
+                    {client.whatsappGroupLink}
+                  </p>
+                  <Button className="w-full" asChild>
+                    <a
+                      href={client.whatsappGroupLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Open group
+                    </a>
+                  </Button>
+                </>
+              ) : (
+                <p className="text-muted-foreground">
+                  No group link set. Edit the client to add one.
+                </p>
+              )}
+              <Separator />
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowEdit(true)}
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Update group link
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {showEdit && (
+        <EditClientModal
+          client={client}
+          onClose={() => setShowEdit(false)}
+          onUpdated={() => {
+            setShowEdit(false);
+            fetchClientDetails();
+          }}
+        />
+      )}
+
+      <Dialog open={!!renewAmc} onOpenChange={(o) => !o && setRenewAmc(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Renew {renewAmc?.contractNumber}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Start date</label>
+              <Input
+                type="date"
+                value={renewForm.startDate}
+                onChange={(e) =>
+                  setRenewForm({ ...renewForm, startDate: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">End date</label>
+              <Input
+                type="date"
+                value={renewForm.endDate}
+                onChange={(e) =>
+                  setRenewForm({ ...renewForm, endDate: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Amount (Nu.)</label>
+              <Input
+                value={renewForm.amount}
+                onChange={(e) =>
+                  setRenewForm({ ...renewForm, amount: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Notes</label>
+              <Textarea
+                value={renewForm.notes}
+                onChange={(e) =>
+                  setRenewForm({ ...renewForm, notes: e.target.value })
+                }
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Renewing creates a new contract and a draft invoice for the amount.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenewAmc(null)}>
+              Cancel
+            </Button>
+            <Button onClick={submitRenew} disabled={renewing}>
+              {renewing ? "Renewing…" : "Renew & invoice"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showTicket} onOpenChange={setShowTicket}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New ticket — {client.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Subject</label>
+              <Input
+                value={ticketForm.subject}
+                onChange={(e) =>
+                  setTicketForm({ ...ticketForm, subject: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Priority</label>
+              <Select
+                value={ticketForm.priority}
+                onValueChange={(v) =>
+                  setTicketForm({ ...ticketForm, priority: v })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Description</label>
+              <Textarea
+                value={ticketForm.description}
+                onChange={(e) =>
+                  setTicketForm({ ...ticketForm, description: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTicket(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitTicket} disabled={creatingTicket}>
+              {creatingTicket ? "Creating…" : "Create ticket"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -112,8 +112,8 @@ export function EditClientModal({ client, onClose, onUpdated }: EditClientModalP
         </div>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
+        <form id="edit-client-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col">
+          <div className="p-6 space-y-6 flex-1">
             {/* Basic Information */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
@@ -282,42 +282,31 @@ export function EditClientModal({ client, onClose, onUpdated }: EditClientModalP
               </div>
             </div>
           </div>
-        </form>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 p-6 bg-gray-50">
+        <div className="border-t border-border p-6 bg-muted/40">
           <div className="flex justify-end gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={loading}
-              className="h-12 px-6 border-gray-300"
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="h-12 px-8 bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={(e) => {
-                e.currentTarget.blur();
-              }}
-            >
+            <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Saving...
                 </>
               ) : (
-                <>
-                  <Building2 className="h-5 w-5 mr-2" />
-                  Update Client
-                </>
+                "Update Client"
               )}
             </Button>
           </div>
         </div>
+        </form>
       </div>
     </div>
   );

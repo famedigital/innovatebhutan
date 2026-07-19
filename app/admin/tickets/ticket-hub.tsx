@@ -25,12 +25,43 @@ export function TicketHub() {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [showDetail, setShowDetail] = useState(false);
-  const [newTicket, setNewTicket] = useState({ subject: '', clientId: '', priority: 'medium', description: '' });
+  const [newTicket, setNewTicket] = useState({
+    subject: "",
+    clientId: "",
+    priority: "medium",
+    description: "",
+    assignedTo: "",
+  });
+  const [clientSearch, setClientSearch] = useState("");
+  const [staff, setStaff] = useState<Array<{ id: number; fullName: string | null }>>([]);
 
   useEffect(() => {
     fetchTickets();
     fetchClients();
+    fetchStaff();
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tid = params.get("ticketId");
+    if (tid) {
+      const id = parseInt(tid);
+      if (!isNaN(id)) {
+        setSelectedTicketId(id);
+        setShowDetail(true);
+      }
+    }
+  }, []);
+
+  const fetchStaff = async () => {
+    try {
+      const response = await fetch("/api/profiles?role=ADMIN,STAFF");
+      const result = await response.json();
+      if (result.success) setStaff(result.data || []);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const fetchTickets = async () => {
     try {
@@ -84,6 +115,9 @@ export function TicketHub() {
         clientId: parseInt(newTicket.clientId),
         priority: newTicket.priority,
         description: newTicket.description || undefined,
+        assignedTo: newTicket.assignedTo
+          ? parseInt(newTicket.assignedTo)
+          : undefined,
       }),
     });
     const result = await response.json();
@@ -93,7 +127,14 @@ export function TicketHub() {
     } else {
       toast.success("Ticket created");
       setShowCreate(false);
-      setNewTicket({ subject: '', clientId: '', priority: 'medium', description: '' });
+      setNewTicket({
+        subject: "",
+        clientId: "",
+        priority: "medium",
+        description: "",
+        assignedTo: "",
+      });
+      setClientSearch("");
       fetchTickets();
     }
   };
@@ -184,23 +225,35 @@ export function TicketHub() {
         </Card>
       </div>
 
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="relative">
+      {/* Filters — stack on mobile */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search tickets..."
-              className="pl-9 w-64 bg-muted border-border h-9"
+              placeholder="Search tickets or clients..."
+              className="pl-9 w-full h-9"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          <div className="flex gap-2 shrink-0">
+            <Button onClick={fetchTickets} variant="outline" size="sm">
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            <Button onClick={() => setShowCreate(true)} size="sm">
+              <Plus className="w-4 h-4 mr-2" />
+              New Ticket
+            </Button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32 bg-muted border-border h-9">
+            <SelectTrigger className="w-full sm:w-36 h-9">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent className="bg-white border-border">
+            <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="open">Open</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
@@ -209,27 +262,16 @@ export function TicketHub() {
             </SelectContent>
           </Select>
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="w-32 bg-muted border-border h-9">
+            <SelectTrigger className="w-full sm:w-36 h-9">
               <SelectValue placeholder="Priority" />
             </SelectTrigger>
-            <SelectContent className="bg-white border-border">
+            <SelectContent>
               <SelectItem value="all">All Priority</SelectItem>
               <SelectItem value="high">High</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="low">Low</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button onClick={fetchTickets} variant="outline" className="border-border">
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button onClick={() => setShowCreate(true)} className="bg-primary hover:bg-[#34b27b] text-white">
-            <Plus className="w-4 h-4 mr-2" />
-            New Ticket
-          </Button>
         </div>
       </div>
 
@@ -258,13 +300,59 @@ export function TicketHub() {
 
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Client *</label>
-                <Select value={newTicket.clientId} onValueChange={(v) => setNewTicket({...newTicket, clientId: v})}>
-                  <SelectTrigger className="bg-muted border-border">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search clients..."
+                    className="pl-9 mb-2 h-9"
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
+                  />
+                </div>
+                <Select
+                  value={newTicket.clientId}
+                  onValueChange={(v) => setNewTicket({ ...newTicket, clientId: v })}
+                >
+                  <SelectTrigger>
                     <SelectValue placeholder="Select client" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-border">
-                    {clients.map(c => (
-                      <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                  <SelectContent className="max-h-60">
+                    {clients
+                      .filter((c) =>
+                        !clientSearch ||
+                        (c.name || "")
+                          .toLowerCase()
+                          .includes(clientSearch.toLowerCase())
+                      )
+                      .map((c) => (
+                        <SelectItem key={c.id} value={c.id.toString()}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Assign to</label>
+                <Select
+                  value={newTicket.assignedTo || "unassigned"}
+                  onValueChange={(v) =>
+                    setNewTicket({
+                      ...newTicket,
+                      assignedTo: v === "unassigned" ? "" : v,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Unassigned" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {staff.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)}>
+                        {s.fullName || `Staff #${s.id}`}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

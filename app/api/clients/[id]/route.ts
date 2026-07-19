@@ -13,14 +13,15 @@ import { requireApiAuth, requireStaffOrAdmin, formatApiError } from "@/lib/auth/
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Authenticate and authorize
     const authContext = await requireApiAuth(req);
     requireStaffOrAdmin(authContext.profile);
 
-    const clientId = parseInt(params.id);
+    const { id } = await params;
+    const clientId = parseInt(id);
     if (isNaN(clientId)) {
       return NextResponse.json(
         { success: false, error: "Invalid client ID" },

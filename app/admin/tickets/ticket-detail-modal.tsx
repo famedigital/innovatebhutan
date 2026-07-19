@@ -33,6 +33,8 @@ interface Ticket {
   id: number;
   client_id: number;
   client_name?: string;
+  client_whatsapp?: string | null;
+  client_whatsapp_group?: string | null;
   subject: string;
   description: string;
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
@@ -64,14 +66,27 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [staff, setStaff] = useState<Array<{ id: number; fullName: string | null }>>([]);
+  const [followUpNote, setFollowUpNote] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open && ticketId) {
       fetchTicketDetails();
       fetchMessages();
+      fetchStaff();
     }
   }, [open, ticketId]);
+
+  const fetchStaff = async () => {
+    try {
+      const response = await fetch("/api/profiles?role=ADMIN,STAFF");
+      const result = await response.json();
+      if (result.success) setStaff(result.data || []);
+    } catch {
+      /* ignore */
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -94,6 +109,8 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
           id: data.id,
           client_id: data.clientId,
           client_name: data.clientName,
+          client_whatsapp: data.clientWhatsapp,
+          client_whatsapp_group: data.clientWhatsappGroupLink,
           subject: data.subject,
           description: data.description,
           status: data.status,
@@ -179,6 +196,56 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
       toast.error("Failed to update status");
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const updateAssignee = async (assignedTo: string) => {
+    if (!ticketId) return;
+    setUpdating(true);
+    try {
+      const response = await fetch(`/api/tickets/${ticketId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignedTo: assignedTo === "unassigned" ? null : parseInt(assignedTo),
+        }),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || "Failed");
+      toast.success("Assignee updated");
+      fetchTicketDetails();
+      onTicketUpdate?.();
+    } catch {
+      toast.error("Failed to assign");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const postFollowUp = async () => {
+    if (!ticketId || !followUpNote.trim()) {
+      toast.error("Add a follow-up note");
+      return;
+    }
+    setSending(true);
+    try {
+      const response = await fetch(`/api/tickets/${ticketId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Follow-up: ${followUpNote.trim()}`,
+        }),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || "Failed");
+      setFollowUpNote("");
+      toast.success("Follow-up logged");
+      fetchMessages();
+      if (ticket?.status === "open") await updateStatus("in_progress");
+    } catch {
+      toast.error("Failed to log follow-up");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -284,6 +351,73 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
                 </div>
               </div>
 
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground mb-1">Assign staff</p>
+                  <Select
+                    value={ticket.assigned_to ? String(ticket.assigned_to) : "unassigned"}
+                    onValueChange={updateAssignee}
+                    disabled={updating}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Unassigned" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {staff.map((s) => (
+                        <SelectItem key={s.id} value={String(s.id)}>
+                          {s.fullName || `Staff #${s.id}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground mb-1">Priority</p>
+                  <Select
+                    value={ticket.priority}
+                    onValueChange={updatePriority}
+                    disabled={updating}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {(ticket.client_whatsapp_group || ticket.client_whatsapp) && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {ticket.client_whatsapp_group && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href={ticket.client_whatsapp_group}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        WhatsApp group
+                      </a>
+                    </Button>
+                  )}
+                  {ticket.client_whatsapp && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href={`https://wa.me/${ticket.client_whatsapp}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Message client
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {/* SLA Warning */}
               {slaInfo && ticket.status === 'open' && (
                 <Card className={`mt-3 ${slaInfo.isBreached ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
@@ -343,28 +477,48 @@ export function TicketDetailModal({ open, onOpenChange, ticketId, onTicketUpdate
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input */}
-              <div className="p-4 border-t border-[#E5E5E1]">
+              {/* Follow-up + reply */}
+              <div className="p-4 border-t space-y-3">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Log a follow-up note…"
+                    value={followUpNote}
+                    onChange={(e) => setFollowUpNote(e.target.value)}
+                    className="flex-1 h-9"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={postFollowUp}
+                    disabled={sending || !followUpNote.trim()}
+                  >
+                    Follow-up
+                  </Button>
+                </div>
                 <div className="flex gap-2">
                   <Textarea
                     placeholder="Type your message..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                      if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         sendMessage();
                       }
                     }}
-                    className="flex-1 bg-[#F3F3F1] border-[#E5E5E1] min-h-[60px] resize-none"
+                    className="flex-1 min-h-[60px] resize-none"
                     disabled={sending}
                   />
                   <Button
                     onClick={sendMessage}
                     disabled={sending || !newMessage.trim()}
-                    className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white self-end"
+                    className="self-end"
                   >
-                    {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    {sending ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
               </div>

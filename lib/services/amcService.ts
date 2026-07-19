@@ -1,6 +1,7 @@
 import { amcRepository, type AMCFilters, type AMCStats } from "@/lib/repositories/amcRepository";
 import type { AMC } from "@/lib/repositories/amcRepository";
 import { notificationService } from "@/lib/services/notificationService";
+import { invoiceService } from "@/lib/services/invoiceService";
 
 export type AMCStatus = "active" | "expiring" | "expired" | "cancelled";
 
@@ -120,7 +121,41 @@ export class AMCService {
   }
 
   async listAMCs(filters: AMCFilters = {}) {
-    return await this.repository.listAMCsWithDetails(filters);
+    // Load without status filter first when we need accurate date-derived statuses,
+    // then apply filter after sync. For cancelled-only filters, keep as-is.
+    const wantsStatus = filters.status && filters.status !== "cancelled";
+    const fetchFilters = wantsStatus
+      ? { ...filters, status: undefined }
+      : filters;
+
+    const result = await this.repository.listAMCsWithDetails(fetchFilters);
+    const synced = [];
+
+    for (const amc of result.amcs) {
+      if (amc.status === "cancelled" || amc.renewedTo) {
+        synced.push(amc);
+        continue;
+      }
+
+      const computed = this.calculateStatus(amc.endDate);
+      if (computed !== amc.status) {
+        try {
+          await this.repository.updateAMCStatus(amc.id, computed);
+        } catch {
+          // Still return computed status for UI even if persist fails
+        }
+        synced.push({ ...amc, status: computed });
+      } else {
+        synced.push(amc);
+      }
+    }
+
+    let amcs = synced;
+    if (filters.status) {
+      amcs = synced.filter((a) => a.status === filters.status);
+    }
+
+    return { ...result, amcs, total: amcs.length };
   }
 
   // ==================== STATUS MANAGEMENT ====================
@@ -161,16 +196,19 @@ export class AMCService {
    * Sends notifications for contracts becoming expiring or expired
    */
   async updateAllAMCStatuses(): Promise<{ updated: number }> {
-    const activeAMCs = await this.repository.listAMCs({ status: "active", limit: 1000 });
+    const [active, expiring] = await Promise.all([
+      this.repository.listAMCs({ status: "active", limit: 1000 }),
+      this.repository.listAMCs({ status: "expiring", limit: 1000 }),
+    ]);
+    const candidates = [...active.amcs, ...expiring.amcs];
     let updated = 0;
 
-    for (const amc of activeAMCs.amcs) {
+    for (const amc of candidates) {
+      if (amc.status === "cancelled") continue;
       const newStatus = this.calculateStatus(amc.endDate);
       if (newStatus !== amc.status) {
         await this.repository.updateAMCStatus(amc.id, newStatus);
         updated++;
-
-        // Send notifications for status changes
         await this.notifyAMCStatusChange(amc, newStatus);
       }
     }
@@ -255,7 +293,7 @@ export class AMCService {
       startDate: renewalData.startDate,
       endDate: renewalData.endDate,
       amount: renewalData.amount,
-      status: "active",
+      status: this.calculateStatus(renewalData.endDate),
       renewedFrom: oldAMC.id,
       notes: renewalData.notes,
     };
@@ -271,7 +309,34 @@ export class AMCService {
     }
 
     // Use transactional renew method - creates new AMC and updates old AMC atomically
-    return await this.repository.renewAMC(amcId, newAMCData);
+    const renewed = await this.repository.renewAMC(amcId, newAMCData);
+
+    // Generate draft renewal invoice for the new contract amount
+    try {
+      const amountNum = parseFloat(renewalData.amount) || 0;
+      if (amountNum > 0) {
+        const issueDate = new Date();
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 30);
+        await invoiceService.generateInvoice({
+          clientId: oldAMC.clientId,
+          issueDate,
+          dueDate,
+          items: [
+            {
+              description: `AMC Renewal — ${contractNumber}`,
+              quantity: 1,
+              rate: amountNum,
+            },
+          ],
+          notes: `Auto-generated from AMC renewal of ${oldAMC.contractNumber || oldAMC.id}`,
+        });
+      }
+    } catch (err) {
+      console.error("[AMC] Failed to create renewal invoice:", err);
+    }
+
+    return renewed;
   }
 
   async getRenewalChain(amcId: number): Promise<AMC[]> {

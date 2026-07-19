@@ -87,7 +87,9 @@ export class TicketService {
       description: data.description,
       status: data.status,
       priority: data.priority,
-      assignedTo: data.assignedTo === null ? undefined : data.assignedTo,
+      ...(data.assignedTo !== undefined
+        ? { assignedTo: data.assignedTo }
+        : {}),
     });
     await writeAuditLog({
       operatorId,

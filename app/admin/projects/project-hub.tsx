@@ -347,13 +347,13 @@ export function ProjectHub() {
   return (
     <div className="space-y-4">
       {/* Header Actions */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#717171]" />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search projects..."
-              className="pl-9 w-64 bg-[#F3F3F1] border-[#E5E5E1] h-9"
+              className="pl-9 w-full h-9"
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -361,8 +361,9 @@ export function ProjectHub() {
               }}
             />
           </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
           <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-32 bg-[#F3F3F1] border-[#E5E5E1] h-9">
+            <SelectTrigger className="w-full sm:w-36 h-9">
               <Filter className="w-4 h-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
@@ -390,21 +391,21 @@ export function ProjectHub() {
             <Filter className="w-4 h-4 mr-2" />
             Filters
             {(clientFilter !== "all" || leadFilter !== "all" || dateFromFilter || dateToFilter) && (
-              <span className="ml-1 w-2 h-2 bg-[#3ECF8E] rounded-full" />
+              <span className="ml-1 w-2 h-2 bg-premium rounded-full" />
             )}
           </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* View Mode Toggle */}
-          <div className="flex items-center border border-[#E5E5E1] rounded-lg overflow-hidden">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center border rounded-lg overflow-hidden">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setViewMode("table")}
               className={cn(
-                "h-9 rounded-none border-none",
-                viewMode === "table" ? "bg-[#3ECF8E] text-white" : "bg-white"
+                "h-9 rounded-none",
+                viewMode === "table" ? "bg-secondary" : ""
               )}
             >
               <List className="w-4 h-4" />
@@ -414,22 +415,22 @@ export function ProjectHub() {
               size="sm"
               onClick={() => setViewMode("calendar")}
               className={cn(
-                "h-9 rounded-none border-none",
-                viewMode === "calendar" ? "bg-[#3ECF8E] text-white" : "bg-white"
+                "h-9 rounded-none",
+                viewMode === "calendar" ? "bg-secondary" : ""
               )}
             >
               <Calendar className="w-4 h-4" />
             </Button>
           </div>
 
-          <div className="text-sm text-[#717171]">
+          <div className="text-sm text-muted-foreground">
             {total} project{total !== 1 ? "s" : ""}
           </div>
-          <Button onClick={fetchProjects} variant="outline" className="border-[#E5E5E1]" size="sm">
+          <Button onClick={fetchProjects} variant="outline" size="sm">
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          <Button onClick={() => setShowCreate(true)} className="bg-[#3ECF8E] hover:bg-[#34b27b] text-white" size="sm">
+          <Button onClick={() => setShowCreate(true)} size="sm">
             <Plus className="w-4 h-4 mr-2" />
             New Project
           </Button>
@@ -456,7 +457,7 @@ export function ProjectHub() {
                 Clear All
               </Button>
             </div>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-[#717171]">Client</label>
                 <Select value={clientFilter} onValueChange={setClientFilter}>
@@ -519,7 +520,7 @@ export function ProjectHub() {
       {loading ? (
         <StatsSkeleton />
       ) : (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -583,7 +584,7 @@ export function ProjectHub() {
       {/* Projects View - Table or Calendar */}
       {viewMode === "table" ? (
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-border bg-muted">

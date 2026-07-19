@@ -48,6 +48,7 @@ interface AMC {
   endDate: string;
   amount?: string;
   status: 'active' | 'expired' | 'expiring' | 'cancelled';
+  renewedTo?: number | null;
   servicesIncluded?: string[];
   notes?: string;
   invoices?: Array<{
@@ -457,7 +458,11 @@ export default function AMCPage() {
   // Stats
   const activeAMCs = amcs.filter(a => a.status === 'active').length;
   const expiringSoon = amcs.filter(a => a.status === 'expiring').length;
-  const totalValue = amcs.filter(a => a.status === 'active').reduce((sum, a) => sum + (parseFloat(a.amount || '0') || 0), 0);
+  const expiredCount = amcs.filter(a => a.status === 'expired').length;
+  const totalValue = amcs.filter(a => a.status === 'active' || a.status === 'expiring').reduce((sum, a) => sum + (parseFloat(a.amount || '0') || 0), 0);
+
+  const canRenew = (amc: AMC) =>
+    amc.status !== "cancelled" && !amc.renewedTo;
 
   // Loading state
   if (loadingState === 'loading') {
@@ -515,30 +520,48 @@ export default function AMCPage() {
         }
       />
 
-      {/* Stats */}
+      {/* Stats — clickable filters */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <button
+          type="button"
+          onClick={() => setStatusFilter("active")}
+          className="text-left"
+        >
+          <Card className={`shadow-none transition-colors ${statusFilter === "active" ? "border-primary ring-1 ring-primary/30" : "hover:bg-accent/40"}`}>
+            <CardContent className="p-3">
+              <p className="text-[10px] text-muted-foreground uppercase">Active Contracts</p>
+              <p className="text-xl font-semibold text-foreground">{activeAMCs}</p>
+            </CardContent>
+          </Card>
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusFilter("expiring")}
+          className="text-left"
+        >
+          <Card className={`shadow-none transition-colors ${statusFilter === "expiring" ? "border-amber-500 ring-1 ring-amber-500/30" : "hover:bg-accent/40"}`}>
+            <CardContent className="p-3">
+              <p className="text-[10px] text-muted-foreground uppercase">Expiring Soon</p>
+              <p className="text-xl font-semibold text-amber-700 dark:text-amber-300">{expiringSoon}</p>
+            </CardContent>
+          </Card>
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusFilter("expired")}
+          className="text-left"
+        >
+          <Card className={`shadow-none transition-colors ${statusFilter === "expired" ? "border-destructive ring-1 ring-destructive/30" : "hover:bg-accent/40"}`}>
+            <CardContent className="p-3">
+              <p className="text-[10px] text-muted-foreground uppercase">Expired</p>
+              <p className="text-xl font-semibold text-destructive">{expiredCount}</p>
+            </CardContent>
+          </Card>
+        </button>
         <Card className="shadow-none">
           <CardContent className="p-3">
-            <p className="text-[10px] text-muted-foreground uppercase">Active Contracts</p>
-            <p className="text-xl font-semibold text-foreground">{activeAMCs}</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-none">
-          <CardContent className="p-3">
-            <p className="text-[10px] text-muted-foreground uppercase">Expiring Soon</p>
-            <p className="text-xl font-semibold text-amber-700 dark:text-amber-300">{expiringSoon}</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-none">
-          <CardContent className="p-3">
-            <p className="text-[10px] text-muted-foreground uppercase">Total Contract Value</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Contract Value</p>
             <p className="text-xl font-semibold">Nu. {(totalValue / 1000).toFixed(1)}k</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-none">
-          <CardContent className="p-3">
-            <p className="text-[10px] text-muted-foreground uppercase">Annual Revenue</p>
-            <p className="text-xl font-semibold text-foreground">Nu. {(totalValue / 12).toFixed(0)}k/mo</p>
           </CardContent>
         </Card>
       </div>
@@ -684,7 +707,7 @@ export default function AMCPage() {
                         </a>
                       </DropdownMenuItem>
                     )}
-                    {amc.status === "active" && (
+                    {canRenew(amc) && (
                       <DropdownMenuItem onClick={() => openRenewModal(amc)}>
                         <RotateCcw className="w-4 h-4 mr-2" />
                         Renew
@@ -778,7 +801,7 @@ export default function AMCPage() {
                         </a>
                       </DropdownMenuItem>
                     )}
-                    {amc.status === "active" && (
+                    {canRenew(amc) && (
                       <DropdownMenuItem onClick={() => openRenewModal(amc)}>
                         Renew
                       </DropdownMenuItem>
@@ -851,7 +874,7 @@ export default function AMCPage() {
                       </a>
                     </Button>
                   )}
-                  {detailAMC.status === "active" && (
+                  {canRenew(detailAMC) && (
                     <Button
                       onClick={() => {
                         openRenewModal(detailAMC);

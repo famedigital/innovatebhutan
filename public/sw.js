@@ -1,5 +1,5 @@
 /* Innovates Bhutan ERP — Service Worker */
-const CACHE = "innovates-erp-v2";
+const CACHE = "innovates-erp-v3";
 const PRECACHE = [
   "/",
   "/login/",

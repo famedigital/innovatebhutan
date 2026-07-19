@@ -41,6 +41,8 @@ export class TicketRepository {
         createdAt: tickets.createdAt,
         updatedAt: tickets.updatedAt,
         clientName: clients.name,
+        clientWhatsapp: clients.whatsapp,
+        clientWhatsappGroupLink: clients.whatsappGroupLink,
         assignedName: profiles.fullName,
       })
       .from(tickets)
