@@ -63,7 +63,7 @@ export async function POST(
     // Validate request body
     const validatedData = validateRequest(renewAMCSchema, body);
 
-    // Create renewal
+    // Create renewal (requires paid quotation + RanceLab remittance)
     const newAMC = await amcService.renewAMC(amcId, validatedData);
     console.log("[API /api/amc/[id]/renew] AMC renewed successfully:", amcId, "->", newAMC.id);
 
@@ -92,6 +92,17 @@ export async function POST(
       { status: 201 }
     );
   } catch (error) {
+    if (
+      error instanceof Error &&
+      !isApiError(error) &&
+      (error.message.includes("before") ||
+        error.message.includes("Create and send") ||
+        error.message.includes("Receive client") ||
+        error.message.includes("Record RanceLab") ||
+        error.message.includes("must be"))
+    ) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
     const errorResponse = formatApiError(error);
     const statusCode = isApiError(error) ? (error as any).statusCode : 500;
     const { id } = await params;

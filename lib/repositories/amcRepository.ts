@@ -181,6 +181,7 @@ export class AMCRepository {
           renewedTo: amcs.renewedTo,
           status: amcs.status,
           notes: amcs.notes,
+          meta: amcs.meta,
           createdAt: amcs.createdAt,
           updatedAt: amcs.updatedAt,
           clientName: clients.name,

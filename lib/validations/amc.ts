@@ -52,6 +52,24 @@ export const renewAMCSchema = z.object({
   { message: "End date must be after start date", path: ["endDate"] }
 );
 
+export const renewalQuotationSchema = z.object({
+  startDate: z.coerce.date({ required_error: "Start date is required" }),
+  endDate: z.coerce.date({ required_error: "End date is required" }),
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"),
+  notes: z.string().max(5000).optional(),
+}).refine(
+  (data) => new Date(data.endDate) > new Date(data.startDate),
+  { message: "End date must be after start date", path: ["endDate"] }
+);
+
+export const rancelabRemittanceSchema = z.object({
+  remitted: z.boolean(),
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format").optional(),
+  date: z.string().min(1).optional(),
+  reference: z.string().max(200).optional(),
+  notes: z.string().max(2000).optional(),
+});
+
 export const amcQuerySchema = z.object({
   clientId: z.coerce.number().int().positive().optional(),
   serviceId: z.coerce.number().int().positive().optional(),
@@ -71,6 +89,8 @@ export const updateAMCStatusSchema = z.object({
 export type CreateAMCInput = z.infer<typeof createAMCSchema>;
 export type UpdateAMCInput = z.infer<typeof updateAMCSchema>;
 export type RenewAMCInput = z.infer<typeof renewAMCSchema>;
+export type RenewalQuotationInput = z.infer<typeof renewalQuotationSchema>;
+export type RancelabRemittanceInput = z.infer<typeof rancelabRemittanceSchema>;
 export type AMCQueryInput = z.infer<typeof amcQuerySchema>;
 export type UpdateAMCStatusInput = z.infer<typeof updateAMCStatusSchema>;
 export type AMCStatus = z.infer<typeof amcStatusSchema>;

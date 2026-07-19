@@ -2,6 +2,16 @@ import { amcRepository, type AMCFilters, type AMCStats } from "@/lib/repositorie
 import type { AMC } from "@/lib/repositories/amcRepository";
 import { notificationService } from "@/lib/services/notificationService";
 import { invoiceService } from "@/lib/services/invoiceService";
+import { clientRepository } from "@/lib/repositories/clientRepository";
+import {
+  buildQuotationLineItems,
+  buildQuotationNotes,
+  computeRenewalSteps,
+  getRenewalPipeline,
+  withRenewalPipeline,
+  type AmcRenewalPipeline,
+  type RancelabRemittance,
+} from "@/lib/amc/renewal";
 
 export type AMCStatus = "active" | "expiring" | "expired" | "cancelled";
 
@@ -238,27 +248,226 @@ export class AMCService {
 
   // ==================== RENEWAL MANAGEMENT ====================
 
+  async getRenewalStatus(amcId: number) {
+    const amc = await this.repository.getAMCById(amcId);
+    if (!amc) {
+      throw new Error("AMC not found");
+    }
+
+    const pipeline = getRenewalPipeline(amc.meta);
+    let quotationInvoice: {
+      id: number;
+      invoiceNumber: string;
+      status: string | null;
+      total: string;
+      dueDate: Date;
+    } | null = null;
+
+    if (pipeline.quotationInvoiceId) {
+      const inv = await invoiceService.getInvoiceById(pipeline.quotationInvoiceId);
+      if (inv) {
+        quotationInvoice = {
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          status: inv.status,
+          total: inv.total,
+          dueDate: inv.dueDate,
+        };
+      }
+    }
+
+    const steps = computeRenewalSteps({
+      pipeline,
+      invoiceStatus: quotationInvoice?.status,
+      alreadyRenewed: !!amc.renewedTo,
+    });
+
+    return {
+      amc,
+      pipeline,
+      quotationInvoice,
+      steps,
+      canRenew: this.isAMCRenewable(amc),
+    };
+  }
+
+  /**
+   * Step 1: Create quotation invoice (GST 5%) and store pipeline on AMC meta.
+   * Does not create a new AMC contract.
+   */
+  async createRenewalQuotation(
+    amcId: number,
+    data: { startDate: Date; endDate: Date; amount: string; notes?: string }
+  ) {
+    const amc = await this.repository.getAMCById(amcId);
+    if (!amc) throw new Error("AMC not found");
+    if (!this.isAMCRenewable(amc)) {
+      throw new Error("This AMC cannot be renewed. It may be cancelled or already renewed.");
+    }
+    if (!amc.clientId) throw new Error("AMC has no client");
+
+    this.validateDates(data.startDate, data.endDate);
+
+    const pipeline = getRenewalPipeline(amc.meta);
+    if (pipeline.quotationInvoiceId) {
+      const existing = await invoiceService.getInvoiceById(pipeline.quotationInvoiceId);
+      if (existing && existing.status !== "cancelled") {
+        throw new Error(
+          `Quotation already exists (${existing.invoiceNumber}). Mark it paid or cancel it before creating another.`
+        );
+      }
+    }
+
+    const amountNum = parseFloat(data.amount);
+    if (!amountNum || amountNum <= 0) {
+      throw new Error("Amount must be greater than zero");
+    }
+
+    const client = await clientRepository.getById(amc.clientId);
+    const clientName = client?.name || `Client #${amc.clientId}`;
+
+    const startStr =
+      data.startDate instanceof Date
+        ? data.startDate.toISOString().slice(0, 10)
+        : String(data.startDate).slice(0, 10);
+    const endStr =
+      data.endDate instanceof Date
+        ? data.endDate.toISOString().slice(0, 10)
+        : String(data.endDate).slice(0, 10);
+
+    const issueDate = new Date();
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 14);
+
+    const invoice = await invoiceService.generateInvoice({
+      clientId: amc.clientId,
+      issueDate,
+      dueDate,
+      items: buildQuotationLineItems({
+        amount: amountNum,
+        startDate: startStr,
+        endDate: endStr,
+        clientName,
+      }),
+      notes: [
+        buildQuotationNotes(amcId, amc.contractNumber),
+        data.notes || "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    });
+
+    await invoiceService.markInvoiceAsSent(invoice.id);
+
+    const nextPipeline: AmcRenewalPipeline = {
+      ...pipeline,
+      quotationInvoiceId: invoice.id,
+      startDate: startStr,
+      endDate: endStr,
+      amount: data.amount,
+    };
+
+    const updated = await this.repository.updateAMC(amcId, {
+      meta: withRenewalPipeline(amc.meta, nextPipeline),
+    });
+
+    const refreshed = await invoiceService.getInvoiceById(invoice.id);
+
+    return {
+      amc: updated,
+      invoice: refreshed || invoice,
+      pipeline: nextPipeline,
+    };
+  }
+
+  /**
+   * Step 3: Record RanceLab remittance (amount, date, reference, notes).
+   */
+  async saveRancelabRemittance(amcId: number, remittance: RancelabRemittance) {
+    const amc = await this.repository.getAMCById(amcId);
+    if (!amc) throw new Error("AMC not found");
+    if (!this.isAMCRenewable(amc)) {
+      throw new Error("This AMC cannot be renewed.");
+    }
+
+    const pipeline = getRenewalPipeline(amc.meta);
+    if (!pipeline.quotationInvoiceId) {
+      throw new Error("Create a quotation invoice before recording RanceLab remittance.");
+    }
+
+    const invoice = await invoiceService.getInvoiceById(pipeline.quotationInvoiceId);
+    if (!invoice || invoice.status !== "paid") {
+      throw new Error("Mark the quotation invoice as paid before recording remittance.");
+    }
+
+    if (remittance.remitted) {
+      if (!remittance.amount || !remittance.date) {
+        throw new Error("Remittance amount and date are required.");
+      }
+    }
+
+    const nextPipeline: AmcRenewalPipeline = {
+      ...pipeline,
+      rancelab: {
+        ...remittance,
+        remittedAt: remittance.remitted
+          ? remittance.remittedAt || new Date().toISOString()
+          : undefined,
+      },
+    };
+
+    const updated = await this.repository.updateAMC(amcId, {
+      meta: withRenewalPipeline(amc.meta, nextPipeline),
+    });
+
+    return { amc: updated, pipeline: nextPipeline };
+  }
+
+  /**
+   * Step 4: Complete license renewal — creates new AMC.
+   * Requires paid quotation + RanceLab remittance. Does not create another invoice.
+   */
   async renewAMC(amcId: number, renewalData: RenewAMCDTO): Promise<AMC> {
     const oldAMC = await this.repository.getAMCById(amcId);
     if (!oldAMC) {
       throw new Error("AMC not found");
     }
 
-    // Validate dates
-    this.validateDates(renewalData.startDate, renewalData.endDate);
-
-    // Renewal must start after or on the old AMC's end date
-    if (new Date(renewalData.startDate) < new Date(oldAMC.endDate)) {
-      throw new Error("Renewal start date must be on or after the current contract end date");
+    if (!this.isAMCRenewable(oldAMC)) {
+      throw new Error("This AMC cannot be renewed. It may be cancelled or already renewed.");
     }
 
-    // Generate new public ID
-    const publicId = this.generatePublicId();
+    const pipeline = getRenewalPipeline(oldAMC.meta);
+    if (!pipeline.quotationInvoiceId) {
+      throw new Error("Create and send the quotation invoice first.");
+    }
 
-    // Generate new contract number (base on old one)
+    const invoice = await invoiceService.getInvoiceById(pipeline.quotationInvoiceId);
+    if (!invoice || invoice.status !== "paid") {
+      throw new Error("Receive client payment (mark quotation invoice as paid) before renewing the license.");
+    }
+
+    if (!pipeline.rancelab?.remitted) {
+      throw new Error("Record RanceLab remittance before renewing the license.");
+    }
+
+    // Prefer pipeline dates/amount if request omitted extras; still validate body dates
+    this.validateDates(renewalData.startDate, renewalData.endDate);
+
+    if (new Date(renewalData.startDate) < new Date(oldAMC.endDate)) {
+      // Allow same-day rollover: start may equal day after end; keep soft check
+      const oldEnd = new Date(oldAMC.endDate);
+      oldEnd.setHours(0, 0, 0, 0);
+      const newStart = new Date(renewalData.startDate);
+      newStart.setHours(0, 0, 0, 0);
+      if (newStart < oldEnd) {
+        throw new Error("Renewal start date must be on or after the current contract end date");
+      }
+    }
+
+    const publicId = this.generatePublicId();
     const contractNumber = this.generateRenewalContractNumber(oldAMC.contractNumber ?? "");
 
-    // Prepare data for new AMC
     const newAMCData: Parameters<typeof this.repository.createAMC>[0] = {
       publicId,
       clientId: oldAMC.clientId,
@@ -270,45 +479,31 @@ export class AMCService {
       status: this.calculateStatus(renewalData.endDate),
       renewedFrom: oldAMC.id,
       notes: renewalData.notes,
+      meta: {
+        renewedFromPipeline: {
+          quotationInvoiceId: pipeline.quotationInvoiceId,
+          rancelab: pipeline.rancelab,
+        },
+      },
     };
 
-    // Copy hardware details if requested
     if (renewalData.copyHardwareDetails && oldAMC.hardwareDetails) {
       newAMCData.hardwareDetails = oldAMC.hardwareDetails;
     }
 
-    // Copy services included if requested
     if (renewalData.copyServicesIncluded && oldAMC.servicesIncluded) {
       newAMCData.servicesIncluded = oldAMC.servicesIncluded;
     }
 
-    // Use transactional renew method - creates new AMC and updates old AMC atomically
     const renewed = await this.repository.renewAMC(amcId, newAMCData);
 
-    // Generate draft renewal invoice for the new contract amount
-    try {
-      const amountNum = parseFloat(renewalData.amount) || 0;
-      if (amountNum > 0) {
-        const issueDate = new Date();
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 30);
-        await invoiceService.generateInvoice({
-          clientId: oldAMC.clientId,
-          issueDate,
-          dueDate,
-          items: [
-            {
-              description: `AMC Renewal — ${contractNumber}`,
-              quantity: 1,
-              rate: amountNum,
-            },
-          ],
-          notes: `Auto-generated from AMC renewal of ${oldAMC.contractNumber || oldAMC.id}`,
-        });
-      }
-    } catch (err) {
-      console.error("[AMC] Failed to create renewal invoice:", err);
-    }
+    // Clear active pipeline on old AMC (keep history under completed flag)
+    await this.repository.updateAMC(amcId, {
+      meta: withRenewalPipeline(oldAMC.meta, {
+        ...pipeline,
+        // keep invoice + remittance for audit; license complete via renewedTo
+      }),
+    });
 
     return renewed;
   }

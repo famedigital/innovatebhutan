@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
-  FileText, Plus, Search, AlertCircle, CheckCircle, Clock, Trash2, RotateCcw, BarChart3, Wifi, Upload, MoreVertical, MessageCircle, RefreshCw
+  FileText, Plus, Search, AlertCircle, CheckCircle, Clock, Trash2, RotateCcw, BarChart3, Upload, MoreVertical, MessageCircle, RefreshCw
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,9 +16,6 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
-} from "@/components/ui/sheet";
-import {
   TableCell, TableHead, TableRow
 } from "@/components/ui/table";
 import {
@@ -26,6 +23,7 @@ import {
 } from "@/components/ui/item";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { ResponsiveDataList } from "@/components/admin/responsive-data-list";
+import { AmcDetailSheet } from "@/components/admin/amc-detail-sheet";
 import { toast } from "sonner";
 import { BulkImportModal } from "./bulk-import-modal";
 
@@ -89,12 +87,10 @@ export default function AMCPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showCreate, setShowCreate] = useState(false);
-  const [showRenew, setShowRenew] = useState(false);
   const [showClientCreate, setShowClientCreate] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [newClientName, setNewClientName] = useState("");
   const [creatingClient, setCreatingClient] = useState(false);
-  const [selectedAMC, setSelectedAMC] = useState<AMC | null>(null);
   const [detailAMC, setDetailAMC] = useState<AMC | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newAMC, setNewAMC] = useState({
@@ -104,14 +100,6 @@ export default function AMCPage() {
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     amount: "",
-    notes: ""
-  });
-  const [renewalData, setRenewalData] = useState({
-    startDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    endDate: new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    amount: "",
-    copyHardwareDetails: true,
-    copyServicesIncluded: true,
     notes: ""
   });
 
@@ -258,58 +246,7 @@ export default function AMCPage() {
   };
 
   const openRenewModal = (amc: AMC) => {
-    setSelectedAMC(amc);
-    const oldEndDate = new Date(amc.endDate);
-    const newStartDate = new Date(oldEndDate);
-    newStartDate.setDate(newStartDate.getDate() + 1);
-    const newEndDate = new Date(newStartDate);
-    newEndDate.setFullYear(newEndDate.getFullYear() + 1);
-
-    setRenewalData({
-      startDate: newStartDate.toISOString().split('T')[0],
-      endDate: newEndDate.toISOString().split('T')[0],
-      amount: amc.amount || "",
-      copyHardwareDetails: true,
-      copyServicesIncluded: true,
-      notes: `Renewal of contract ${amc.contractNumber}`
-    });
-    setShowRenew(true);
-  };
-
-  const renewAMC = async () => {
-    if (!selectedAMC) return;
-
-    setIsSubmitting(true);
-    try {
-      console.log('[AMC Page] Renewing AMC:', selectedAMC.id);
-
-      const response = await fetch(`/api/amc/${selectedAMC.id}/renew`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(renewalData)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error('[AMC Page] Renew AMC error:', response.status, data);
-        throw new Error(data.error || `Failed to renew AMC (${response.status})`);
-      }
-
-      if (data.success) {
-        toast.success("AMC renewed successfully!");
-        setShowRenew(false);
-        setSelectedAMC(null);
-        fetchData();
-      } else {
-        throw new Error(data.error || "Failed to renew AMC");
-      }
-    } catch (err: any) {
-      console.error('[AMC Page] Renew AMC error:', err);
-      toast.error(err.message || "Failed to renew AMC");
-    } finally {
-      setIsSubmitting(false);
-    }
+    setDetailAMC(amc);
   };
 
   const deleteAMC = async (id: number) => {
@@ -821,76 +758,13 @@ export default function AMCPage() {
         })}
       />
 
-      <Sheet open={!!detailAMC} onOpenChange={(o) => !o && setDetailAMC(null)}>
-        <SheetContent className="sm:max-w-md overflow-y-auto">
-          {detailAMC && (
-            <>
-              <SheetHeader>
-                <SheetTitle>
-                  {detailAMC.clientName || `Client #${detailAMC.clientId}`}
-                </SheetTitle>
-                <SheetDescription>
-                  {detailAMC.contractNumber || `AMC-${detailAMC.id}`}
-                </SheetDescription>
-              </SheetHeader>
-              <div className="mt-6 space-y-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={getStatusColor(detailAMC.status)}>
-                    {detailAMC.status}
-                  </Badge>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">End date</p>
-                    <p className="font-medium">
-                      {detailAMC.endDate
-                        ? new Date(detailAMC.endDate).toLocaleDateString()
-                        : "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Value</p>
-                    <p className="font-medium">
-                      Nu.{" "}
-                      {(parseFloat(detailAMC.amount || "0") || 0).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 pt-2">
-                  <Button asChild variant="outline">
-                    <Link href={`/admin/clients/${detailAMC.clientId}`}>
-                      Open client
-                    </Link>
-                  </Button>
-                  {detailAMC.clientWhatsapp && (
-                    <Button asChild variant="outline">
-                      <a
-                        href={`https://wa.me/${detailAMC.clientWhatsapp}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Wifi className="w-4 h-4 mr-2" />
-                        WhatsApp
-                      </a>
-                    </Button>
-                  )}
-                  {canRenew(detailAMC) && (
-                    <Button
-                      onClick={() => {
-                        openRenewModal(detailAMC);
-                        setDetailAMC(null);
-                      }}
-                    >
-                      <RotateCcw className="w-4 h-4 mr-2" />
-                      Renew contract
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      <AmcDetailSheet
+        amc={detailAMC}
+        open={!!detailAMC}
+        onOpenChange={(o) => !o && setDetailAMC(null)}
+        onRenewed={fetchData}
+        getStatusColor={getStatusColor}
+      />
 
       {/* Create AMC Modal */}
       {showCreate && (
@@ -1030,92 +904,6 @@ export default function AMCPage() {
                   <>
                     <FileText className="w-4 h-4 mr-2" />
                     Create Contract
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Renew AMC Modal */}
-      {showRenew && selectedAMC && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <h3 className="font-semibold">Renew AMC Contract</h3>
-              <Button variant="ghost" size="icon" onClick={() => setShowRenew(false)} disabled={isSubmitting}>×</Button>
-            </div>
-
-            <div className="p-4 space-y-4">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <p className="text-xs text-blue-700">Renewing: {selectedAMC.contractNumber}</p>
-                <p className="text-sm text-blue-900 font-medium">{selectedAMC.clientName}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs text-muted-foreground">New Start Date</label>
-                  <Input
-                    type="date"
-                    value={renewalData.startDate}
-                    onChange={(e) => setRenewalData({ ...renewalData, startDate: e.target.value })}
-                    className="bg-muted border-border"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs text-muted-foreground">New End Date</label>
-                  <Input
-                    type="date"
-                    value={renewalData.endDate}
-                    onChange={(e) => setRenewalData({ ...renewalData, endDate: e.target.value })}
-                    className="bg-muted border-border"
-                    disabled={isSubmitting}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">New Contract Value (Nu.)</label>
-                <Input
-                  type="number"
-                  placeholder={selectedAMC.amount || "50000"}
-                  value={renewalData.amount}
-                  onChange={(e) => setRenewalData({ ...renewalData, amount: e.target.value })}
-                  className="bg-muted border-border"
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">Notes</label>
-                <Input
-                  placeholder="Renewal notes..."
-                  value={renewalData.notes}
-                  onChange={(e) => setRenewalData({ ...renewalData, notes: e.target.value })}
-                  className="bg-muted border-border"
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-border flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowRenew(false)} disabled={isSubmitting}>Cancel</Button>
-              <Button
-                className="bg-blue-500 hover:bg-blue-600 text-white"
-                onClick={renewAMC}
-                disabled={isSubmitting || !renewalData.amount}
-              >
-                {isSubmitting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Renewing...
-                  </>
-                ) : (
-                  <>
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Renew Contract
                   </>
                 )}
               </Button>

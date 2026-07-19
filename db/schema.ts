@@ -122,6 +122,7 @@ export const amcs = pgTable("amcs", {
   renewedTo: integer("renewed_to"), // Forward reference (next contract) - references amcs.id
   status: varchar("status", { length: 50 }).default("active"), // active, expiring, expired, cancelled
   notes: text("notes"), // Additional notes about the contract
+  meta: jsonb("meta"), // Renewal pipeline, remittance, flexible ops data
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

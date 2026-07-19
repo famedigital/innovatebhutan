@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/select";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Separator } from "@/components/ui/separator";
+import { AmcDetailSheet } from "@/components/admin/amc-detail-sheet";
 import { toast } from "sonner";
 import { EditClientModal } from "../edit-client-modal";
 
@@ -111,17 +112,16 @@ export default function ClientDetailPage() {
   const [showEdit, setShowEdit] = useState(false);
   const [renewAmc, setRenewAmc] = useState<{
     id: number;
+    clientId: number;
+    clientName?: string;
+    clientWhatsapp?: string;
     contractNumber: string;
+    startDate: string;
     endDate: string;
     amount: string;
+    status: string;
+    renewedTo?: number | null;
   } | null>(null);
-  const [renewing, setRenewing] = useState(false);
-  const [renewForm, setRenewForm] = useState({
-    startDate: "",
-    endDate: "",
-    amount: "",
-    notes: "",
-  });
   const [showTicket, setShowTicket] = useState(false);
   const [creatingTicket, setCreatingTicket] = useState(false);
   const [ticketForm, setTicketForm] = useState({
@@ -150,48 +150,19 @@ export default function ClientDetailPage() {
   }, [clientId]);
 
   const openRenew = (amc: NonNullable<ClientDetails["amcs"]>[number]) => {
-    const start = new Date(amc.endDate);
-    start.setDate(start.getDate() + 1);
-    const end = new Date(start);
-    end.setFullYear(end.getFullYear() + 1);
-    setRenewForm({
-      startDate: start.toISOString().slice(0, 10),
-      endDate: end.toISOString().slice(0, 10),
+    if (!client) return;
+    setRenewAmc({
+      id: amc.id,
+      clientId: client.id,
+      clientName: client.name,
+      clientWhatsapp: client.whatsapp,
+      contractNumber: amc.contractNumber,
+      startDate: amc.startDate,
+      endDate: amc.endDate,
       amount: amc.amount || "",
-      notes: `Renewal of ${amc.contractNumber}`,
+      status: amc.status,
+      renewedTo: amc.renewedTo,
     });
-    setRenewAmc(amc);
-  };
-
-  const submitRenew = async () => {
-    if (!renewAmc) return;
-    setRenewing(true);
-    try {
-      const res = await fetch(`/api/amc/${renewAmc.id}/renew`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          startDate: renewForm.startDate,
-          endDate: renewForm.endDate,
-          amount: renewForm.amount,
-          copyHardwareDetails: true,
-          copyServicesIncluded: true,
-          notes: renewForm.notes,
-        }),
-      });
-      const result = await res.json();
-      if (result.success) {
-        toast.success("Contract renewed — draft invoice created");
-        setRenewAmc(null);
-        fetchClientDetails();
-      } else {
-        toast.error(result.error || "Renewal failed");
-      }
-    } catch {
-      toast.error("Renewal failed");
-    } finally {
-      setRenewing(false);
-    }
   };
 
   const submitTicket = async () => {
@@ -268,7 +239,7 @@ export default function ClientDetailPage() {
   const contractValue = activeAmcs.reduce((s, a) => s + (parseFloat(a.amount) || 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6 px-1 sm:px-0">
       <div className="flex items-start gap-3">
         <Button variant="ghost" size="icon" className="shrink-0 mt-0.5" asChild>
           <Link href="/admin/clients">
@@ -499,12 +470,15 @@ export default function ClientDetailPage() {
                 <p className="text-sm text-muted-foreground py-6 text-center">No invoices</p>
               ) : (
                 client.invoices.slice(0, 6).map((inv) => (
-                  <div
+                  <Link
                     key={inv.id}
-                    className="flex items-center justify-between gap-2 rounded-md border p-3 text-sm"
+                    href={`/admin/invoice?invoiceId=${inv.id}`}
+                    className="flex items-center justify-between gap-2 rounded-md border p-3 text-sm transition-colors hover:bg-muted/50"
                   >
                     <div>
-                      <p className="font-medium">{inv.invoiceNumber}</p>
+                      <p className="font-medium text-primary underline-offset-2 group-hover:underline">
+                        {inv.invoiceNumber}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         Due {new Date(inv.dueDate).toLocaleDateString()}
                       </p>
@@ -515,19 +489,19 @@ export default function ClientDetailPage() {
                       </p>
                       {statusBadge(inv.status)}
                     </div>
-                  </div>
+                  </Link>
                 ))
               )}
             </CardContent>
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <aside className="space-y-4 lg:pl-2">
           <Card className="shadow-none">
-            <CardHeader className="pb-2">
+            <CardHeader className="px-4 pb-2 pt-4 sm:px-6">
               <CardTitle className="text-base">WhatsApp group</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
+            <CardContent className="space-y-3 px-4 pb-4 text-sm sm:px-6">
               {client.whatsappGroupLink ? (
                 <>
                   <p className="text-muted-foreground break-all text-xs">
@@ -560,7 +534,7 @@ export default function ClientDetailPage() {
               </Button>
             </CardContent>
           </Card>
-        </div>
+        </aside>
       </div>
 
       {showEdit && (
@@ -574,64 +548,12 @@ export default function ClientDetailPage() {
         />
       )}
 
-      <Dialog open={!!renewAmc} onOpenChange={(o) => !o && setRenewAmc(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Renew {renewAmc?.contractNumber}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs text-muted-foreground">Start date</label>
-              <Input
-                type="date"
-                value={renewForm.startDate}
-                onChange={(e) =>
-                  setRenewForm({ ...renewForm, startDate: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">End date</label>
-              <Input
-                type="date"
-                value={renewForm.endDate}
-                onChange={(e) =>
-                  setRenewForm({ ...renewForm, endDate: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Amount (Nu.)</label>
-              <Input
-                value={renewForm.amount}
-                onChange={(e) =>
-                  setRenewForm({ ...renewForm, amount: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Notes</label>
-              <Textarea
-                value={renewForm.notes}
-                onChange={(e) =>
-                  setRenewForm({ ...renewForm, notes: e.target.value })
-                }
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Renewing creates a new contract and a draft invoice for the amount.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRenewAmc(null)}>
-              Cancel
-            </Button>
-            <Button onClick={submitRenew} disabled={renewing}>
-              {renewing ? "Renewing…" : "Renew & invoice"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AmcDetailSheet
+        amc={renewAmc}
+        open={!!renewAmc}
+        onOpenChange={(o) => !o && setRenewAmc(null)}
+        onRenewed={fetchClientDetails}
+      />
 
       <Dialog open={showTicket} onOpenChange={setShowTicket}>
         <DialogContent>
