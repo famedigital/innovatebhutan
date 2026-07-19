@@ -25,13 +25,47 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { addOneYear, type RenewalStepKey, type RenewalStepState } from "@/lib/amc/renewal";
-import {
-  buildAmcQuotationPdf,
-  buildWhatsAppQuotationUrl,
-  downloadBlob,
-} from "@/lib/amc/quotationPdf";
+import { addOneYear, AMC_GST_RATE, formatAmcDisplayDate, type RenewalStepKey, type RenewalStepState } from "@/lib/amc/renewal";
 import { toast } from "sonner";
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function buildWhatsAppQuotationUrl(params: {
+  phoneOrGroupLink?: string | null;
+  groupLink?: string | null;
+  clientName: string;
+  amount: number;
+  startDate: string;
+  endDate: string;
+  pdfUrl?: string | null;
+}): string | null {
+  const total = Math.round(params.amount * (1 + AMC_GST_RATE) * 100) / 100;
+  const period = `${formatAmcDisplayDate(params.startDate)} to ${formatAmcDisplayDate(params.endDate)}`;
+  const text = [
+    `Dear ${params.clientName},`,
+    ``,
+    `Please find the RanceLab Yearly AMC quotation for ${period}.`,
+    `Amount (incl. 5% GST): Nu. ${total.toLocaleString()}`,
+    params.pdfUrl ? `Quotation PDF: ${params.pdfUrl}` : null,
+    ``,
+    `Payment via M-BoB or Cheque only (no cash).`,
+    `— Innovates`,
+  ]
+    .filter((l) => l !== null)
+    .join("\n");
+
+  if (params.groupLink) return params.groupLink;
+  const phone = (params.phoneOrGroupLink || "").replace(/\D/g, "");
+  if (!phone) return null;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+}
 
 export type AmcRenewalTarget = {
   id: number;
@@ -215,39 +249,48 @@ export function AmcRenewalDesk({ amc, open, onOpenChange, onRenewed }: Props) {
 
   const handleDownloadPdf = async () => {
     if (!amc) return;
-    const amount = parseFloat(form.amount) || 0;
-    const blob = buildAmcQuotationPdf({
-      clientName: amc.clientName || `Client #${amc.clientId}`,
-      contractNumber: amc.contractNumber,
-      invoiceNumber: status?.quotationInvoice?.invoiceNumber,
-      startDate: form.startDate,
-      endDate: form.endDate,
-      amount,
-    });
-    const filename = `AMC-Quotation-${amc.contractNumber || amc.id}.pdf`;
-    downloadBlob(blob, filename);
-
-    // Upload to media for WhatsApp link
+    setSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append("file", blob, filename);
-      const up = await fetch("/api/media/upload", { method: "POST", body: fd });
-      const upData = await up.json();
-      const url = upData?.url as string | undefined;
-      if (upData?.success && url) {
-        setPdfUrl(url);
-        await fetch(`/api/amc/${amc.id}/renewal`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ quotationPdfUrl: url }),
-        });
-        toast.success("PDF ready — uploaded for sharing");
-        await loadStatus(amc.id);
-      } else {
-        toast.success("PDF downloaded");
+      const amount = parseFloat(form.amount) || 0;
+      // Lazy-load jspdf only on click (keeps it out of Client Component SSR graph)
+      const { buildAmcQuotationPdf } = await import("@/lib/amc/quotationPdf");
+      const blob = await buildAmcQuotationPdf({
+        clientName: amc.clientName || `Client #${amc.clientId}`,
+        contractNumber: amc.contractNumber,
+        invoiceNumber: status?.quotationInvoice?.invoiceNumber,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        amount,
+      });
+      const filename = `AMC-Quotation-${amc.contractNumber || amc.id}.pdf`;
+      downloadBlob(blob, filename);
+
+      // Upload to media for WhatsApp link
+      try {
+        const fd = new FormData();
+        fd.append("file", blob, filename);
+        const up = await fetch("/api/media/upload", { method: "POST", body: fd });
+        const upData = await up.json();
+        const url = upData?.url as string | undefined;
+        if (upData?.success && url) {
+          setPdfUrl(url);
+          await fetch(`/api/amc/${amc.id}/renewal`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ quotationPdfUrl: url }),
+          });
+          toast.success("PDF ready — uploaded for sharing");
+          await loadStatus(amc.id);
+        } else {
+          toast.success("PDF downloaded");
+        }
+      } catch {
+        toast.success("PDF downloaded (upload skipped)");
       }
-    } catch {
-      toast.success("PDF downloaded (upload skipped)");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "PDF failed");
+    } finally {
+      setSubmitting(false);
     }
   };
 

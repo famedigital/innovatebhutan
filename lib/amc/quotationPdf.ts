@@ -1,4 +1,3 @@
-import { jsPDF } from "jspdf";
 import { AMC_GST_RATE, formatAmcDisplayDate } from "@/lib/amc/renewal";
 
 export type QuotationPdfInput = {
@@ -13,8 +12,15 @@ export type QuotationPdfInput = {
   amount: number;
 };
 
-/** Build RanceLab AMC quotation PDF (matches sample layout) */
-export function buildAmcQuotationPdf(input: QuotationPdfInput): Blob {
+/** Build RanceLab AMC quotation PDF (browser-only; dynamic jspdf import avoids SSR/Turbopack node worker) */
+export async function buildAmcQuotationPdf(input: QuotationPdfInput): Promise<Blob> {
+  if (typeof window === "undefined") {
+    throw new Error("PDF generation is only available in the browser");
+  }
+
+  // Dynamic import of browser build — never resolve jspdf.node (fflate Worker breaks Turbopack SSR)
+  const { jsPDF } = await import("jspdf/dist/jspdf.es.min.js");
+
   const taxable = Math.round(input.amount * 100) / 100;
   const gst = Math.round(taxable * AMC_GST_RATE * 100) / 100;
   const total = Math.round((taxable + gst) * 100) / 100;
