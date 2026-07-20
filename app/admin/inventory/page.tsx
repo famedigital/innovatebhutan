@@ -92,26 +92,32 @@ export default function InventoryPage() {
   const [deletingItem, setDeletingItem] = useState<Item | null>(null);
   const [formData, setFormData] = useState<ItemFormData>(emptyForm);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const response = await fetch("/api/inventory");
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      const response = await fetch("/api/inventory/");
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
+        const msg =
+          result.error || `Failed to load inventory (HTTP ${response.status})`;
+        setLoadError(msg);
+        toast.error(msg);
+        setItems([]);
+        return;
       }
-      const result = await response.json();
-      if (result.success) {
-        setItems(result.data || []);
-      } else {
-        toast.error(result.error || "Failed to load inventory");
-      }
+      setItems(result.data || []);
     } catch (error) {
       console.error("Fetch error:", error);
-      toast.error("Failed to load inventory");
+      const msg = "Failed to load inventory";
+      setLoadError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -306,7 +312,11 @@ export default function InventoryPage() {
                 {items.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                      No items found. Add your first item to get started.
+                      {loadError ? (
+                        <span className="text-destructive">{loadError}</span>
+                      ) : (
+                        "No items found. Add your first item to get started."
+                      )}
                     </TableCell>
                   </TableRow>
                 ) : (

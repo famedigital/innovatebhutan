@@ -295,6 +295,10 @@ export class ProjectService {
     return await this.repository.getTasksWithProfiles(projectId);
   }
 
+  async getMyTasks(userId: string) {
+    return await this.repository.getTasksAssignedToUser(userId);
+  }
+
   async updateTask(id: number, data: UpdateTaskDTO, userId?: string, userRole?: string): Promise<ProjectTask> {
     const task = await this.repository.getTaskById(id);
     if (!task) {

@@ -30,3 +30,12 @@ Apply migration: `drizzle/0030_products_catalog.sql` on Supabase.
 
 ## Auth note
 - DEV API bypass only when `ALLOW_DEV_AUTH_BYPASS=true`
+
+## Staff create (critical)
+- [ ] Vercel `SUPABASE_SERVICE_ROLE_KEY` is the **service_role** / `sb_secret_…` key — **not** `sb_publishable_…`
+- [ ] `/admin/users` → Add staff succeeds with email + password
+- [ ] Wrong/missing key returns clear 503 (not “Bearer token”)
+
+## Console troubleshooting
+- `runtime.lastError: Could not establish connection` is a **browser extension**, not the ERP — verify in Incognito without extensions
+- PWA `beforeinstallprompt` warnings are expected when the install banner is deferred

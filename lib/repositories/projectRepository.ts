@@ -347,6 +347,48 @@ export class ProjectRepository {
       .orderBy(projectTasks.position, desc(projectTasks.createdAt));
   }
 
+  /** Tasks assigned to a staff user (profiles.user_id) across projects */
+  async getTasksAssignedToUser(userId: string): Promise<
+    Array<
+      ProjectTask & {
+        projectName?: string | null;
+        projectStatus?: string | null;
+        clientName?: string | null;
+      }
+    >
+  > {
+    return await this.db
+      .select({
+        id: projectTasks.id,
+        projectId: projectTasks.projectId,
+        assignedTo: projectTasks.assignedTo,
+        title: projectTasks.title,
+        description: projectTasks.description,
+        status: projectTasks.status,
+        priority: projectTasks.priority,
+        dueDate: projectTasks.dueDate,
+        estimatedHours: projectTasks.estimatedHours,
+        actualHours: projectTasks.actualHours,
+        position: projectTasks.position,
+        createdAt: projectTasks.createdAt,
+        deletedAt: projectTasks.deletedAt,
+        projectName: projects.name,
+        projectStatus: projects.status,
+        clientName: clients.name,
+      })
+      .from(projectTasks)
+      .innerJoin(projects, eq(projectTasks.projectId, projects.id))
+      .leftJoin(clients, eq(projects.clientId, clients.id))
+      .where(
+        and(
+          eq(projectTasks.assignedTo, userId),
+          isNull(projectTasks.deletedAt),
+          isNull(projects.deletedAt)
+        )
+      )
+      .orderBy(projectTasks.dueDate, desc(projectTasks.createdAt));
+  }
+
   async updateTask(id: number, data: Partial<NewProjectTask>): Promise<ProjectTask> {
     const [task] = await this.db.update(projectTasks).set(data).where(eq(projectTasks.id, id)).returning();
 

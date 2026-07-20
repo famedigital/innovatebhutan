@@ -30,13 +30,26 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
+    console.error("[API /api/inventory] GET error:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to list inventory";
+    const isMissingTable =
+      /relation .* does not exist|undefined table|items/i.test(message);
     const errorResponse = formatApiError(error);
-    const statusCode = isApiError(error) ? (error as any).statusCode : 500;
-    return NextResponse.json(errorResponse, { status: statusCode });
+    const statusCode = isApiError(error)
+      ? (error as { statusCode?: number }).statusCode || 500
+      : 500;
+    return NextResponse.json(
+      {
+        ...errorResponse,
+        error: isMissingTable
+          ? "Inventory tables missing. Apply drizzle/0015_erp_modules_clean.sql (items/warehouses) on Supabase."
+          : errorResponse.error || message,
+      },
+      { status: statusCode }
+    );
   }
 }
-
-// POST /api/inventory - Create a new item
 export async function POST(req: NextRequest) {
   try {
     const { profile } = await requireApiAuth(req);

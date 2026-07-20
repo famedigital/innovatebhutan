@@ -81,7 +81,7 @@ export function ProjectDetailModal({
     title: "",
     description: "",
     priority: "medium",
-    assignedTo: "",
+    assignedTo: "unassigned",
     dueDate: "",
     estimatedHours: "",
   });
@@ -117,22 +117,14 @@ export function ProjectDetailModal({
       const statsResult = await statsRes.json();
 
       if (tasksResult.success) {
-        // Enrich tasks with assignee names
-        const enrichedTasks = await Promise.all(
-          tasksResult.data.map(async (task: Task) => {
-            if (task.assignedTo) {
-              try {
-                const profileRes = await fetch(`/api/profiles/${task.assignedTo}`);
-                const profileResult = await profileRes.json();
-                return { ...task, assignedName: profileResult.data?.fullName || "Unknown" };
-              } catch {
-                return task;
-              }
-            }
-            return task;
-          })
+        setTasks(
+          (tasksResult.data || []).map(
+            (task: Task & { assigneeName?: string }) => ({
+              ...task,
+              assignedName: task.assignedName || task.assigneeName,
+            })
+          )
         );
-        setTasks(enrichedTasks);
       } else {
         toast.error(tasksResult.error || "Failed to fetch tasks");
       }
@@ -198,7 +190,9 @@ export function ProjectDetailModal({
       };
 
       if (taskForm.description) payload.description = taskForm.description;
-      if (taskForm.assignedTo) payload.assignedTo = taskForm.assignedTo; // Keep as string (userId)
+      if (taskForm.assignedTo && taskForm.assignedTo !== "unassigned") {
+        payload.assignedTo = taskForm.assignedTo;
+      }
       if (taskForm.dueDate) payload.dueDate = new Date(taskForm.dueDate);
       if (taskForm.estimatedHours) payload.estimatedHours = taskForm.estimatedHours;
 
@@ -213,7 +207,14 @@ export function ProjectDetailModal({
       if (result.success) {
         toast.success("Task created successfully");
         setShowTaskForm(false);
-        setTaskForm({ title: "", description: "", priority: "medium", assignedTo: "", dueDate: "", estimatedHours: "" });
+        setTaskForm({
+          title: "",
+          description: "",
+          priority: "medium",
+          assignedTo: "unassigned",
+          dueDate: "",
+          estimatedHours: "",
+        });
         fetchProjectData();
       } else {
         toast.error(result.error || "Failed to create task. Please try again.");
@@ -769,9 +770,10 @@ export function ProjectDetailModal({
                         <SelectValue placeholder="Optional" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
                         {teamMembers.map((m) => (
                           <SelectItem key={m.id} value={m.id}>
-                            {m.fullName}
+                            {m.fullName || m.id}
                           </SelectItem>
                         ))}
                       </SelectContent>

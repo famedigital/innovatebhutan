@@ -65,7 +65,7 @@ export default function FinanceReportsPage() {
   const [exporting, setExporting] = useState(false);
   const [kpis, setKpis] = useState<FinanceKPIs | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [reportType, setReportType] = useState<string>("kpis");
 
   useEffect(() => {
@@ -76,7 +76,7 @@ export default function FinanceReportsPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (statusFilter) params.append("status", statusFilter);
+      if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
       if (dateRange?.from) params.append("startDate", dateRange.from.toISOString());
       if (dateRange?.to) params.append("endDate", dateRange.to.toISOString());
       params.append("type", reportType);
@@ -232,7 +232,7 @@ export default function FinanceReportsPage() {
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="sent">Sent</SelectItem>
                   <SelectItem value="paid">Paid</SelectItem>
@@ -245,7 +245,7 @@ export default function FinanceReportsPage() {
             <div className="ml-auto flex items-end">
               <Button variant="outline" onClick={() => {
                 setDateRange(undefined);
-                setStatusFilter("");
+                setStatusFilter("all");
               }}>
                 Clear Filters
               </Button>

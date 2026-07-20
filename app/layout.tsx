@@ -51,8 +51,11 @@ export const metadata: Metadata = {
     images: [{ url: '/og-image.png', width: 1200, height: 630 }],
   },
   icons: {
-    icon: 'https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/v1776705871/weblogo_os6cni.png',
-    apple: 'https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/c_fit,w_180,h_180/v1776705871/weblogo_os6cni.png',
+    icon: [
+      { url: '/icon.png', sizes: '192x192', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: '/icons/icon-192.png',
   },
 }
 

@@ -21,14 +21,14 @@ export function AdminPageHeader({
   className,
 }: Props) {
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn("admin-page-header space-y-3 pb-1", className)}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-1">
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground truncate">
             {title}
           </h1>
           {description ? (
-            <p className="text-sm text-muted-foreground">{description}</p>
+            <p className="text-sm text-muted-foreground max-w-2xl">{description}</p>
           ) : null}
         </div>
         {actions ? (

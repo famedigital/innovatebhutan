@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, CheckCircle2, Share, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,9 +31,13 @@ export function InstallAppButton({
 }: Props) {
   const { canInstall, isStandalone, install } = usePwa();
   const [helpOpen, setHelpOpen] = useState(false);
-  const isIOS =
-    typeof navigator !== "undefined" &&
-    /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const [mounted, setMounted] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    setIsIOS(/iphone|ipad|ipod/i.test(navigator.userAgent));
+  }, []);
 
   if (isStandalone) {
     return (
@@ -59,6 +63,9 @@ export function InstallAppButton({
     setHelpOpen(true);
   };
 
+  // SSR + first client paint: identical (no navigator branch)
+  const showIos = mounted && isIOS;
+
   return (
     <>
       <Button
@@ -68,7 +75,7 @@ export function InstallAppButton({
         onClick={handleClick}
         className={cn(fullWidth && "w-full", "border-premium/50", className)}
       >
-        {isIOS ? (
+        {showIos ? (
           <Share className="w-4 h-4 mr-2" />
         ) : canInstall ? (
           <Download className="w-4 h-4 mr-2" />
@@ -77,7 +84,7 @@ export function InstallAppButton({
         )}
         {canInstall
           ? "Install app"
-          : isIOS
+          : showIos
             ? "Add to Home Screen"
             : "Install app"}
       </Button>
@@ -92,7 +99,7 @@ export function InstallAppButton({
                 : "Browsers only show a native install prompt after criteria are met. Use the steps below."}
             </DialogDescription>
           </DialogHeader>
-          {isIOS ? (
+          {showIos ? (
             <ol className="list-decimal pl-5 space-y-2 text-sm">
               <li>Tap the Share button in Safari</li>
               <li>Scroll and choose Add to Home Screen</li>

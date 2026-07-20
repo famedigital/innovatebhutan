@@ -212,6 +212,17 @@
 }
 
 @layer utilities {
+  /* Admin ERP chrome — shared spacing / empty states */
+  .admin-page-header {
+    margin-bottom: 0.25rem;
+  }
+  .admin-empty {
+    @apply py-12 text-center text-sm text-muted-foreground;
+  }
+  .admin-stat-card {
+    @apply rounded-xl border bg-card p-3 sm:p-4 shadow-none;
+  }
+
   .neon-text {
     text-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
   }
@@ -1027,9 +1038,10 @@ html {
   }
 }
 
-/* iOS-style selection highlight */
+/* iOS-style selection highlight — only marketing cards, NEVER sidebar/shell */
 @media (hover: none) {
-  .group:active {
+  .AppStoreCard:active,
+  .ServiceListItem:active {
     transform: scale(0.95);
     opacity: 0.9;
   }

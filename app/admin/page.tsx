@@ -77,26 +77,55 @@ export default function AdminPage() {
     }
 
     try {
-      const [{ count: clients }, { count: openTickets }, { data: transactions }, { count: projects }] = await Promise.all([
-        supabase.from('clients').select('*', { count: 'exact', head: true }),
-        supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open'),
-        supabase.from('transactions').select('amount, type').order('created_at', { ascending: false }).limit(10),
-        supabase.from('projects').select('*', { count: 'exact', head: true })
+      const [
+        { count: clients },
+        { count: openTickets },
+        txResult,
+        { count: projects },
+      ] = await Promise.all([
+        supabase.from("clients").select("*", { count: "exact", head: true }),
+        supabase
+          .from("tickets")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "open"),
+        supabase
+          .from("transactions")
+          .select("amount, type, date")
+          .order("date", { ascending: false })
+          .limit(10),
+        supabase.from("projects").select("*", { count: "exact", head: true }),
       ]);
 
-      const income = transactions?.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+      const transactions = txResult.error ? [] : txResult.data || [];
+      if (txResult.error) {
+        console.warn("[dashboard] transactions query:", txResult.error.message);
+      }
+
+      const isIncome = (t: string | null | undefined) =>
+        String(t || "").toLowerCase() === "income";
+
+      const income = transactions
+        .filter((t) => isIncome(t.type))
+        .reduce((sum, t) => sum + Number(t.amount), 0);
 
       setStats({
         clients: clients || 0,
         tickets: openTickets || 0,
         revenue: income,
         projects: projects || 0,
-        loading: false
+        loading: false,
       });
 
-      setRecentActivity(transactions?.slice(0, 5) || []);
+      setRecentActivity(
+        transactions.map((t) => ({
+          ...t,
+          type: isIncome(t.type) ? "income" : "expense",
+          created_at: t.date,
+        })).slice(0, 5)
+      );
     } catch (err) {
-      setStats(s => ({ ...s, loading: false }));
+      setStats((s) => ({ ...s, loading: false }));
+      setRecentActivity([]);
     }
   }
 

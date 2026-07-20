@@ -58,7 +58,7 @@ export default function UsersAdminPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/users");
+      const res = await fetch("/api/users/");
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Failed");
       setRows(json.data || []);
@@ -84,7 +84,7 @@ export default function UsersAdminPage() {
     }
     setBusy(true);
     try {
-      const res = await fetch("/api/users", {
+      const res = await fetch("/api/users/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -99,7 +99,15 @@ export default function UsersAdminPage() {
         }),
       });
       const json = await res.json();
-      if (!json.success) throw new Error(json.error || "Create failed");
+      if (!json.success) {
+        const detail =
+          typeof json.details?.fieldErrors === "object"
+            ? Object.values(json.details.fieldErrors as Record<string, string[]>)
+                .flat()
+                .filter(Boolean)[0]
+            : undefined;
+        throw new Error(detail || json.error || "Create failed");
+      }
       toast.success(json.message || "Staff created");
       setCreateOpen(false);
       setForm(emptyForm);
@@ -113,7 +121,7 @@ export default function UsersAdminPage() {
 
   const updateRole = async (profileId: number, role: string) => {
     try {
-      const res = await fetch("/api/users", {
+      const res = await fetch("/api/users/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

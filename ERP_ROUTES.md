@@ -8,6 +8,10 @@
 | `/admin/services` | Services | ✅ API → serviceCatalogService |
 | `/admin/hr` | HR & Payroll | ✅ Working |
 | `/admin/finance` | Legacy Finance | ↪️ Redirects to `/admin/transactions` |
+| `/admin/finance/reports` | Finance Reports | ✅ ADMIN — KPIs / invoice filters |
+| `/admin/my-work` | My Tasks | ✅ Project tasks assigned to current user |
+| `/admin/products` | Products catalog | ✅ Multi-product hubs |
+| `/admin/users` | Users & Roles | ✅ ADMIN — create staff needs service_role key |
 | `/admin/transactions` | Transactions | ✅ Working |
 | `/admin/accounts` | Accounts | ✅ Create payment/journal dialogs |
 | `/admin/procurement` | Procurement | ✅ Create PO/RFQ dialogs |
