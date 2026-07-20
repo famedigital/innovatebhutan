@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/utils/supabase/client";
+import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
 
 export default function AdminLayout({
   children,
@@ -89,16 +90,11 @@ export default function AdminLayout({
           <SidebarTrigger className="-ml-1" />
           <Separator
             orientation="vertical"
-            className="mr-2 hidden h-4 md:block"
+            className="mr-1 hidden h-4 sm:block"
           />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-sm font-semibold">Innovates ERP</span>
-            <span className="hidden text-xs text-muted-foreground md:inline">
-              Admin workspace
-            </span>
-          </div>
+          <AdminBreadcrumbs />
 
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <div className="hidden sm:block">
               <InstallAppButton size="sm" variant="ghost" />
             </div>

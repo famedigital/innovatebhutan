@@ -48,13 +48,13 @@ export function ProductHubShell({ productKey }: { productKey: ProductKey }) {
           {
             href: `/admin/amc?productKey=${product.key}`,
             title: "AMC contracts",
-            description: "Renewals, quotations, remittance",
+            description: "All contracts, renewals, quotations",
             icon: ShieldCheck,
           },
           {
             href: `/admin/amc?productKey=${product.key}&owner=today`,
             title: "Today’s renewals",
-            description: "Expiring and unclaimed work",
+            description: "Expiring within 30 days / unclaimed",
             icon: CalendarClock,
           },
         ]
@@ -98,8 +98,8 @@ export function ProductHubShell({ productKey }: { productKey: ProductKey }) {
         actions={
           product.supportsAmc ? (
             <Button asChild>
-              <Link href={`/admin/amc?productKey=${product.key}&owner=today`}>
-                Open today’s work
+              <Link href={`/admin/amc?productKey=${product.key}`}>
+                Open AMC contracts
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

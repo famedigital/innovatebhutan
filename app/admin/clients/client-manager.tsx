@@ -49,6 +49,7 @@ import {
 import { ResponsiveDataList } from "@/components/admin/responsive-data-list";
 import { toast } from "sonner";
 import { EditClientModal } from "./edit-client-modal";
+import { fetchAssignableStaff } from "@/lib/admin/fetch-assignable-staff";
 
 type Ownership = {
   clientId: number;
@@ -91,12 +92,11 @@ export function ClientManager() {
   const fetchClients = useCallback(async () => {
     try {
       setLoading(true);
-      const [clientsRes, membersRes] = await Promise.all([
+      const [clientsRes, memberList] = await Promise.all([
         fetch("/api/clients"),
-        fetch("/api/team?view=members"),
+        fetchAssignableStaff(),
       ]);
       const clientsJson = await clientsRes.json();
-      const membersJson = await membersRes.json();
 
       if (!clientsJson.success) {
         toast.error(clientsJson.error || "Failed to load clients");
@@ -104,8 +104,13 @@ export function ClientManager() {
       }
 
       const list: ClientRow[] = clientsJson.data || [];
-      const memberList: StaffMember[] = membersJson.data || [];
       setStaff(memberList);
+      if (memberList.length === 0) {
+        toast.message("No staff employees found", {
+          description:
+            "Add staff under Users & Roles (with employee record) or Employees before assigning.",
+        });
+      }
 
       const ids = list.map((c) => c.id);
       let ownershipMap = new Map<number, Ownership>();
@@ -562,14 +567,21 @@ export function ClientManager() {
               <SelectValue placeholder="Select staff member" />
             </SelectTrigger>
             <SelectContent>
-              {staff.map((s) => (
-                <SelectItem
-                  key={s.teamMemberId}
-                  value={String(s.teamMemberId)}
-                >
-                  {s.teamMemberName}
-                </SelectItem>
-              ))}
+              {staff.length === 0 ? (
+                <div className="px-2 py-3 text-sm text-muted-foreground">
+                  No staff in employees table. Create staff under Users & Roles
+                  first.
+                </div>
+              ) : (
+                staff.map((s) => (
+                  <SelectItem
+                    key={s.teamMemberId}
+                    value={String(s.teamMemberId)}
+                  >
+                    {s.teamMemberName}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
           <DialogFooter>

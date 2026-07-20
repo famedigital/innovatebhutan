@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { amcs, clients, services, teamAssignments } from "@/db/schema";
-import { eq, and, desc, sql, count, gte, lte, lt, ne } from "drizzle-orm";
+import { eq, and, desc, sql, count, gte, lte, lt, ne, or, isNull } from "drizzle-orm";
 import { dashboardCache, withCache, CacheTTL, hashFilters, listCache } from "@/lib/cache/repository-cache";
 
 export type AMC = typeof amcs.$inferSelect;
@@ -86,9 +86,7 @@ export class AMCRepository {
     if (filters.serviceId) {
       conditions.push(eq(amcs.serviceId, filters.serviceId));
     }
-    if (filters.productKey) {
-      conditions.push(eq(amcs.productKey, filters.productKey));
-    }
+    this.applyProductKeyFilter(conditions, filters.productKey);
     if (filters.status) {
       conditions.push(eq(amcs.status, filters.status));
     }
@@ -119,6 +117,18 @@ export class AMCRepository {
     return { amcs: amcsData, total };
   }
 
+  /** Legacy rows often have NULL product_key — treat as rancelab. */
+  private applyProductKeyFilter(conditions: any[], productKey?: string) {
+    if (!productKey) return;
+    if (productKey === "rancelab") {
+      conditions.push(
+        or(eq(amcs.productKey, "rancelab"), isNull(amcs.productKey))
+      );
+    } else {
+      conditions.push(eq(amcs.productKey, productKey));
+    }
+  }
+
   async listAMCsWithDetails(filters: AMCFilters = {}) {
     // Don't cache lists with search (too many permutations)
     const cacheKey = filters.search
@@ -140,9 +150,7 @@ export class AMCRepository {
     if (filters.serviceId) {
       conditions.push(eq(amcs.serviceId, filters.serviceId));
     }
-    if (filters.productKey) {
-      conditions.push(eq(amcs.productKey, filters.productKey));
-    }
+    this.applyProductKeyFilter(conditions, filters.productKey);
     // Status filter uses endDate so list stays correct even if DB status is stale
     if (filters.status === "cancelled") {
       conditions.push(eq(amcs.status, "cancelled"));

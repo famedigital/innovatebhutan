@@ -153,7 +153,11 @@ export async function getAvailableTeamMembers(skill?: string): Promise<Array<{
   specializations: string[];
 }>> {
   try {
-    const conditions = [eq(employees.status, "active")];
+    // Assignable = anyone with an employee row who is not terminated/inactive.
+    // (Strict status='active' hid staff with null/legacy statuses.)
+    const conditions = [
+      sql`COALESCE(LOWER(${employees.status}), 'active') NOT IN ('terminated', 'inactive')`,
+    ];
     if (skill) {
       conditions.push(sql`${employees.skills} @> ${JSON.stringify([skill])}`);
     }
@@ -170,7 +174,7 @@ export async function getAvailableTeamMembers(skill?: string): Promise<Array<{
       .from(employees)
       .leftJoin(profiles, eq(employees.profileId, profiles.id))
       .where(and(...conditions))
-      .orderBy(employees.currentWorkload);
+      .orderBy(sql`COALESCE(${employees.currentWorkload}, 0)`);
 
     return rows.map((r) => ({
       teamMemberId: r.teamMemberId,
@@ -182,7 +186,32 @@ export async function getAvailableTeamMembers(skill?: string): Promise<Array<{
     }));
   } catch (error) {
     console.error("Error fetching available team members:", error);
-    return [];
+    // Fallback: minimal columns if enhanced fields/migrations missing
+    try {
+      const rows = await db
+        .select({
+          teamMemberId: employees.id,
+          teamMemberName: sql<string>`COALESCE(${profiles.fullName}, ${employees.designation}, ${employees.email}, 'Staff')`,
+        })
+        .from(employees)
+        .leftJoin(profiles, eq(employees.profileId, profiles.id))
+        .where(
+          sql`COALESCE(LOWER(${employees.status}), 'active') NOT IN ('terminated', 'inactive')`
+        )
+        .orderBy(employees.id);
+
+      return rows.map((r) => ({
+        teamMemberId: r.teamMemberId,
+        teamMemberName: r.teamMemberName || "Staff",
+        currentWorkload: 0,
+        maxCapacity: 5,
+        skills: [],
+        specializations: [],
+      }));
+    } catch (fallbackError) {
+      console.error("Team members fallback failed:", fallbackError);
+      return [];
+    }
   }
 }
 

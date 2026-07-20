@@ -184,17 +184,17 @@ export default function AdminPage() {
             </div>
             <div className="divide-y divide-[#E5E5E1]">
               {recentActivity.length > 0 ? recentActivity.map((item, i) => (
-                <div key={i} className="flex items-center justify-between p-4 hover:bg-muted">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${item.type === 'income' ? 'bg-green-100' : 'bg-red-100'}`}>
+                <div key={i} className="flex items-center justify-between gap-3 p-3 sm:p-4 hover:bg-muted min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${item.type === 'income' ? 'bg-green-100' : 'bg-red-100'}`}>
                       {item.type === 'income' ? <ArrowUpRight className="w-4 h-4 text-green-600" /> : <DollarSign className="w-4 h-4 text-red-600" />}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">{item.type === 'income' ? 'Payment Received' : 'Expense'}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{item.type === 'income' ? 'Payment Received' : 'Expense'}</p>
                       <p className="text-xs text-muted-foreground">{new Date(item.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <span className={`text-sm font-medium ${item.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className={`text-sm font-medium shrink-0 tabular-nums ${item.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                     {item.type === 'income' ? '+' : '-'}{Number(item.amount).toLocaleString()}
                   </span>
                 </div>
@@ -208,8 +208,8 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <Card>
+        {/* Quick Actions — desktop; mobile uses top shortcut grid */}
+        <Card className="hidden md:block">
           <CardContent className="p-4">
             <h3 className="font-medium mb-4">Quick Actions</h3>
             <div className="space-y-2">

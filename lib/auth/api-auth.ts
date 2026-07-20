@@ -218,7 +218,7 @@ export function requireRole(
  * Convenience wrapper for requireRole
  */
 export function requireAdmin(profile: UserProfile): void {
-  requireRole(profile, ['ADMIN']);
+  requireRole(profile, ["ADMIN", "SUPERADMIN"]);
 }
 
 /**
@@ -226,7 +226,7 @@ export function requireAdmin(profile: UserProfile): void {
  * Convenience wrapper for requireRole
  */
 export function requireStaffOrAdmin(profile: UserProfile): void {
-  requireRole(profile, ['ADMIN', 'STAFF']);
+  requireRole(profile, ["ADMIN", "STAFF", "SUPERADMIN"]);
 }
 
 /**

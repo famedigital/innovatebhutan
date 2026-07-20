@@ -342,9 +342,9 @@ export function ProjectDetailModal({
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-        <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-6xl mx-4 p-8 flex items-center justify-center">
-          <Spinner className="w-8 h-8 text-[#3ECF8E]" />
-          <span className="ml-3 text-[#717171]">Loading project details...</span>
+        <div className="relative bg-background rounded-xl shadow-2xl w-full max-w-6xl mx-3 sm:mx-4 p-6 sm:p-8 flex items-center justify-center">
+          <Spinner className="w-8 h-8 text-primary" />
+          <span className="ml-3 text-muted-foreground text-sm">Loading project details...</span>
         </div>
       </div>
     );
@@ -352,9 +352,9 @@ export function ProjectDetailModal({
 
   // Stats skeleton component
   const StatsSkeleton = () => (
-    <div className="grid grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="bg-[#F3F3F1] rounded-lg p-3">
+        <div key={i} className="bg-muted rounded-lg p-3">
           <Skeleton className="h-8 w-16 mb-1" />
           <Skeleton className="h-4 w-24" />
         </div>
@@ -363,31 +363,33 @@ export function ProjectDetailModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-7xl mx-4 max-h-[95vh] overflow-hidden flex flex-col">
+      <div className="relative bg-background rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-7xl sm:mx-4 h-[92dvh] sm:h-auto sm:max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#E5E5E1] bg-gradient-to-r from-[#3ECF8E]/5 to-transparent">
-          <div className="flex-1">
+        <div className="flex items-start justify-between gap-2 p-3 sm:p-4 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex-1 min-w-0">
             {editMode ? (
               <form onSubmit={handleSaveProject} className="space-y-3">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                   <Input
-                    className="max-w-md bg-white"
+                    className="max-w-md bg-background"
                     value={projectForm.name}
                     onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
                     required
                   />
-                  <Button type="submit" size="sm" disabled={savingProject} className="bg-[#3ECF8E] hover:bg-[#34b27b]">
-                    <Save className="w-4 h-4 mr-1" />
-                    Save
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setEditMode(false)}>
-                    Cancel
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button type="submit" size="sm" disabled={savingProject}>
+                      <Save className="w-4 h-4 mr-1" />
+                      Save
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setEditMode(false)}>
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
                 <Textarea
-                  className="max-w-lg bg-white"
+                  className="max-w-lg bg-background"
                   placeholder="Project description..."
                   value={projectForm.description}
                   onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
@@ -396,20 +398,20 @@ export function ProjectDetailModal({
               </form>
             ) : (
               <>
-                <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-semibold">{project.name}</h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base sm:text-xl font-semibold truncate">{project.name}</h2>
                   <Badge className={statusConfig[project.status]?.color || ""}>
                     {project.status?.replace("_", " ") || "Unknown"}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-4 mt-2 text-sm text-[#717171]">
-                  <span className="flex items-center gap-1">
-                    <Building2 className="w-3 h-3" />
-                    {project.clientName || "-"}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs sm:text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1 min-w-0">
+                    <Building2 className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{project.clientName || "-"}</span>
                   </span>
-                  <span className="flex items-center gap-1">
-                    <User className="w-3 h-3" />
-                    {project.leadName || "-"}
+                  <span className="flex items-center gap-1 min-w-0">
+                    <User className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{project.leadName || "-"}</span>
                   </span>
                   {project.budget && (
                     <span className="flex items-center gap-1">
@@ -422,14 +424,14 @@ export function ProjectDetailModal({
               </>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {!editMode && (
-              <Button variant="outline" size="sm" onClick={() => setEditMode(true)}>
-                <Edit2 className="w-4 h-4 mr-1" />
-                Edit Project
+              <Button variant="outline" size="sm" className="h-8" onClick={() => setEditMode(true)}>
+                <Edit2 className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Edit</span>
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
               <X className="w-5 h-5" />
             </Button>
           </div>
@@ -438,7 +440,7 @@ export function ProjectDetailModal({
         {/* Edit Form - Extended Fields */}
         {editMode && (
           <div className="border-b border-[#E5E5E1] p-4 bg-gray-50">
-            <form onSubmit={handleSaveProject} className="grid grid-cols-4 gap-4">
+            <form onSubmit={handleSaveProject} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-[#717171]">Budget</label>
                 <div className="relative">
@@ -529,7 +531,7 @@ export function ProjectDetailModal({
                 />
               </div>
 
-              <div className="col-span-2 flex items-end gap-2">
+              <div className="sm:col-span-2 flex flex-wrap items-end gap-2">
                 <Button type="submit" disabled={savingProject} className="bg-[#3ECF8E] hover:bg-[#34b27b]">
                   {savingProject ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                   Save Changes
@@ -549,30 +551,30 @@ export function ProjectDetailModal({
           {loading ? (
             <StatsSkeleton />
           ) : stats && (
-            <div className="grid grid-cols-4 gap-4 mb-6">
-              <div className="bg-[#F3F3F1] rounded-lg p-3">
-                <div className="text-2xl font-semibold">{stats.totalTasks}</div>
-                <div className="text-xs text-[#717171]">Total Tasks</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+              <div className="bg-muted rounded-lg p-3">
+                <div className="text-xl sm:text-2xl font-semibold">{stats.totalTasks}</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">Total Tasks</div>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="text-2xl font-semibold">{stats.todoTasks}</div>
-                <div className="text-xs text-[#717171]">To Do</div>
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="text-xl sm:text-2xl font-semibold">{stats.todoTasks}</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">To Do</div>
               </div>
-              <div className="bg-blue-50 rounded-lg p-3">
-                <div className="text-2xl font-semibold">{stats.inProgressTasks}</div>
-                <div className="text-xs text-[#717171]">In Progress</div>
+              <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3">
+                <div className="text-xl sm:text-2xl font-semibold">{stats.inProgressTasks}</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">In Progress</div>
               </div>
-              <div className="bg-green-50 rounded-lg p-3">
-                <div className="text-2xl font-semibold">{stats.completedTasks}</div>
-                <div className="text-xs text-[#717171]">Completed</div>
+              <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-3">
+                <div className="text-xl sm:text-2xl font-semibold">{stats.completedTasks}</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">Completed</div>
               </div>
             </div>
           )}
 
           {/* Kanban Board */}
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 snap-x snap-mandatory">
             {columns.map((column) => (
-              <div key={column.key} className="flex-shrink-0 w-72">
+              <div key={column.key} className="flex-shrink-0 w-[min(85vw,18rem)] sm:w-72 snap-start">
                 <div className={`flex items-center gap-2 p-2 rounded-t-lg border border-b-0 ${column.color}`}>
                   <column.icon className="w-4 h-4" />
                   <span className="font-medium text-sm">{column.label}</span>

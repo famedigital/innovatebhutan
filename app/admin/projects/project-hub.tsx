@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Search, RefreshCw, Plus, Eye, Edit2, Trash2, Filter, X, MoreVertical, Calendar, User, DollarSign, List, ChevronDown, LayoutGrid, AlertCircle } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Search, RefreshCw, Plus, Eye, Trash2, Filter, MoreVertical, Calendar, User, List, LayoutGrid, AlertCircle } from "lucide-react";
+import { TableCell, TableHead, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,21 @@ import {
 import { toast } from "sonner";
 import { ProjectDetailModal } from "./project-detail-modal";
 import { CreateProjectModal } from "./create-project-modal";
+import { ResponsiveDataList } from "@/components/admin/responsive-data-list";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 type Project = {
@@ -52,44 +67,29 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-red-50 text-red-600 border-red-200",
 };
 
-// Table skeleton component for loading state
-function TableSkeleton() {
-  return (
-    <>
-      {[...Array(5)].map((_, i) => (
-        <TableRow key={i} className="border-[#E5E5E1]">
-          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-          <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-          <TableCell><Skeleton className="h-2 w-16 rounded-full" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-          <TableCell><div className="flex gap-1"><Skeleton className="h-8 w-8 rounded" /><Skeleton className="h-8 w-8 rounded" /></div></TableCell>
-        </TableRow>
-      ))}
-    </>
-  );
+function formatBudget(value?: string) {
+  if (!value) return "—";
+  const n = parseFloat(value);
+  if (Number.isNaN(n)) return "—";
+  if (n >= 1_000_000) return `Nu. ${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `Nu. ${(n / 1_000).toFixed(1)}k`;
+  return `Nu. ${n.toLocaleString()}`;
 }
 
-// Stats skeleton component
-function StatsSkeleton() {
+function ProgressBar({ value }: { value: number }) {
+  const pct = Math.min(100, Math.max(0, value || 0));
   return (
-    <>
-      {[...Array(4)].map((_, i) => (
-        <Card key={i}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Skeleton className="w-10 h-10 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-7 w-16" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </>
+    <div className="flex items-center gap-2 min-w-0">
+      <div className="h-1.5 flex-1 min-w-[3rem] max-w-[6rem] rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-full rounded-full bg-primary transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+        {pct}%
+      </span>
+    </div>
   );
 }
 
@@ -243,131 +243,188 @@ export function ProjectHub() {
   const CalendarView = () => {
     const { daysInMonth, startDayOfWeek, year, month } = getDaysInMonth(currentMonth);
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
+    const dayLabelsFull = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
     const days = [];
-    // Empty cells for days before month starts
     for (let i = 0; i < startDayOfWeek; i++) {
-      days.push(<div key={`empty-${i}`} className="h-24 border border-gray-100 bg-gray-50/30" />);
+      days.push(
+        <div
+          key={`empty-${i}`}
+          className="min-h-14 sm:min-h-20 md:min-h-24 border border-border/60 bg-muted/20"
+        />
+      );
     }
 
-    // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const dayProjects = getProjectsForDay(day, month, year);
-      const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
+      const isToday =
+        new Date().toDateString() === new Date(year, month, day).toDateString();
 
       days.push(
         <div
           key={day}
           className={cn(
-            "h-24 border border-gray-100 p-1 overflow-hidden",
-            isToday && "bg-blue-50/50"
+            "min-h-14 sm:min-h-20 md:min-h-24 border border-border/60 p-0.5 sm:p-1 overflow-hidden",
+            isToday && "bg-primary/5 ring-1 ring-inset ring-primary/30"
           )}
         >
-          <div className={cn("text-xs font-medium mb-1", isToday && "text-[#3ECF8E]")}>
+          <div
+            className={cn(
+              "text-[10px] sm:text-xs font-medium mb-0.5 sm:mb-1",
+              isToday && "text-primary"
+            )}
+          >
             {day}
           </div>
-          <div className="space-y-1">
-            {dayProjects.slice(0, 3).map((p) => (
-              <div
+          <div className="space-y-0.5 hidden sm:block">
+            {dayProjects.slice(0, 2).map((p) => (
+              <button
                 key={p.id}
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setSelectedProject(p);
                   setShowDetail(true);
                 }}
                 className={cn(
-                  "text-[10px] px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80",
-                  statusColors[p.status] || "bg-gray-50 text-gray-600"
+                  "w-full text-left text-[10px] px-1 py-0.5 rounded truncate",
+                  statusColors[p.status] || "bg-muted text-muted-foreground"
                 )}
               >
                 {p.name}
-              </div>
+              </button>
             ))}
-            {dayProjects.length > 3 && (
-              <div className="text-[10px] text-[#717171] pl-1">
-                +{dayProjects.length - 3} more
+            {dayProjects.length > 2 && (
+              <div className="text-[10px] text-muted-foreground pl-0.5">
+                +{dayProjects.length - 2}
               </div>
             )}
           </div>
+          {dayProjects.length > 0 && (
+            <div className="sm:hidden flex flex-wrap gap-0.5 mt-0.5">
+              {dayProjects.slice(0, 3).map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  aria-label={p.name}
+                  onClick={() => {
+                    setSelectedProject(p);
+                    setShowDetail(true);
+                  }}
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    p.status === "active"
+                      ? "bg-emerald-500"
+                      : p.status === "complete"
+                        ? "bg-blue-500"
+                        : "bg-muted-foreground/50"
+                  )}
+                />
+              ))}
+            </div>
+          )}
         </div>
       );
     }
 
     return (
-      <Card>
-        <CardHeader className="border-b border-[#E5E5E1]">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">
+      <Card className="shadow-none overflow-hidden">
+        <CardHeader className="border-b border-border p-3 sm:p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-base sm:text-lg">
               {monthNames[month]} {year}
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8 flex-1 sm:flex-none"
                 onClick={() => setCurrentMonth(new Date(year, month - 1, 1))}
-                className="border-[#E5E5E1]"
               >
-                Previous
+                Prev
               </Button>
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8 flex-1 sm:flex-none"
                 onClick={() => setCurrentMonth(new Date())}
-                className="border-[#E5E5E1]"
               >
                 Today
               </Button>
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8 flex-1 sm:flex-none"
                 onClick={() => setCurrentMonth(new Date(year, month + 1, 1))}
-                className="border-[#E5E5E1]"
               >
                 Next
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          {/* Day headers */}
-          <div className="grid grid-cols-7 border-b border-[#E5E5E1]">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-              <div key={day} className="p-2 text-xs font-medium text-[#717171] text-center bg-[#F3F3F1]">
-                {day}
-              </div>
-            ))}
+        <CardContent className="p-0 overflow-x-auto">
+          <div className="min-w-[280px]">
+            <div className="grid grid-cols-7 border-b border-border">
+              {dayLabelsFull.map((day, i) => (
+                <div
+                  key={day}
+                  className="p-1.5 sm:p-2 text-[10px] sm:text-xs font-medium text-muted-foreground text-center bg-muted/40"
+                >
+                  <span className="sm:hidden">{dayLabels[i]}</span>
+                  <span className="hidden sm:inline">{day}</span>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7">{days}</div>
           </div>
-          {/* Calendar grid */}
-          <div className="grid grid-cols-7">{days}</div>
         </CardContent>
       </Card>
     );
   };
 
+  const openProject = (project: Project) => {
+    setSelectedProject(project);
+    setShowDetail(true);
+  };
+
+  const totalBudget = projects
+    .filter((p) => p.budget)
+    .reduce((sum, p) => sum + parseFloat(p.budget || "0"), 0);
+
+  const activeCount = projects.filter((p) => p.status === "active").length;
+  const completeCount = projects.filter((p) => p.status === "complete").length;
+
   return (
     <div className="space-y-4">
-      {/* Header Actions */}
+      {/* Toolbar */}
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-          <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search projects..."
-              className="pl-9 w-full h-9"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-full sm:w-36 h-9">
-              <Filter className="w-4 h-4 mr-2" />
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            placeholder="Search projects..."
+            className="pl-9 h-10 w-full"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="h-9 w-[min(100%,9.5rem)] shrink-0">
+              <Filter className="size-4 mr-1.5 shrink-0" />
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-white border-[#E5E5E1]">
+            <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="planning">Planning</SelectItem>
               <SelectItem value="active">Active</SelectItem>
@@ -378,93 +435,105 @@ export function ProjectHub() {
             </SelectContent>
           </Select>
 
-          {/* Advanced Filters Toggle */}
           <Button
             variant="outline"
             size="sm"
+            className="h-9"
             onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-            className={cn(
-              "border-[#E5E5E1] h-9",
-              showAdvancedFilters && "bg-[#3ECF8E]/10 border-[#3ECF8E] text-[#3ECF8E]"
-            )}
           >
-            <Filter className="w-4 h-4 mr-2" />
+            <Filter className="size-4 mr-1.5" />
             Filters
-            {(clientFilter !== "all" || leadFilter !== "all" || dateFromFilter || dateToFilter) && (
-              <span className="ml-1 w-2 h-2 bg-premium rounded-full" />
+            {(clientFilter !== "all" ||
+              leadFilter !== "all" ||
+              dateFromFilter ||
+              dateToFilter) && (
+              <span className="ml-1.5 size-1.5 rounded-full bg-primary" />
             )}
           </Button>
-          </div>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center border rounded-lg overflow-hidden">
+          <div className="flex items-center border rounded-md overflow-hidden ml-auto sm:ml-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setViewMode("table")}
               className={cn(
-                "h-9 rounded-none",
-                viewMode === "table" ? "bg-secondary" : ""
+                "h-9 rounded-none px-2.5",
+                viewMode === "table" && "bg-secondary"
               )}
+              aria-label="List view"
             >
-              <List className="w-4 h-4" />
+              <List className="size-4" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setViewMode("calendar")}
               className={cn(
-                "h-9 rounded-none",
-                viewMode === "calendar" ? "bg-secondary" : ""
+                "h-9 rounded-none px-2.5",
+                viewMode === "calendar" && "bg-secondary"
               )}
+              aria-label="Calendar view"
             >
-              <Calendar className="w-4 h-4" />
+              <Calendar className="size-4" />
             </Button>
           </div>
 
-          <div className="text-sm text-muted-foreground">
-            {total} project{total !== 1 ? "s" : ""}
-          </div>
-          <Button onClick={fetchProjects} variant="outline" size="sm">
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Refresh
+          <Button
+            onClick={fetchProjects}
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            aria-label="Refresh"
+          >
+            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
           </Button>
-          <Button onClick={() => setShowCreate(true)} size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            New Project
+
+          <Button
+            onClick={() => setShowCreate(true)}
+            size="sm"
+            className="h-9 shrink-0"
+          >
+            <Plus className="size-4 mr-1.5" />
+            <span className="sm:hidden">New</span>
+            <span className="hidden sm:inline">New Project</span>
           </Button>
         </div>
+
+        <p className="text-xs text-muted-foreground">
+          {total} project{total !== 1 ? "s" : ""}
+        </p>
       </div>
 
-      {/* Advanced Filters Panel */}
+      {/* Advanced Filters */}
       {showAdvancedFilters && (
-        <Card className="border-[#E5E5E1] bg-[#F9F9F7]">
-          <CardContent className="p-4">
+        <Card className="shadow-none bg-muted/30">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-medium text-sm">Advanced Filters</h3>
               <Button
                 variant="ghost"
                 size="sm"
+                className="h-8 text-xs"
                 onClick={() => {
                   setClientFilter("all");
                   setLeadFilter("all");
                   setDateFromFilter("");
                   setDateToFilter("");
                 }}
-                className="text-xs text-[#3ECF8E] hover:text-[#34b27b]"
               >
-                Clear All
+                Clear
               </Button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[#717171]">Client</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  Client
+                </label>
                 <Select value={clientFilter} onValueChange={setClientFilter}>
-                  <SelectTrigger className="bg-white border-[#E5E5E1] h-9">
+                  <SelectTrigger className="h-9 bg-background">
                     <SelectValue placeholder="All clients" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-[#E5E5E1]">
+                  <SelectContent>
                     <SelectItem value="all">All Clients</SelectItem>
                     {clients.map((c) => (
                       <SelectItem key={c.id} value={c.id.toString()}>
@@ -476,12 +545,14 @@ export function ProjectHub() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[#717171]">Project Lead</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  Project Lead
+                </label>
                 <Select value={leadFilter} onValueChange={setLeadFilter}>
-                  <SelectTrigger className="bg-white border-[#E5E5E1] h-9">
+                  <SelectTrigger className="h-9 bg-background">
                     <SelectValue placeholder="All leads" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-[#E5E5E1]">
+                  <SelectContent>
                     <SelectItem value="all">All Leads</SelectItem>
                     {leads.map((l) => (
                       <SelectItem key={l.id} value={l.id}>
@@ -493,20 +564,24 @@ export function ProjectHub() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[#717171]">Start Date From</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  Start From
+                </label>
                 <Input
                   type="date"
-                  className="bg-white border-[#E5E5E1] h-9"
+                  className="h-9 bg-background"
                   value={dateFromFilter}
                   onChange={(e) => setDateFromFilter(e.target.value)}
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[#717171]">Start Date To</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  Start To
+                </label>
                 <Input
                   type="date"
-                  className="bg-white border-[#E5E5E1] h-9"
+                  className="h-9 bg-background"
                   value={dateToFilter}
                   onChange={(e) => setDateToFilter(e.target.value)}
                 />
@@ -516,208 +591,268 @@ export function ProjectHub() {
         </Card>
       )}
 
-      {/* Stats Cards */}
+      {/* Stats */}
       {loading ? (
-        <StatsSkeleton />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="shadow-none">
+              <CardContent className="p-3 sm:p-4">
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                  <MoreVertical className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold">{total}</p>
-                  <p className="text-xs text-[#717171]">Total Projects</p>
-                </div>
-              </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+          <Card className="shadow-none">
+            <CardContent className="p-3 sm:p-4">
+              <p className="text-xl sm:text-2xl font-semibold tabular-nums">
+                {total}
+              </p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                Total
+              </p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
-                  <Eye className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold">{projects.filter(p => p.status === "active").length}</p>
-                  <p className="text-xs text-[#717171]">Active</p>
-                </div>
-              </div>
+          <Card className="shadow-none">
+            <CardContent className="p-3 sm:p-4">
+              <p className="text-xl sm:text-2xl font-semibold tabular-nums text-emerald-600">
+                {activeCount}
+              </p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                Active
+              </p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold">{projects.filter(p => p.status === "complete").length}</p>
-                  <p className="text-xs text-[#717171]">Completed</p>
-                </div>
-              </div>
+          <Card className="shadow-none">
+            <CardContent className="p-3 sm:p-4">
+              <p className="text-xl sm:text-2xl font-semibold tabular-nums">
+                {completeCount}
+              </p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                Done
+              </p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold">
-                    {projects
-                      .filter(p => p.budget)
-                      .reduce((sum, p) => sum + parseFloat(p.budget || "0"), 0)
-                      .toLocaleString("bt-BT", { style: "currency", currency: "BTN" })}
-                  </p>
-                  <p className="text-xs text-[#717171]">Total Budget</p>
-                </div>
-              </div>
+          <Card className="shadow-none">
+            <CardContent className="p-3 sm:p-4">
+              <p className="text-lg sm:text-xl font-semibold tabular-nums truncate">
+                {formatBudget(String(totalBudget))}
+              </p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                Budget (page)
+              </p>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Projects View - Table or Calendar */}
+      {/* List / Calendar */}
       {viewMode === "table" ? (
-      <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border bg-muted">
-                <TableHead className="text-xs text-muted-foreground">Project</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Client</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Lead</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Status</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Progress</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Budget</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Start Date</TableHead>
-                <TableHead className="text-xs text-[#717171]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableSkeleton />
-              ) : projects.length > 0 ? projects.map((project) => (
+        <>
+          {loading ? (
+            <Card className="shadow-none">
+              <CardContent className="py-16 flex justify-center">
+                <Spinner />
+              </CardContent>
+            </Card>
+          ) : (
+            <ResponsiveDataList
+              isEmpty={projects.length === 0}
+              empty={
+                <div className="flex flex-col items-center gap-2 py-4">
+                  <AlertCircle className="size-8 text-muted-foreground/50" />
+                  <span>No projects found</span>
+                  <span className="text-xs">
+                    Adjust filters or create a new project
+                  </span>
+                </div>
+              }
+              tableHeader={
+                <>
+                  <TableHead>Project</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Lead</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Progress</TableHead>
+                  <TableHead>Budget</TableHead>
+                  <TableHead>Start</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </>
+              }
+              tableBody={projects.map((project) => (
                 <TableRow
                   key={project.id}
-                  className="border-[#E5E5E1] hover:bg-[#F3F3F1] cursor-pointer"
-                  onClick={() => {
-                    setSelectedProject(project);
-                    setShowDetail(true);
-                  }}
+                  className="cursor-pointer"
+                  onClick={() => openProject(project)}
                 >
-                  <TableCell className="font-medium text-sm">
-                    <div>
-                      <div className="font-medium">{project.name}</div>
-                      {project.description && (
-                        <div className="text-xs text-[#717171] truncate max-w-[200px]">{project.description}</div>
-                      )}
+                  <TableCell className="font-medium">
+                    <div className="min-w-0">
+                      <div className="truncate max-w-[220px]">{project.name}</div>
+                      {project.description ? (
+                        <div className="text-xs text-muted-foreground truncate max-w-[220px]">
+                          {project.description}
+                        </div>
+                      ) : null}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{project.clientName || "-"}</TableCell>
+                  <TableCell className="text-sm">
+                    {project.clientName || "—"}
+                  </TableCell>
                   <TableCell className="text-sm">
                     {project.leadName ? (
-                      <div className="flex items-center gap-1">
-                        <User className="w-3 h-3 text-[#717171]" />
+                      <span className="inline-flex items-center gap-1">
+                        <User className="size-3 text-muted-foreground" />
                         {project.leadName}
-                      </div>
-                    ) : "-"}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Badge className={`text-[10px] px-2 ${statusColors[project.status] || ""}`}>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] capitalize",
+                        statusColors[project.status]
+                      )}
+                    >
                       {project.status.replace("_", " ")}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-1.5 bg-[#F3F3F1] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#3ECF8E] rounded-full transition-all" style={{ width: `${project.progress || 0}%` }} />
-                      </div>
-                      <span className="text-xs text-[#717171]">{project.progress || 0}%</span>
-                    </div>
+                    <ProgressBar value={project.progress || 0} />
                   </TableCell>
-                  <TableCell className="text-sm text-[#717171]">
-                    {project.budget ? parseFloat(project.budget).toLocaleString("bt-BT", { style: "currency", currency: "BTN" }) : "-"}
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatBudget(project.budget)}
                   </TableCell>
-                  <TableCell className="text-xs text-[#717171]">
-                    {project.startDate ? new Date(project.startDate).toLocaleDateString() : "-"}
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                    {project.startDate
+                      ? new Date(project.startDate).toLocaleDateString()
+                      : "—"}
                   </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-red-500"
-                        onClick={() => handleDeleteProject(project.id)}
+                  <TableCell
+                    className="text-right"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openProject(project)}>
+                          <Eye className="size-4 mr-2" />
+                          Open
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => handleDeleteProject(project.id)}
+                        >
+                          <Trash2 className="size-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+              mobileItems={projects.map((project) => (
+                <Item
+                  key={project.id}
+                  size="sm"
+                  className="cursor-pointer active:bg-muted/60"
+                  onClick={() => openProject(project)}
+                >
+                  <ItemMedia variant="icon">
+                    <LayoutGrid className="size-4" />
+                  </ItemMedia>
+                  <ItemContent className="min-w-0">
+                    <ItemTitle className="truncate">{project.name}</ItemTitle>
+                    <ItemDescription className="line-clamp-1">
+                      {project.clientName || "No client"}
+                      {project.leadName ? ` · ${project.leadName}` : ""}
+                    </ItemDescription>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] capitalize",
+                          statusColors[project.status]
+                        )}
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                        {project.status.replace("_", " ")}
+                      </Badge>
+                      <div className="flex-1 min-w-[5rem] max-w-[8rem]">
+                        <ProgressBar value={project.progress || 0} />
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">
+                        {formatBudget(project.budget)}
+                      </span>
                     </div>
-                  </TableCell>
-                </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
-                    {loading ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <Spinner />
-                        <span className="text-[#717171]">Loading projects...</span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 text-[#717171]">
-                        <AlertCircle className="w-8 h-8 text-gray-400" />
-                        <span>No projects found</span>
-                        <span className="text-xs">Try adjusting your filters or create a new project</span>
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                  </ItemContent>
+                  <ItemActions onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openProject(project)}>
+                          <Eye className="size-4 mr-2" />
+                          Open
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => handleDeleteProject(project.id)}
+                        >
+                          <Trash2 className="size-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </ItemActions>
+                </Item>
+              ))}
+            />
+          )}
 
-          {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-[#E5E5E1]">
-              <div className="text-sm text-[#717171]">
-                Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total}
-              </div>
-              <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-1">
+              <p className="text-xs text-muted-foreground text-center sm:text-left">
+                {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of{" "}
+                {total}
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:flex">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className="h-9"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="border-[#E5E5E1]"
                 >
                   Previous
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  className="h-9"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="border-[#E5E5E1]"
                 >
                   Next
                 </Button>
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </>
       ) : (
         <CalendarView />
       )}
 
-      {/* Create Project Modal */}
       {showCreate && (
         <CreateProjectModal
           onClose={() => setShowCreate(false)}
@@ -725,7 +860,6 @@ export function ProjectHub() {
         />
       )}
 
-      {/* Project Detail Modal */}
       {showDetail && selectedProject && (
         <ProjectDetailModal
           project={selectedProject}

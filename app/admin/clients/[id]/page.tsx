@@ -44,6 +44,7 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Separator } from "@/components/ui/separator";
 import { AmcRenewalDesk } from "@/components/admin/amc-renewal-desk";
 import { toast } from "sonner";
+import { fetchAssignableStaff } from "@/lib/admin/fetch-assignable-staff";
 import { EditClientModal } from "../edit-client-modal";
 
 interface ClientDetails {
@@ -159,20 +160,19 @@ export default function ClientDetailPage() {
     if (!clientId) return;
     try {
       setLoading(true);
-      const [detailsRes, teamRes, membersRes] = await Promise.all([
+      const [detailsRes, teamRes, memberList] = await Promise.all([
         fetch(`/api/clients/${clientId}/details`),
         fetch(`/api/team?view=client&clientId=${clientId}`),
-        fetch(`/api/team?view=members`),
+        fetchAssignableStaff(),
       ]);
       const details = await detailsRes.json();
       const teamJson = await teamRes.json();
-      const membersJson = await membersRes.json();
 
       if (details.success) setClient(details.data);
       else toast.error(details.error || "Failed to load client");
 
       if (teamJson.success) setTeam(teamJson.data || []);
-      if (membersJson.success) setStaff(membersJson.data || []);
+      setStaff(memberList);
     } catch {
       toast.error("Failed to load client");
     } finally {
@@ -521,14 +521,20 @@ export default function ClientDetailPage() {
                     <SelectValue placeholder="Select staff" />
                   </SelectTrigger>
                   <SelectContent>
-                    {staff.map((s) => (
-                      <SelectItem
-                        key={s.teamMemberId}
-                        value={String(s.teamMemberId)}
-                      >
-                        {s.teamMemberName}
-                      </SelectItem>
-                    ))}
+                    {staff.length === 0 ? (
+                      <div className="px-2 py-3 text-sm text-muted-foreground">
+                        No staff employees found. Add them under Users & Roles.
+                      </div>
+                    ) : (
+                      staff.map((s) => (
+                        <SelectItem
+                          key={s.teamMemberId}
+                          value={String(s.teamMemberId)}
+                        >
+                          {s.teamMemberName}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 <Select

@@ -12,7 +12,7 @@ export default function RanceLabAmcPage() {
         </div>
       }
     >
-      <AmcDeskPage />
+      <AmcDeskPage defaultProductKey="rancelab" />
     </Suspense>
   );
 }

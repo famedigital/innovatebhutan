@@ -20,6 +20,9 @@ ALTER TABLE services ADD COLUMN IF NOT EXISTS billing_type VARCHAR(50) DEFAULT '
 
 ALTER TABLE amcs ADD COLUMN IF NOT EXISTS product_key VARCHAR(50);
 
+-- Existing contracts predate multi-product; treat as RanceLab
+UPDATE amcs SET product_key = 'rancelab' WHERE product_key IS NULL;
+
 INSERT INTO products (key, name, description, billing_types, supports_amc, sort_order)
 VALUES
   ('rancelab', 'RanceLab', 'POS & retail AMC', '["amc","training","one_time"]'::jsonb, true, 1),

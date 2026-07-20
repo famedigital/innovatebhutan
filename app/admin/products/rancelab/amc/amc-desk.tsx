@@ -79,7 +79,11 @@ interface Service {
 
 type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 
-export default function AmcDeskPage() {
+export default function AmcDeskPage({
+  defaultProductKey,
+}: {
+  defaultProductKey?: string;
+}) {
   const searchParams = useSearchParams();
   const [amcs, setAMCs] = useState<AMC[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -88,10 +92,12 @@ export default function AmcDeskPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Prefer explicit URL owner; otherwise show full list (not "today")
   const [ownerFilter, setOwnerFilter] = useState<string>(
     searchParams.get("owner") || "all"
   );
-  const productKeyFilter = searchParams.get("productKey") || undefined;
+  const productKeyFilter =
+    searchParams.get("productKey") || defaultProductKey || undefined;
   const [showCreate, setShowCreate] = useState(false);
   const [showClientCreate, setShowClientCreate] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
@@ -122,7 +128,7 @@ export default function AmcDeskPage() {
       const clientIdParam = searchParams.get("clientId");
       if (clientIdParam) params.append("clientId", clientIdParam);
       if (productKeyFilter) params.append("productKey", productKeyFilter);
-      params.append("limit", "50");
+      params.append("limit", "100");
 
       const [amcsRes, clientsRes, servicesRes] = await Promise.all([
         fetch(`/api/amc?${params}`),
