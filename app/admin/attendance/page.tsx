@@ -113,31 +113,111 @@ export default function AttendancePage() {
       />
 
       {/* Filters */}
-      <Card>
+      <Card className="shadow-none">
         <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by employee name..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by employee name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </CardContent>
       </Card>
 
-      {/* Attendance Table */}
-      <Card>
+      {/* Mobile cards */}
+      <div className="space-y-2 md:hidden">
+        {loading ? (
+          <Card className="shadow-none">
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              Loading...
+            </CardContent>
+          </Card>
+        ) : attendance.length === 0 ? (
+          <Card className="shadow-none">
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              No attendance records found.
+            </CardContent>
+          </Card>
+        ) : (
+          attendance.map((record) => {
+            const isCheckedIn = !record.checkOut;
+            return (
+              <Card key={record.id} className="shadow-none">
+                <CardContent className="space-y-3 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">
+                        {record.employeeName || "Unknown"}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {record.employeeDesignation || ""}
+                        {record.employeeDepartment
+                          ? ` · ${record.employeeDepartment}`
+                          : ""}
+                      </p>
+                    </div>
+                    {isCheckedIn ? (
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 border-emerald-200 bg-emerald-50 text-emerald-700"
+                      >
+                        Checked in
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="shrink-0">
+                        Completed
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Date</p>
+                      <p>{formatDate(record.date)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Duration</p>
+                      <p>
+                        {calculateDuration(record.checkIn, record.checkOut)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">In</p>
+                      <p>{formatTime(record.checkIn)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Out</p>
+                      <p>{formatTime(record.checkOut)}</p>
+                    </div>
+                  </div>
+                  {isCheckedIn ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleCheckOut(record)}
+                    >
+                      Check out
+                    </Button>
+                  ) : null}
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <Card className="hidden shadow-none md:block">
         <CardHeader>
           <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableHead>Employee</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Check In</TableHead>
@@ -150,7 +230,10 @@ export default function AttendancePage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell
+                    colSpan={7}
+                    className="py-8 text-center text-muted-foreground"
+                  >
                     Loading...
                   </TableCell>
                 </TableRow>
@@ -158,32 +241,40 @@ export default function AttendancePage() {
                 attendance.map((record) => {
                   const isCheckedIn = !record.checkOut;
                   return (
-                    <TableRow key={record.id} className="hover:bg-muted/50">
+                    <TableRow key={record.id}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{record.employeeName || "Unknown"}</div>
+                          <div className="font-medium">
+                            {record.employeeName || "Unknown"}
+                          </div>
                           <div className="text-xs text-muted-foreground">
-                            {record.employeeDesignation || ""} {record.employeeDepartment ? `• ${record.employeeDepartment}` : ""}
+                            {record.employeeDesignation || ""}{" "}
+                            {record.employeeDepartment
+                              ? `· ${record.employeeDepartment}`
+                              : ""}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>{formatDate(record.date)}</TableCell>
                       <TableCell>{formatTime(record.checkIn)}</TableCell>
                       <TableCell>{formatTime(record.checkOut)}</TableCell>
-                      <TableCell>{calculateDuration(record.checkIn, record.checkOut)}</TableCell>
+                      <TableCell>
+                        {calculateDuration(record.checkIn, record.checkOut)}
+                      </TableCell>
                       <TableCell>
                         {isCheckedIn ? (
-                          <Badge className="bg-green-50 text-green-600 border-green-200">
+                          <Badge
+                            variant="outline"
+                            className="border-emerald-200 bg-emerald-50 text-emerald-700"
+                          >
                             Checked In
                           </Badge>
                         ) : (
-                          <Badge className="bg-gray-50 text-gray-600 border-gray-200">
-                            Completed
-                          </Badge>
+                          <Badge variant="secondary">Completed</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        {isCheckedIn && (
+                        {isCheckedIn ? (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -192,14 +283,17 @@ export default function AttendancePage() {
                           >
                             Check Out
                           </Button>
-                        )}
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   );
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell
+                    colSpan={7}
+                    className="py-8 text-center text-muted-foreground"
+                  >
                     No attendance records found.
                   </TableCell>
                 </TableRow>

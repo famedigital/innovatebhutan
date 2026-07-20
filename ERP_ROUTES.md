@@ -7,6 +7,7 @@
 | `/admin/clients` | Clients | ✅ API → clientService |
 | `/admin/services` | Services | ✅ API → serviceCatalogService |
 | `/admin/hr` | HR & Payroll | ✅ Working |
+| `/admin/hr/reports` | HR Reports | ✅ ADMIN — headcount / payroll KPIs |
 | `/admin/finance` | Legacy Finance | ↪️ Redirects to `/admin/transactions` |
 | `/admin/finance/reports` | Finance Reports | ✅ ADMIN — KPIs / invoice filters |
 | `/admin/my-work` | My Tasks | ✅ Project tasks assigned to current user |

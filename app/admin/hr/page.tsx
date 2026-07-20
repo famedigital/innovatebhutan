@@ -6,6 +6,7 @@ import { OperatorOnboardingModal } from "./operator-onboarding-modal";
 import { PayslipListModal } from "./payslip-list";
 import { BatchPayrollModal } from "./batch-payroll-modal";
 import { useState } from "react";
+import Link from "next/link";
 import { Users, FileText, Sparkles } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
@@ -18,28 +19,40 @@ export default function HRPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Payroll"
-        description="Team payroll, payslips, and onboarding"
-        breadcrumbs={[
-          { label: "Admin", href: "/admin" },
-          { label: "People" },
-          { label: "Payroll" },
-        ]}
+        description="Team payroll, payslips, and employee onboarding"
         actions={
           <>
-            <Button variant="outline" onClick={() => setShowPayslips(true)}>
-              <FileText className="w-4 h-4 mr-2" />
-              View Payslips
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="hidden sm:inline-flex"
+            >
+              <Link href="/admin/hr/reports/">HR Reports</Link>
             </Button>
-            <Button variant="outline" onClick={() => setShowBatch(true)}>
-              <Sparkles className="w-4 h-4 mr-2" />
-              Run Payroll
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPayslips(true)}
+            >
+              <FileText className="size-4 sm:mr-2" />
+              <span className="hidden sm:inline">View Payslips</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowBatch(true)}
+            >
+              <Sparkles className="size-4 sm:mr-2" />
+              <span className="hidden sm:inline">Run Payroll</span>
             </Button>
             <OperatorOnboardingModal
               onCreated={() => setRefreshKey((k) => k + 1)}
               trigger={
-                <Button>
-                  <Users className="w-4 h-4 mr-2" />
-                  Add Employee
+                <Button size="sm">
+                  <Users className="size-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Add Employee</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               }
             />

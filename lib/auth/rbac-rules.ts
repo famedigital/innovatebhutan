@@ -5,7 +5,7 @@
  * Used by middleware, API routes, and client-side components.
  */
 
-export type UserRole = 'ADMIN' | 'STAFF' | 'CLIENT'
+export type UserRole = "ADMIN" | "STAFF" | "CLIENT" | "SUPERADMIN";
 export type Permission = string
 export type Resource = string
 
@@ -33,11 +33,16 @@ export type PermissionRule = {
  */
 export const RBAC_RULES: Record<UserRole, Permission[]> = {
   /**
+   * 👑 SUPERADMIN - Same as ADMIN (full access)
+   */
+  SUPERADMIN: ["*"],
+
+  /**
    * 👑 ADMIN - Full system access
    * Can access all features, settings, and perform any action
    */
   ADMIN: [
-    '*', // Wildcard - grants all permissions
+    "*", // Wildcard - grants all permissions
   ],
 
   /**
@@ -138,22 +143,27 @@ export const RBAC_RULES: Record<UserRole, Permission[]> = {
  * Role descriptions for UI display
  */
 export const ROLE_DESCRIPTIONS: Record<UserRole, { label: string; description: string; color: string }> = {
+  SUPERADMIN: {
+    label: "Super Administrator",
+    description: "Full system access with all permissions",
+    color: "red",
+  },
   ADMIN: {
-    label: 'Administrator',
-    description: 'Full system access with all permissions',
-    color: 'red',
+    label: "Administrator",
+    description: "Full system access with all permissions",
+    color: "red",
   },
   STAFF: {
-    label: 'Staff Member',
-    description: 'Operational access for daily tasks',
-    color: 'blue',
+    label: "Staff Member",
+    description: "Operational access for daily tasks",
+    color: "blue",
   },
   CLIENT: {
-    label: 'Client',
-    description: 'Portal access for self-service',
-    color: 'green',
+    label: "Client",
+    description: "Portal access for self-service",
+    color: "green",
   },
-}
+};
 
 /**
  * Check if a role has a specific permission
@@ -205,47 +215,52 @@ export function getRolePermissions(role: UserRole): Permission[] {
  * Filter routes based on role permissions
  */
 export function canAccessRoute(role: UserRole, route: string): boolean {
+  // Normalize trailing slash (next.config trailingSlash: true)
+  const path = route.replace(/\/+$/, "") || "/";
+
   // Only ADMIN and STAFF may access any /admin route
-  if (route.startsWith('/admin')) {
-    if (role !== 'ADMIN' && role !== 'STAFF') {
-      return false
+  if (path.startsWith("/admin")) {
+    if (role !== "ADMIN" && role !== "STAFF" && role !== "SUPERADMIN") {
+      return false;
     }
 
     // Admin-only routes
     const adminOnlyRoutes = [
-      '/admin/settings',
-      '/admin/employees',
-      '/admin/attendance',
-      '/admin/hr',
-      '/admin/invoice',
-      '/admin/accounts',
-      '/admin/expenses',
-      '/admin/transactions',
-      '/admin/finance',
-      '/admin/notifications',
-      '/admin/audit',
-      '/admin/website',
-      '/admin/blog',
-      '/admin/media',
-      '/admin/marketing',
-      '/admin/hero',
-      '/admin/users',
-    ]
+      "/admin/settings",
+      "/admin/employees",
+      "/admin/attendance",
+      "/admin/hr",
+      "/admin/invoice",
+      "/admin/accounts",
+      "/admin/expenses",
+      "/admin/transactions",
+      "/admin/finance",
+      "/admin/notifications",
+      "/admin/audit",
+      "/admin/website",
+      "/admin/blog",
+      "/admin/media",
+      "/admin/marketing",
+      "/admin/hero",
+      "/admin/users",
+    ];
 
-    if (adminOnlyRoutes.some(r => route === r || route.startsWith(r + '/'))) {
-      return role === 'ADMIN'
+    if (
+      adminOnlyRoutes.some((r) => path === r || path.startsWith(r + "/"))
+    ) {
+      return role === "ADMIN" || role === "SUPERADMIN";
     }
 
-    return true
+    return true;
   }
 
   // Portal routes (all authenticated users)
-  if (route.startsWith('/portal') || route.startsWith('/client')) {
-    return true
+  if (path.startsWith("/portal") || path.startsWith("/client")) {
+    return true;
   }
 
   // Public routes
-  return true
+  return true;
 }
 
 /**

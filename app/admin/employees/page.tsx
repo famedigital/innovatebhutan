@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Users, UserPlus, Edit, Trash2, Search, Filter, MoreVertical } from "lucide-react";
+import { useEffect, useState, type ComponentType } from "react";
+import { Users, UserPlus, Edit, Trash2, Search, MoreVertical } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,17 +45,29 @@ interface EmployeeStats {
   terminatedEmployees: number;
 }
 
-function MetricCard({ title, value, icon: Icon, color }: any) {
+function MetricCard({
+  title,
+  value,
+  icon: Icon,
+  color,
+}: {
+  title: string;
+  value: number;
+  icon: ComponentType<{ className?: string }>;
+  color: string;
+}) {
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
+    <Card className="shadow-none">
+      <CardContent className="p-3 sm:p-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground uppercase tracking-wider">{title}</span>
-          <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-            <Icon className={`w-4 h-4 ${color}`} />
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground sm:text-xs">
+            {title}
+          </span>
+          <div className="flex size-7 items-center justify-center rounded-md border bg-muted/40 sm:size-8">
+            <Icon className={`size-3.5 sm:size-4 ${color}`} />
           </div>
         </div>
-        <p className="text-2xl font-bold mt-2">{value}</p>
+        <p className="mt-2 text-xl font-semibold sm:text-2xl">{value}</p>
       </CardContent>
     </Card>
   );
@@ -163,21 +175,21 @@ export default function EmployeesPage() {
         }
       />
 
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {stats ? (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <MetricCard title="Total" value={stats.totalEmployees} icon={Users} color="text-foreground" />
           <MetricCard title="Active" value={stats.activeEmployees} icon={Users} color="text-foreground" />
           <MetricCard title="On Leave" value={stats.onLeaveEmployees} icon={Users} color="text-amber-700" />
           <MetricCard title="Inactive" value={stats.inactiveEmployees} icon={Users} color="text-muted-foreground" />
         </div>
-      )}
+      ) : null}
 
       {/* Filters */}
-      <Card>
+      <Card className="shadow-none">
         <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search employees..."
                 value={search}
@@ -188,7 +200,7 @@ export default function EmployeesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border rounded-lg text-sm"
+              className="h-9 rounded-md border bg-background px-3 text-sm"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -200,15 +212,75 @@ export default function EmployeesPage() {
         </CardContent>
       </Card>
 
-      {/* Employees Table */}
-      <Card>
+      {/* Mobile cards */}
+      <div className="space-y-2 md:hidden">
+        {loading ? (
+          <Card className="shadow-none">
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              Loading...
+            </CardContent>
+          </Card>
+        ) : employees.length === 0 ? (
+          <Card className="shadow-none">
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              No employees found. Add your first team member to get started.
+            </CardContent>
+          </Card>
+        ) : (
+          employees.map((emp) => (
+            <Card key={emp.id} className="shadow-none">
+              <CardContent className="flex items-start justify-between gap-3 p-4">
+                <div className="min-w-0 space-y-1">
+                  <p className="truncate font-medium">
+                    {emp.fullName || "Unknown"}
+                  </p>
+                  <p className="truncate text-sm text-muted-foreground">
+                    {emp.designation || "—"} · {emp.department || "—"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {emp.phone || "No phone"}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <Badge className={getStatusColor(emp.status)}>
+                    {emp.status?.replace("_", " ") || "active"}
+                  </Badge>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="size-8">
+                        <MoreVertical className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditingEmployee(emp)}>
+                        <Edit className="mr-2 size-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(emp.id)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="mr-2 size-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <Card className="hidden shadow-none md:block">
         <CardHeader>
           <CardTitle className="text-sm font-medium">Team Members</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableHead>Name</TableHead>
                 <TableHead>Designation</TableHead>
                 <TableHead>Department</TableHead>
@@ -220,30 +292,36 @@ export default function EmployeesPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : employees.length > 0 ? (
                 employees.map((emp) => (
-                  <TableRow key={emp.id} className="hover:bg-muted/50">
+                  <TableRow key={emp.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                        <div className="flex size-8 items-center justify-center rounded-full bg-muted">
                           {emp.photoUrl ? (
-                            <img src={emp.photoUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                            <img
+                              src={emp.photoUrl}
+                              alt=""
+                              className="size-8 rounded-full object-cover"
+                            />
                           ) : (
                             <span className="text-xs font-medium">
                               {emp.fullName?.charAt(0).toUpperCase() || "U"}
                             </span>
                           )}
                         </div>
-                        <span className="font-medium">{emp.fullName || "Unknown"}</span>
+                        <span className="font-medium">
+                          {emp.fullName || "Unknown"}
+                        </span>
                       </div>
                     </TableCell>
-                    <TableCell>{emp.designation || "-"}</TableCell>
-                    <TableCell>{emp.department || "-"}</TableCell>
-                    <TableCell>{emp.phone || "-"}</TableCell>
+                    <TableCell>{emp.designation || "—"}</TableCell>
+                    <TableCell>{emp.department || "—"}</TableCell>
+                    <TableCell>{emp.phone || "—"}</TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(emp.status)}>
                         {emp.status?.replace("_", " ") || "active"}
@@ -252,20 +330,20 @@ export default function EmployeesPage() {
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="w-4 h-4" />
+                          <Button variant="ghost" size="icon" className="size-8">
+                            <MoreVertical className="size-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => setEditingEmployee(emp)}>
-                            <Edit className="w-4 h-4 mr-2" />
+                            <Edit className="mr-2 size-4" />
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDelete(emp.id)}
-                            className="text-red-600"
+                            className="text-destructive"
                           >
-                            <Trash2 className="w-4 h-4 mr-2" />
+                            <Trash2 className="mr-2 size-4" />
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -275,7 +353,7 @@ export default function EmployeesPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                     No employees found. Add your first team member to get started.
                   </TableCell>
                 </TableRow>

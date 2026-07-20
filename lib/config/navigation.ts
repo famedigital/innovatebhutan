@@ -102,7 +102,7 @@ export const navigationConfig: NavGroup[] = [
       { title: "Employees", href: "/admin/employees", icon: Users },
       { title: "Attendance", href: "/admin/attendance", icon: Clock },
       { title: "Payroll", href: "/admin/hr", icon: DollarSign },
-      { title: "HR Reports", href: "/admin/hr/reports", icon: BarChart3 },
+      { title: "HR Reports", href: "/admin/hr/reports/", icon: BarChart3 },
     ],
   },
   {

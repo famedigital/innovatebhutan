@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reportService } from "@/lib/services/reportService";
-import { requireApiAuth, requireStaffOrAdmin, formatApiError } from '@/lib/auth/api-auth';
-import { isApiError } from '@/lib/errors';
+import {
+  requireApiAuth,
+  requireStaffOrAdmin,
+  formatApiError,
+} from "@/lib/auth/api-auth";
+import { isApiError } from "@/lib/errors";
 
-// GET /api/reports/hr - Get HR KPIs and metrics
+// GET /api/reports/hr — HR KPIs and metrics
 export async function GET(request: NextRequest) {
   try {
-    const _auth = await requireApiAuth(request);
-    requireStaffOrAdmin(_auth.profile);
+    const auth = await requireApiAuth(request);
+    requireStaffOrAdmin(auth.profile);
     const searchParams = request.nextUrl.searchParams;
 
-    // Parse filters from query parameters
     const filters = {
       department: searchParams.get("department") || undefined,
       designation: searchParams.get("designation") || undefined,
@@ -19,7 +22,6 @@ export async function GET(request: NextRequest) {
       endDate: searchParams.get("endDate") || undefined,
     };
 
-    // Check what type of report is requested
     const reportType = searchParams.get("type") || "kpis";
 
     let data;
@@ -47,13 +49,14 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error generating HR report:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to generate HR report",
-      },
-      { status: 500 }
-    );
+    const body = formatApiError(error);
+    const status = isApiError(error)
+      ? error.statusCode
+      : body.code === "UNAUTHORIZED"
+        ? 401
+        : body.code === "FORBIDDEN"
+          ? 403
+          : 500;
+    return NextResponse.json(body, { status });
   }
 }

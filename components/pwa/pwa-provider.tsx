@@ -29,53 +29,74 @@ const PwaContext = createContext<PwaContextValue>({
   install: async () => false,
 });
 
+/** Module singletons — survive Strict Mode remounts without re-binding BIP. */
+let deferredPromptSingleton: BeforeInstallPromptEvent | null = null;
+let bipBootstrapped = false;
+const deferredSubscribers = new Set<
+  (event: BeforeInstallPromptEvent | null) => void
+>();
+
+function notifyDeferred(event: BeforeInstallPromptEvent | null) {
+  deferredPromptSingleton = event;
+  deferredSubscribers.forEach((fn) => fn(event));
+}
+
 function detectStandalone() {
   if (typeof window === "undefined") return false;
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
-    // iOS Safari
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+    (window.navigator as Navigator & { standalone?: boolean }).standalone ===
+      true
   );
 }
 
 export function PwaProvider({ children }: { children: ReactNode }) {
-  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
+    deferredPromptSingleton
+  );
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
     setIsStandalone(detectStandalone());
+    deferredSubscribers.add(setDeferred);
+    if (deferredPromptSingleton) setDeferred(deferredPromptSingleton);
 
-    const onBip = (e: Event) => {
-      e.preventDefault();
-      setDeferred(e as BeforeInstallPromptEvent);
-    };
-    const onInstalled = () => {
-      setDeferred(null);
-      setIsStandalone(true);
-    };
-
-    window.addEventListener("beforeinstallprompt", onBip);
-    window.addEventListener("appinstalled", onInstalled);
+    if (!bipBootstrapped) {
+      bipBootstrapped = true;
+      window.addEventListener("beforeinstallprompt", (e) => {
+        // Custom InstallAppButton owns the prompt — suppress native banner.
+        e.preventDefault();
+        notifyDeferred(e as BeforeInstallPromptEvent);
+      });
+      window.addEventListener("appinstalled", () => {
+        notifyDeferred(null);
+      });
+    }
 
     if ("serviceWorker" in navigator && window.isSecureContext) {
       navigator.serviceWorker
         .register("/sw.js", { updateViaCache: "none" })
-        .catch((err) => {
-          console.warn("[PWA] SW registration failed:", err);
-        });
+        .catch(() => {});
     }
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", onBip);
-      window.removeEventListener("appinstalled", onInstalled);
+      deferredSubscribers.delete(setDeferred);
     };
   }, []);
 
+  useEffect(() => {
+    if (!deferredPromptSingleton) return;
+    const onInstalled = () => setIsStandalone(true);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => window.removeEventListener("appinstalled", onInstalled);
+  }, []);
+
   const install = useCallback(async () => {
-    if (!deferred) return false;
-    await deferred.prompt();
-    const choice = await deferred.userChoice;
-    setDeferred(null);
+    const event = deferred || deferredPromptSingleton;
+    if (!event) return false;
+    await event.prompt();
+    const choice = await event.userChoice;
+    notifyDeferred(null);
     return choice.outcome === "accepted";
   }, [deferred]);
 
