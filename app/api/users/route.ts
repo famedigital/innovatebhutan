@@ -11,6 +11,7 @@ import {
 } from "@/lib/auth/api-auth";
 import { checkRateLimit, rateLimitPresets } from "@/lib/rate-limit/rate-limiter";
 import { isApiError, RateLimitError } from "@/lib/errors";
+import { insertEmployeeMinimal } from "@/lib/admin/employee-insert";
 import { z } from "zod";
 
 const createUserSchema = z.object({
@@ -318,19 +319,14 @@ export async function POST(req: NextRequest) {
             .limit(1);
 
           if (!existingEmp[0]) {
-            const [emp] = await db
-              .insert(employees)
-              .values({
-                profileId: profile.id,
-                designation: data.designation || "Staff",
-                department: data.department || undefined,
-                phone: data.phone || undefined,
-                email: data.email,
-                status: "active",
-                authId: userId,
-              })
-              .returning({ id: employees.id });
-            employeeId = emp?.id ?? null;
+            employeeId = await insertEmployeeMinimal({
+              profileId: profile.id,
+              designation: data.designation || "Staff",
+              department: data.department || undefined,
+              phone: data.phone || undefined,
+              email: data.email,
+              status: "active",
+            });
           } else {
             employeeId = existingEmp[0].id;
           }

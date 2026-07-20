@@ -1,15 +1,28 @@
 import { db } from "@/db";
-import { employees, profiles } from "@/db/schema";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
+import { insertEmployeeMinimal } from "@/lib/admin/employee-insert";
 
 export type AssignableStaffRow = {
   teamMemberId: number;
   teamMemberName: string;
 };
 
+type SqlRow = Record<string, unknown>;
+
+async function rawQuery<T extends SqlRow>(query: ReturnType<typeof sql>) {
+  const result = await db.execute(query);
+  // postgres-js / drizzle may return array or { rows }
+  if (Array.isArray(result)) return result as unknown as T[];
+  if (result && typeof result === "object" && "rows" in result) {
+    return (result as { rows: T[] }).rows;
+  }
+  return [] as T[];
+}
+
 /**
  * Sync missing employee rows for STAFF/ADMIN, then list assignable staff.
- * Uses minimal columns so older DBs without optional migrations still work.
+ * Uses raw SQL with only base columns — prod DB often lacks later migration cols,
+ * and Drizzle insert() emits every schema column (which breaks on older tables).
  */
 export async function listAssignableStaff(): Promise<{
   data: AssignableStaffRow[];
@@ -19,55 +32,36 @@ export async function listAssignableStaff(): Promise<{
   const errors: string[] = [];
   let backfilled = 0;
 
+  // Profiles that look like staff but have no employee.profile_id link
   try {
-    const missing = await db
-      .select({
-        id: profiles.id,
-        fullName: profiles.fullName,
-        role: profiles.role,
-        userId: profiles.userId,
-      })
-      .from(profiles)
-      .leftJoin(employees, eq(employees.profileId, profiles.id))
-      .where(
-        and(
-          sql`UPPER(TRIM(COALESCE(${profiles.role}, ''))) IN ('STAFF', 'ADMIN', 'SUPERADMIN')`,
-          isNull(employees.id)
-        )
-      );
+    const missing = await rawQuery<{
+      id: number;
+      full_name: string | null;
+      role: string | null;
+    }>(sql`
+      SELECT p.id, p.full_name, p.role
+      FROM profiles p
+      LEFT JOIN employees e ON e.profile_id = p.id
+      WHERE UPPER(TRIM(COALESCE(p.role, ''))) IN ('STAFF', 'ADMIN', 'SUPERADMIN')
+        AND e.id IS NULL
+    `);
 
     for (const profile of missing) {
+      const role = String(profile.role || "").toUpperCase();
+      const designation =
+        role === "ADMIN" || role === "SUPERADMIN" ? "Administrator" : "Staff";
+
       try {
-        const role = String(profile.role || "").toUpperCase();
-        await db.insert(employees).values({
+        await insertEmployeeMinimal({
           profileId: profile.id,
-          designation:
-            role === "ADMIN" || role === "SUPERADMIN"
-              ? "Administrator"
-              : "Staff",
+          designation,
           status: "active",
-          authId: profile.userId || undefined,
         });
         backfilled += 1;
-      } catch (insertErr) {
-        // Retry without authId if unique/column issue
-        try {
-          const role = String(profile.role || "").toUpperCase();
-          await db.insert(employees).values({
-            profileId: profile.id,
-            designation:
-              role === "ADMIN" || role === "SUPERADMIN"
-                ? "Administrator"
-                : "Staff",
-            status: "active",
-          });
-          backfilled += 1;
-        } catch (retryErr) {
-          const msg =
-            retryErr instanceof Error ? retryErr.message : String(retryErr);
-          errors.push(`profile ${profile.id}: ${msg}`);
-          console.error("[assignable] insert failed", profile.id, insertErr, retryErr);
-        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        errors.push(`profile ${profile.id}: ${msg}`);
+        console.error("[assignable] insert failed", profile.id, err);
       }
     }
   } catch (syncErr) {
@@ -76,55 +70,53 @@ export async function listAssignableStaff(): Promise<{
     console.error("[assignable] sync failed", syncErr);
   }
 
+  // List employees — prefer status filter when column exists
   let data: AssignableStaffRow[] = [];
 
   try {
-    const rows = await db
-      .select({
-        teamMemberId: employees.id,
-        teamMemberName: sql<string>`COALESCE(${profiles.fullName}, ${employees.designation}, ${employees.email}, 'Staff')`,
-        status: employees.status,
-      })
-      .from(employees)
-      .leftJoin(profiles, eq(employees.profileId, profiles.id))
-      .where(
-        sql`COALESCE(LOWER(${employees.status}), 'active') NOT IN ('terminated', 'inactive')`
-      )
-      .orderBy(employees.id);
-
+    const rows = await rawQuery<{
+      team_member_id: number;
+      team_member_name: string;
+    }>(sql`
+      SELECT
+        e.id AS team_member_id,
+        COALESCE(p.full_name, e.designation, e.email, 'Staff') AS team_member_name
+      FROM employees e
+      LEFT JOIN profiles p ON p.id = e.profile_id
+      WHERE COALESCE(LOWER(e.status), 'active') NOT IN ('terminated', 'inactive')
+      ORDER BY e.id
+    `);
     data = rows.map((r) => ({
-      teamMemberId: r.teamMemberId,
-      teamMemberName: r.teamMemberName || "Staff",
+      teamMemberId: Number(r.team_member_id),
+      teamMemberName: String(r.team_member_name || "Staff"),
     }));
-  } catch (listErr) {
-    console.error("[assignable] join list failed", listErr);
+  } catch {
     try {
-      const bare = await db
-        .select({
-          teamMemberId: employees.id,
-          designation: employees.designation,
-          email: employees.email,
-          status: employees.status,
-        })
-        .from(employees);
-
-      data = bare
-        .filter(
-          (e) =>
-            !e.status ||
-            !["terminated", "inactive"].includes(String(e.status).toLowerCase())
-        )
-        .map((e) => ({
-          teamMemberId: e.teamMemberId,
-          teamMemberName:
-            e.designation || e.email || `Staff #${e.teamMemberId}`,
-        }));
-    } catch (bareErr) {
-      const msg = bareErr instanceof Error ? bareErr.message : String(bareErr);
+      const rows = await rawQuery<{
+        team_member_id: number;
+        team_member_name: string;
+      }>(sql`
+        SELECT
+          e.id AS team_member_id,
+          COALESCE(p.full_name, e.designation, 'Staff') AS team_member_name
+        FROM employees e
+        LEFT JOIN profiles p ON p.id = e.profile_id
+        ORDER BY e.id
+      `);
+      data = rows.map((r) => ({
+        teamMemberId: Number(r.team_member_id),
+        teamMemberName: String(r.team_member_name || "Staff"),
+      }));
+    } catch (listErr) {
+      const msg = listErr instanceof Error ? listErr.message : String(listErr);
       errors.push(`list: ${msg}`);
-      console.error("[assignable] bare list failed", bareErr);
+      console.error("[assignable] list failed", listErr);
     }
   }
 
-  return { data, backfilled, errors };
+  return {
+    data: data.filter((d) => Number.isFinite(d.teamMemberId) && d.teamMemberId > 0),
+    backfilled,
+    errors,
+  };
 }

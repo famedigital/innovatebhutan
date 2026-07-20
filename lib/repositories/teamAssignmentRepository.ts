@@ -6,6 +6,7 @@
 import { db } from "@/db";
 import { teamAssignments, employees, problems, profiles } from "@/db/schema";
 import { eq, desc, and, sql, inArray, isNull } from "drizzle-orm";
+import { insertEmployeeMinimal } from "@/lib/admin/employee-insert";
 
 export type TeamAssignment = typeof teamAssignments.$inferSelect;
 export type NewTeamAssignment = typeof teamAssignments.$inferInsert;
@@ -164,17 +165,29 @@ export async function ensureEmployeesForStaffProfiles(): Promise<number> {
 
     if (missing.length === 0) return 0;
 
+    let created = 0;
     for (const profile of missing) {
       const role = String(profile.role || "").toUpperCase();
-      await db.insert(employees).values({
-        profileId: profile.id,
-        designation:
-          role === "ADMIN" || role === "SUPERADMIN" ? "Administrator" : "Staff",
-        status: "active",
-      });
+      try {
+        await insertEmployeeMinimal({
+          profileId: profile.id,
+          designation:
+            role === "ADMIN" || role === "SUPERADMIN"
+              ? "Administrator"
+              : "Staff",
+          status: "active",
+        });
+        created += 1;
+      } catch (err) {
+        console.error(
+          "ensureEmployeesForStaffProfiles insert failed",
+          profile.id,
+          err
+        );
+      }
     }
 
-    return missing.length;
+    return created;
   } catch (error) {
     console.error("ensureEmployeesForStaffProfiles failed:", error);
     return 0;
