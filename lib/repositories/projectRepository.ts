@@ -493,41 +493,35 @@ export class ProjectRepository {
   // ==================== AGGREGATION QUERIES ====================
 
   async getProjectStats(projectId: number): Promise<ProjectStats> {
+    // SUM(CASE…) avoids drizzle count(expr) quirks that can inflate bucket counts
     const stats = await this.db
       .select({
         total: count(),
-        completed: count(sql`CASE WHEN ${projectTasks.status} = 'done' THEN 1 END`),
-        inProgress: count(sql`CASE WHEN ${projectTasks.status} = 'in_progress' THEN 1 END`),
-        todo: count(sql`CASE WHEN ${projectTasks.status} = 'todo' THEN 1 END`),
+        completed: sql<number>`coalesce(sum(case when ${projectTasks.status} = 'done' then 1 else 0 end), 0)`,
+        inProgress: sql<number>`coalesce(sum(case when ${projectTasks.status} = 'in_progress' then 1 else 0 end), 0)`,
+        todo: sql<number>`coalesce(sum(case when ${projectTasks.status} = 'todo' then 1 else 0 end), 0)`,
       })
       .from(projectTasks)
       .where(and(eq(projectTasks.projectId, projectId), isNull(projectTasks.deletedAt)));
 
     const result = stats[0] || { total: 0, completed: 0, inProgress: 0, todo: 0 };
-    const progressPercentage = result.total > 0
-      ? Math.round((Number(result.completed) / Number(result.total)) * 100)
-      : 0;
+    const totalTasks = Number(result.total) || 0;
+    const completedTasks = Number(result.completed) || 0;
+    const progressPercentage =
+      totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
     return {
-      totalTasks: Number(result.total),
-      completedTasks: Number(result.completed),
-      inProgressTasks: Number(result.inProgress),
-      todoTasks: Number(result.todo),
+      totalTasks,
+      completedTasks,
+      inProgressTasks: Number(result.inProgress) || 0,
+      todoTasks: Number(result.todo) || 0,
       progressPercentage,
     };
   }
 
   async updateProjectProgress(projectId: number): Promise<void> {
-    // Check cache first to avoid unnecessary database query
-    const cachedProgress = getCachedProgress(projectId);
-    if (cachedProgress !== null) {
-      await this.db
-        .update(projects)
-        .set({ progress: cachedProgress, updatedAt: new Date() })
-        .where(eq(projects.id, projectId));
-      return;
-    }
-
+    // Always recompute from tasks — never write a cached % (can be stale)
+    invalidateProgress(projectId);
     const stats = await this.getProjectStats(projectId);
 
     await this.db
@@ -535,7 +529,6 @@ export class ProjectRepository {
       .set({ progress: stats.progressPercentage, updatedAt: new Date() })
       .where(eq(projects.id, projectId));
 
-    // Update cache
     setCachedProgress(projectId, stats.progressPercentage);
   }
 

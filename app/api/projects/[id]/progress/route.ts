@@ -24,19 +24,24 @@ export async function GET(
       );
     }
 
-    // Get fresh stats and update cached progress using proper service method
+    // Recalculate from tasks, persist projects.progress, return full stats for UI
     const progress = await projectService.calculateProjectProgress(projectId);
     const stats = await projectService.getProjectStats(projectId);
+    const progressPercentage =
+      typeof stats.progressPercentage === "number"
+        ? stats.progressPercentage
+        : progress;
 
     return NextResponse.json({
       success: true,
       data: {
-        progress,
+        progress: progressPercentage,
         stats: {
           totalTasks: stats.totalTasks,
           completedTasks: stats.completedTasks,
           inProgressTasks: stats.inProgressTasks,
           todoTasks: stats.todoTasks,
+          progressPercentage,
         },
       },
     });

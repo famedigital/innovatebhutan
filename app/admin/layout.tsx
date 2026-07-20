@@ -83,6 +83,12 @@ export default function AdminLayout({
     router.refresh();
   };
 
+  const isManual = pathname?.startsWith("/admin/manual");
+
+  if (isManual) {
+    return <>{children}</>;
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />

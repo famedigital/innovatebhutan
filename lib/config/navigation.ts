@@ -53,7 +53,10 @@ export interface NavGroup {
 export const navigationConfig: NavGroup[] = [
   {
     title: "Overview",
-    items: [{ title: "Dashboard", href: "/admin", icon: LayoutDashboard }],
+    items: [
+      { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
+      { title: "ERP Manual", href: "/admin/manual", icon: BookOpen },
+    ],
   },
   {
     title: "Work",

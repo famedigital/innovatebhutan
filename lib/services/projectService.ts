@@ -104,11 +104,12 @@ export function normalizeStatus(status: string | null | undefined): ProjectStatu
 export class ProjectService {
   private repository = projectRepository;
 
+  // Allow any non-self jump so kanban/select UI can move columns freely
   private readonly validTaskTransitions: Record<TaskStatus, TaskStatus[]> = {
-    todo: ["in_progress", "blocked"],
+    todo: ["in_progress", "done", "blocked"],
     in_progress: ["done", "blocked", "todo"],
-    blocked: ["todo", "in_progress"],
-    done: ["todo", "in_progress"],
+    blocked: ["todo", "in_progress", "done"],
+    done: ["todo", "in_progress", "blocked"],
   };
 
   private validateTaskStatusTransition(currentStatus: TaskStatus, newStatus: TaskStatus): boolean {

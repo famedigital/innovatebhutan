@@ -88,12 +88,12 @@ function formatBudget(value?: string, moneySummary?: Project["moneySummary"]) {
 }
 
 function ProgressBar({ value }: { value: number }) {
-  const pct = Math.min(100, Math.max(0, value || 0));
+  const pct = Math.min(100, Math.max(0, Number(value) || 0));
   return (
     <div className="flex items-center gap-2 min-w-0">
-      <div className="h-1.5 flex-1 min-w-[3rem] max-w-[6rem] rounded-full bg-muted overflow-hidden">
+      <div className="h-2 flex-1 min-w-[3rem] max-w-[6rem] rounded-full bg-muted overflow-hidden">
         <div
-          className="h-full rounded-full bg-primary transition-all"
+          className="h-full rounded-full bg-emerald-600 transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>

@@ -30,19 +30,20 @@ export const PROJECT_STATUS_LABELS: Record<string, string> = {
   complete: "Done",
 };
 
+/** Solid-enough fills so outline Badge does not read as plain white. */
 export const PROJECT_STATUS_COLORS: Record<string, string> = {
-  needs_quote: "bg-amber-50 text-amber-800 border-amber-200",
-  quoted: "bg-slate-50 text-slate-700 border-slate-200",
-  demo: "bg-violet-50 text-violet-700 border-violet-200",
-  advance_paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  in_progress: "bg-green-50 text-green-700 border-green-200",
-  testing: "bg-sky-50 text-sky-700 border-sky-200",
-  done: "bg-blue-50 text-blue-700 border-blue-200",
-  on_hold: "bg-orange-50 text-orange-700 border-orange-200",
-  cancelled: "bg-red-50 text-red-700 border-red-200",
-  planning: "bg-slate-50 text-slate-700 border-slate-200",
-  active: "bg-green-50 text-green-700 border-green-200",
-  complete: "bg-blue-50 text-blue-700 border-blue-200",
+  needs_quote: "bg-amber-100 text-amber-900 border-amber-300",
+  quoted: "bg-slate-100 text-slate-800 border-slate-300",
+  demo: "bg-violet-100 text-violet-900 border-violet-300",
+  advance_paid: "bg-emerald-100 text-emerald-900 border-emerald-300",
+  in_progress: "bg-green-100 text-green-900 border-green-300",
+  testing: "bg-sky-100 text-sky-900 border-sky-300",
+  done: "bg-blue-100 text-blue-900 border-blue-300",
+  on_hold: "bg-orange-100 text-orange-900 border-orange-300",
+  cancelled: "bg-red-100 text-red-900 border-red-300",
+  planning: "bg-slate-100 text-slate-800 border-slate-300",
+  active: "bg-green-100 text-green-900 border-green-300",
+  complete: "bg-blue-100 text-blue-900 border-blue-300",
 };
 
 export const PRODUCT_OPTIONS = [
