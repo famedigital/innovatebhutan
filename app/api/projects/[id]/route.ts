@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { projectService } from "@/lib/services/projectService";
 import { updateProjectSchema } from "@/lib/validations/project";
-import { requireApiAuth, requireStaffOrAdmin, formatApiError, getClientIp } from "@/lib/auth/api-auth";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError, getClientIp, canSeeMoney } from "@/lib/auth/api-auth";
+import { redactProjectMoney } from "@/lib/auth/capabilities";
 import { checkRateLimit, rateLimitPresets } from "@/lib/rate-limit/rate-limiter";
 import { isApiError, ForbiddenError, RateLimitError, NotFoundError } from "@/lib/errors";
 import { validateRequest, validateId } from "@/lib/validations/validation";
+import { moneySummary, parseMoneyMeta } from "@/lib/projects/moneyMeta";
+import { normalizeStatus } from "@/lib/services/projectService";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -30,9 +33,27 @@ export async function GET(
       throw new NotFoundError("Project");
     }
 
+    const seeMoney = canSeeMoney(profile);
+    const project = (result as any).project || result;
+    const enriched = {
+      ...result,
+      project: project
+        ? {
+            ...project,
+            status: normalizeStatus(project.status),
+            ...(seeMoney
+              ? { moneySummary: moneySummary(parseMoneyMeta(project.moneyMeta)) }
+              : {}),
+          }
+        : undefined,
+    };
+    if (!seeMoney && enriched.project) {
+      enriched.project = redactProjectMoney(enriched.project as any);
+    }
+
     return NextResponse.json({
       success: true,
-      data: result,
+      data: enriched,
     });
   } catch (error) {
     const errorResponse = formatApiError(error);
@@ -106,7 +127,8 @@ export async function PATCH(
       projectId,
       validatedData,
       profile.userId,
-      profile.role
+      profile.role,
+      { capabilities: profile.capabilities }
     );
 
     // Log to audit

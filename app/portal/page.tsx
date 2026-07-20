@@ -1,286 +1,236 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { MessageCircle, Ticket, ShoppingCart, ArrowRight, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import Link from "next/link";
+import { Briefcase, FileText, Ticket, Shield, ArrowRight } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createClient } from "@/utils/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { PROJECT_STATUS_LABELS } from "@/lib/projects/statusUi";
 
-export default function PortalDashboard() {
-  const [stats, setStats] = useState({
-    activeChats: 0,
-    openTickets: 0,
-    pendingOrders: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const supabase = createClient();
+type Dash = {
+  clientName?: string;
+  stats: {
+    projects: number;
+    unpaidInvoices: number;
+    openTickets: number;
+    expiringAmc: number;
+  };
+  projects: Array<{ id: number; name: string; status: string | null }>;
+  invoices: Array<{
+    id: number;
+    invoiceNumber: string | null;
+    status: string | null;
+    total: string | null;
+  }>;
+  tickets: Array<{ id: number; subject: string; status: string | null }>;
+  amcs: Array<{
+    id: number;
+    contractNumber: string | null;
+    status: string | null;
+    endDate: string | null;
+  }>;
+  payInstructions?: { note: string; payee: string; gstTin: string };
+};
+
+export default function PortalHomePage() {
+  const [data, setData] = useState<Dash | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push('/login');
+    void (async () => {
+      const res = await fetch("/api/portal/me");
+      const json = await res.json();
+      if (!json.success) {
+        setError(json.error || "Failed to load");
         return;
       }
+      setData(json.data);
+    })();
+  }, []);
 
-      // Get user's profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('userId', user.id)
-        .single();
-
-      if (!profile) return;
-
-      // Get client info
-      const { data: client } = await supabase
-        .from('clients')
-        .select('id')
-        .eq('userId', user.id)
-        .single();
-
-      if (client) {
-        // Count active chats
-        const { count: chatCount } = await supabase
-          .from('chat_conversations')
-          .select('*', { count: 'exact', head: true })
-          .eq('client_id', client.id)
-          .in('status', ['open', 'active']);
-
-        // Count open tickets
-        const { count: ticketCount } = await supabase
-          .from('tickets')
-          .select('*', { count: 'exact', head: true })
-          .eq('clientId', client.id)
-          .in('status', ['open', 'in_progress']);
-
-        // Count pending orders
-        const { count: orderCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('clientId', client.id)
-          .in('status', ['pending', 'processing']);
-
-        setStats({
-          activeChats: chatCount || 0,
-          openTickets: ticketCount || 0,
-          pendingOrders: orderCount || 0,
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const quickActions = [
-    {
-      title: "Start Live Chat",
-      description: "Chat with our support team in real-time",
-      icon: MessageCircle,
-      href: "/portal/chat",
-      color: "text-green-600",
-      bgColor: "bg-green-600/10",
-    },
-    {
-      title: "View Tickets",
-      description: "Check your support requests status",
-      icon: Ticket,
-      href: "/portal/tickets",
-      color: "text-blue-600",
-      bgColor: "bg-blue-600/10",
-    },
-    {
-      title: "My Orders",
-      description: "Track your orders and purchases",
-      icon: ShoppingCart,
-      href: "/portal/orders",
-      color: "text-purple-600",
-      bgColor: "bg-purple-600/10",
-    },
-  ];
-
-  const recentActivity = [
-    {
-      type: "chat",
-      message: "Support team is online and ready to help",
-      time: "Now",
-      icon: MessageCircle,
-    },
-    {
-      type: "system",
-      message: "Welcome to your client portal",
-      time: "Just now",
-      icon: CheckCircle,
-    },
-    {
-      type: "info",
-      message: "You can reach us via WhatsApp for quick support",
-      time: "Anytime",
-      icon: AlertCircle,
-    },
-  ];
+  if (error) {
+    return <p className="text-sm text-destructive">{error}</p>;
+  }
+  if (!data) {
+    return <p className="text-sm text-muted-foreground">Loading…</p>;
+  }
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Welcome to your Portal
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {data.clientName || "Client portal"}
         </h1>
-        <p className="text-muted-foreground">
-          Manage your communications, tickets, and orders in one place.
+        <p className="text-sm text-muted-foreground mt-1">
+          Projects, invoices, support, and AMC — invite-only access.
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Active Chats
-            </CardTitle>
-            <MessageCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? "..." : stats.activeChats}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Real-time support
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Open Tickets
-            </CardTitle>
-            <Ticket className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? "..." : stats.openTickets}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Support requests
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pending Orders
-            </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? "..." : stats.pendingOrders}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              In progress
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {quickActions.map((action) => {
-          const Icon = action.icon;
-          return (
-            <Card
-              key={action.href}
-              className="group cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1"
-              onClick={() => router.push(action.href)}
-            >
-              <CardHeader>
-                <div className={`w-12 h-12 rounded-xl ${action.bgColor} flex items-center justify-center mb-4`}>
-                  <Icon className={`h-6 w-6 ${action.color}`} />
-                </div>
-                <CardTitle className="text-lg">{action.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {action.description}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { label: "Projects", value: data.stats.projects, href: "/portal/projects" },
+          {
+            label: "Unpaid invoices",
+            value: data.stats.unpaidInvoices,
+            href: "/portal/invoices",
+          },
+          {
+            label: "Open tickets",
+            value: data.stats.openTickets,
+            href: "/portal/tickets",
+          },
+          {
+            label: "AMC · 30 days",
+            value: data.stats.expiringAmc,
+            href: "/portal/amc",
+          },
+        ].map((s) => (
+          <Link key={s.label} href={s.href}>
+            <Card className="hover:bg-muted/40 transition-colors">
+              <CardContent className="p-4">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {s.label}
                 </p>
-                <div className="flex items-center text-sm font-medium text-primary">
-                  Open
-                  <ArrowRight className="ml-1 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </div>
+                <p className="text-2xl font-semibold tabular-nums mt-1">{s.value}</p>
               </CardContent>
             </Card>
-          );
-        })}
+          </Link>
+        ))}
       </div>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Activity & Updates
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentActivity.map((activity, index) => {
-              const Icon = activity.icon;
-              return (
-                <div
-                  key={index}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
-                >
-                  <div className="w-8 h-8 rounded-full bg-background flex items-center justify-center flex-shrink-0">
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm">{activity.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {activity.time}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* CTA Section */}
-      <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-1">
-                Need immediate assistance?
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Start a live chat or reach out via WhatsApp for quick responses.
-              </p>
-            </div>
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-primary to-primary/80"
-              onClick={() => router.push('/portal/chat')}
-            >
-              <MessageCircle className="mr-2 h-4 w-4" />
-              Start Chat
+      {data.payInstructions && (
+        <Card>
+          <CardContent className="p-4 space-y-1">
+            <p className="text-sm font-medium">How to pay</p>
+            <p className="text-xs text-muted-foreground">{data.payInstructions.note}</p>
+            <p className="text-xs">
+              Payee: {data.payInstructions.payee} · GST/TIN:{" "}
+              {data.payInstructions.gstTin}
+            </p>
+            <Button asChild size="sm" variant="outline" className="mt-2">
+              <Link href="/portal/invoices">
+                View invoices <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Link>
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Section
+          title="Recent projects"
+          icon={Briefcase}
+          href="/portal/projects"
+          empty="No projects yet"
+        >
+          {data.projects.map((p) => (
+            <div
+              key={p.id}
+              className="flex items-center justify-between gap-2 py-2 border-b last:border-0"
+            >
+              <span className="text-sm truncate">{p.name}</span>
+              <Badge variant="outline" className="shrink-0 text-[10px]">
+                {PROJECT_STATUS_LABELS[p.status || ""] ||
+                  p.status?.replace(/_/g, " ") ||
+                  "—"}
+              </Badge>
+            </div>
+          ))}
+        </Section>
+        <Section
+          title="Invoices"
+          icon={FileText}
+          href="/portal/invoices"
+          empty="No invoices"
+        >
+          {data.invoices.map((inv) => (
+            <div
+              key={inv.id}
+              className="flex items-center justify-between gap-2 py-2 border-b last:border-0"
+            >
+              <span className="text-sm truncate">
+                {inv.invoiceNumber || `INV-${inv.id}`}
+              </span>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {inv.status} · Nu.{" "}
+                {Number(inv.total || 0).toLocaleString()}
+              </span>
+            </div>
+          ))}
+        </Section>
+        <Section
+          title="Tickets"
+          icon={Ticket}
+          href="/portal/tickets"
+          empty="No tickets"
+        >
+          {data.tickets.map((t) => (
+            <div
+              key={t.id}
+              className="flex items-center justify-between gap-2 py-2 border-b last:border-0"
+            >
+              <span className="text-sm truncate">{t.subject}</span>
+              <Badge variant="outline" className="text-[10px]">
+                {t.status}
+              </Badge>
+            </div>
+          ))}
+        </Section>
+        <Section title="AMC" icon={Shield} href="/portal/amc" empty="No AMC">
+          {data.amcs.map((a) => (
+            <div
+              key={a.id}
+              className="flex items-center justify-between gap-2 py-2 border-b last:border-0"
+            >
+              <span className="text-sm truncate">
+                {a.contractNumber || `AMC-${a.id}`}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {a.status}
+                {a.endDate
+                  ? ` · ${new Date(a.endDate).toLocaleDateString()}`
+                  : ""}
+              </span>
+            </div>
+          ))}
+        </Section>
+      </div>
     </div>
+  );
+}
+
+function Section({
+  title,
+  icon: Icon,
+  href,
+  empty,
+  children,
+}: {
+  title: string;
+  icon: React.ElementType;
+  href: string;
+  empty: string;
+  children: React.ReactNode;
+}) {
+  const childArr = Array.isArray(children) ? children : [children];
+  const has = childArr.filter(Boolean).length > 0;
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-medium">{title}</h2>
+          </div>
+          <Link href={href} className="text-xs text-primary hover:underline">
+            View all
+          </Link>
+        </div>
+        {has ? children : (
+          <p className="text-xs text-muted-foreground py-4">{empty}</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }

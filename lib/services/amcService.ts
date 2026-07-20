@@ -209,14 +209,29 @@ export class AMCService {
    * Send notifications when AMC status changes
    */
   private async notifyAMCStatusChange(amc: AMC, newStatus: string): Promise<void> {
-    // Get admin profile IDs (placeholder - should fetch from database)
     const adminProfileIds = await this.getAdminProfileIds();
+    if (adminProfileIds.length === 0) return;
+
+    let clientName = `Client #${amc.clientId}`;
+    try {
+      const { db } = await import("@/db");
+      const { clients } = await import("@/db/schema");
+      const { eq } = await import("drizzle-orm");
+      const [row] = await db
+        .select({ name: clients.name })
+        .from(clients)
+        .where(eq(clients.id, amc.clientId))
+        .limit(1);
+      if (row?.name) clientName = row.name;
+    } catch {
+      /* keep fallback */
+    }
 
     if (newStatus === "expiring") {
       const daysUntilExpiry = this.getDaysUntilExpiry(amc);
       await notificationService.notifyAMCExpiring(
         adminProfileIds,
-        `Client #${amc.clientId}`,
+        clientName,
         amc.contractNumber || "Unknown",
         new Date(amc.endDate),
         daysUntilExpiry
@@ -224,7 +239,7 @@ export class AMCService {
     } else if (newStatus === "expired") {
       await notificationService.notifyAMCExpired(
         adminProfileIds,
-        `Client #${amc.clientId}`,
+        clientName,
         amc.contractNumber || "Unknown",
         new Date(amc.endDate)
       );
@@ -236,12 +251,25 @@ export class AMCService {
    * This is a placeholder - implement based on your auth setup
    */
   private async getAdminProfileIds(): Promise<number[]> {
-    // TODO: Implement actual admin profile lookup
-    // For now, return empty array to prevent errors
-    // In production, you would:
-    // 1. Query profiles table where role = 'ADMIN'
-    // 2. Return their integer IDs
-    return [];
+    try {
+      const { db } = await import("@/db");
+      const { profiles } = await import("@/db/schema");
+      const { eq, or, sql } = await import("drizzle-orm");
+      const rows = await db
+        .select({ id: profiles.id })
+        .from(profiles)
+        .where(
+          or(
+            eq(profiles.role, "ADMIN"),
+            eq(profiles.role, "SUPERADMIN"),
+            sql`${profiles.capabilities}::jsonb ? 'see_money'`
+          )
+        );
+      return rows.map((r) => r.id);
+    } catch (err) {
+      console.error("[AMC] getAdminProfileIds failed:", err);
+      return [];
+    }
   }
 
   /**

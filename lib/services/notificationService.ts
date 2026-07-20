@@ -16,6 +16,11 @@ export type NotificationCategory =
   | "payroll_ready"
   | "payroll_approved"
   | "payroll_paid"
+  | "ticket_assigned"
+  | "ticket_sla_breach"
+  | "needs_quote"
+  | "portal_amc_renew"
+  | "portal_payment_proof"
   | "system";
 
 export type NotificationType = "info" | "warning" | "critical" | "success";
@@ -442,6 +447,83 @@ export class NotificationService {
         link: "/admin/hr",
       });
     }
+  }
+
+  // ==================== TICKET NOTIFICATIONS ====================
+
+  async notifyTicketAssigned(
+    profileId: number,
+    ticketId: number,
+    publicId: string,
+    subject: string
+  ): Promise<void> {
+    await this.createNotification({
+      profileId,
+      title: "Ticket assigned",
+      message: `${publicId}: ${subject}`,
+      type: "info",
+      category: "ticket_assigned",
+      entityType: "ticket",
+      entityId: ticketId,
+      link: `/admin/tickets?ticketId=${ticketId}`,
+    });
+  }
+
+  async notifyTicketSlaBreach(
+    profileIds: number[],
+    ticketId: number,
+    publicId: string,
+    subject: string,
+    priority: string
+  ): Promise<void> {
+    for (const profileId of profileIds) {
+      await this.createNotification({
+        profileId,
+        title: "Ticket SLA breached",
+        message: `${publicId} (${priority}): ${subject}`,
+        type: "critical",
+        category: "ticket_sla_breach",
+        entityType: "ticket",
+        entityId: ticketId,
+        link: `/admin/tickets?ticketId=${ticketId}`,
+      });
+    }
+  }
+
+  async notifyPortalAmcRenew(
+    profileId: number,
+    clientName: string,
+    contractNumber: string,
+    amcId: number
+  ): Promise<void> {
+    await this.createNotification({
+      profileId,
+      title: "Portal AMC renew request",
+      message: `${clientName} requested renewal for ${contractNumber}`,
+      type: "warning",
+      category: "portal_amc_renew",
+      entityType: "amc",
+      entityId: amcId,
+      link: "/admin/amc",
+    });
+  }
+
+  async notifyPortalPaymentProof(
+    profileId: number,
+    clientName: string,
+    invoiceNumber: string,
+    invoiceId: number
+  ): Promise<void> {
+    await this.createNotification({
+      profileId,
+      title: "Payment screenshot submitted",
+      message: `${clientName} uploaded proof for ${invoiceNumber}`,
+      type: "info",
+      category: "portal_payment_proof",
+      entityType: "invoice",
+      entityId: invoiceId,
+      link: "/admin/invoice",
+    });
   }
 
   // ==================== SYSTEM NOTIFICATIONS ====================

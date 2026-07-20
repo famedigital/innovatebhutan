@@ -87,6 +87,8 @@ export default function InventoryPage() {
     quantity: "1",
     operation: "receipt",
     remarks: "",
+    projectId: "",
+    serialNo: "",
   });
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [deletingItem, setDeletingItem] = useState<Item | null>(null);
@@ -556,6 +558,29 @@ export default function InventoryPage() {
                 }
               />
             </div>
+            {stockForm.operation === "issue" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Project ID (optional)</Label>
+                  <Input
+                    placeholder="e.g. 12"
+                    value={stockForm.projectId}
+                    onChange={(e) =>
+                      setStockForm({ ...stockForm, projectId: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>Serial no. (optional)</Label>
+                  <Input
+                    value={stockForm.serialNo}
+                    onChange={(e) =>
+                      setStockForm({ ...stockForm, serialNo: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setStockOpen(false)}>
@@ -579,12 +604,31 @@ export default function InventoryPage() {
                       warehouseId: parseInt(stockForm.warehouseId, 10) || 1,
                       quantity: parseFloat(stockForm.quantity) || 1,
                       remarks: stockForm.remarks || undefined,
+                      ...(stockForm.operation === "issue" && stockForm.projectId
+                        ? {
+                            referenceType: "project",
+                            referenceId: parseInt(stockForm.projectId, 10),
+                          }
+                        : {}),
+                      ...(stockForm.serialNo
+                        ? { serialNo: stockForm.serialNo }
+                        : {}),
                     }),
                   });
                   const json = await res.json();
                   if (!json.success) throw new Error(json.error || "Failed");
                   toast.success("Stock entry recorded");
                   setStockOpen(false);
+                  setStockForm({
+                    itemId: "",
+                    warehouseId: "1",
+                    quantity: "1",
+                    operation: "receipt",
+                    remarks: "",
+                    projectId: "",
+                    serialNo: "",
+                  });
+                  fetchData();
                 } catch (e) {
                   toast.error(
                     e instanceof Error ? e.message : "Stock entry failed"

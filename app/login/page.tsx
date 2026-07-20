@@ -22,12 +22,18 @@ export default function LoginPage() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        router.push("/admin");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const res = await fetch("/api/portal/me");
+      if (res.ok) {
+        router.push("/portal");
+        return;
       }
+      router.push("/admin");
     };
-    checkUser();
+    void checkUser();
   }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -37,52 +43,29 @@ export default function LoginPage() {
     try {
       if (isSignUp) {
         if (loginAs === "client") {
-          const { error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/client`,
-            },
+          toast.error("Invite only", {
+            description:
+              "Client portal accounts are invite-only. Ask Innovate Bhutan for an invite link.",
           });
-
-          if (error) {
-            toast.error("Registration Failed", { description: error.message });
-            return;
-          }
-
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            await supabase.from("client_portal_access").insert({
-              user_id: user.id,
-              email: user.email,
-              client_id: null,
-              role: "client"
-            });
-          }
-
-          toast.success("Account Created", {
-            description: "Please check your email to verify your account.",
-          });
-          setIsSignUp(false);
-        } else {
-          const { error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/admin`,
-            },
-          });
-
-          if (error) {
-            toast.error("Registration Failed", { description: error.message });
-            return;
-          }
-
-          toast.success("Account Created", {
-            description: "Please check your email to verify your account.",
-          });
-          setIsSignUp(false);
+          return;
         }
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/admin`,
+          },
+        });
+
+        if (error) {
+          toast.error("Registration Failed", { description: error.message });
+          return;
+        }
+
+        toast.success("Account Created", {
+          description: "Please check your email to verify your account.",
+        });
+        setIsSignUp(false);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -94,25 +77,24 @@ export default function LoginPage() {
           return;
         }
 
-        const { data: { user } } = await supabase.auth.getUser();
-        
         if (loginAs === "client") {
-          const { data: clientAccess } = await supabase
-            .from("client_portal_access")
-            .select("*")
-            .eq("email", user?.email)
-            .single();
-
-          if (!clientAccess) {
-            toast.error("Access Denied", { description: "You don't have client portal access" });
+          const res = await fetch("/api/portal/me");
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok || !json.success) {
+            toast.error("Access Denied", {
+              description:
+                json.error ||
+                "No active portal invite. Contact Innovate Bhutan.",
+            });
             await supabase.auth.signOut();
             return;
           }
-
-          toast.success("Welcome back!", { description: "Accessing Client Portal." });
-          router.push("/client");
+          toast.success("Welcome!", { description: "Opening client portal." });
+          router.push("/portal");
         } else {
-          toast.success("Welcome back!", { description: "Access granted to ERP Command Center." });
+          toast.success("Welcome back!", {
+            description: "Access granted to ERP Command Center.",
+          });
           router.push("/admin");
         }
         router.refresh();
@@ -214,7 +196,15 @@ export default function LoginPage() {
             {loginAs === "client" && !isSignUp && (
               <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
                 <p className="text-xs text-foreground/80">
-                  Client Portal: invoices, AMC contracts, and support tickets.
+                  Invite-only portal: projects, invoices, tickets, AMC renew, payment proof.
+                </p>
+              </div>
+            )}
+            {loginAs === "client" && isSignUp && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-950/30">
+                <p className="text-xs">
+                  Clients cannot self-register. Use the invite link from Innovate Bhutan
+                  (or switch to Staff / Admin).
                 </p>
               </div>
             )}
@@ -233,10 +223,22 @@ export default function LoginPage() {
             
             <button
               type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => {
+                if (loginAs === "client") {
+                  toast.message("Invite only", {
+                    description: "Ask staff for a portal invite link.",
+                  });
+                  return;
+                }
+                setIsSignUp(!isSignUp);
+              }}
               className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
             >
-              {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Create one"}
+              {loginAs === "client"
+                ? "Need access? Ask for an invite"
+                : isSignUp
+                  ? "Already have an account? Sign in"
+                  : "Don't have an account? Create one"}
             </button>
           </CardFooter>
         </form>

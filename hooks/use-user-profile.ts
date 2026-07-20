@@ -11,6 +11,7 @@ interface UserProfile {
   userId: string;
   fullName: string | null;
   role: UserRole;
+  capabilities?: string[];
 }
 
 interface UseUserProfileResult {
@@ -20,6 +21,7 @@ interface UseUserProfileResult {
   isAdmin: boolean;
   isStaff: boolean;
   isClient: boolean;
+  canSeeMoney: boolean;
   error: string | null;
 }
 
@@ -176,6 +178,9 @@ export function useUserProfile(): UseUserProfileResult {
         userId: profileData.user_id,
         fullName: profileData.full_name,
         role: normalizeRole(profileData.role),
+        capabilities: Array.isArray(profileData.capabilities)
+          ? profileData.capabilities
+          : [],
       };
 
       console.log(`[useUserProfile] Profile loaded successfully:`, {
@@ -293,6 +298,11 @@ export function useUserProfile(): UseUserProfileResult {
     };
   }, [fetchProfileWithRetry]);
 
+  const canSeeMoney =
+    profile?.role === "ADMIN" ||
+    (Array.isArray(profile?.capabilities) &&
+      profile!.capabilities!.includes("see_money"));
+
   return {
     user,
     profile,
@@ -300,6 +310,7 @@ export function useUserProfile(): UseUserProfileResult {
     isAdmin: profile?.role === "ADMIN",
     isStaff: profile?.role === "STAFF",
     isClient: profile?.role === "CLIENT",
+    canSeeMoney,
     error,
   };
 }

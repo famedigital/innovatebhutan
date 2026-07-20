@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AppSidebar } from "@/components/app-sidebar";
 import { MobileBottomNav } from "@/components/admin/mobile-bottom-nav";
@@ -12,7 +11,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Bell, User, Settings, Search, LogOut, Key, Loader2 } from "lucide-react";
+import { User, Settings, Search, LogOut, Key, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,6 +25,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/utils/supabase/client";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
+import { NotificationBell } from "@/components/admin/notification-bell";
+import { OfflineQueueBadge } from "@/components/pwa/offline-queue-badge";
 
 export default function AdminLayout({
   children,
@@ -107,16 +108,8 @@ export default function AdminLayout({
               <Search className="size-4" />
               <span className="text-xs">Search</span>
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden sm:inline-flex"
-              asChild
-            >
-              <Link href="/admin/notifications">
-                <Bell className="size-4" />
-              </Link>
-            </Button>
+            <OfflineQueueBadge />
+            <NotificationBell />
             <ThemeToggle />
 
             <DropdownMenu>

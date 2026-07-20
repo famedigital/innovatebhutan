@@ -10,6 +10,11 @@ import { profiles } from '@/db/schema';
 import { AuthError } from '@/lib/errors/auth-error';
 import { AuthorizationError } from '@/lib/errors/auth-error';
 import { isApiError } from '@/lib/errors/api-error';
+import {
+  canSeeMoney,
+  hasCapability,
+  type Capability,
+} from '@/lib/auth/capabilities';
 
 /**
  * User profile structure from database
@@ -19,6 +24,7 @@ export interface UserProfile {
   userId: string;
   fullName?: string | null;
   role: string; // 'ADMIN' | 'STAFF' | 'CLIENT'
+  capabilities?: string[] | null;
   createdAt: Date;
 }
 
@@ -165,6 +171,9 @@ export async function requireApiAuth(request: Request): Promise<AuthContext> {
     userId: profileRow.userId,
     fullName: profileRow.fullName,
     role: (profileRow.role || "CLIENT").toString().toUpperCase().trim(),
+    capabilities: Array.isArray(profileRow.capabilities)
+      ? (profileRow.capabilities as string[])
+      : [],
     createdAt: profileRow.createdAt || new Date(),
   };
 
@@ -228,6 +237,30 @@ export function requireAdmin(profile: UserProfile): void {
 export function requireStaffOrAdmin(profile: UserProfile): void {
   requireRole(profile, ["ADMIN", "STAFF", "SUPERADMIN"]);
 }
+
+/**
+ * ERP bible: commercial money visibility (owner + sales head via ADMIN or see_money cap).
+ */
+export function requireSeeMoney(profile: UserProfile): void {
+  if (!canSeeMoney(profile)) {
+    throw new AuthorizationError(
+      "Insufficient permissions: see_money required (prices, invoices, payments)"
+    );
+  }
+}
+
+export function requireCapability(
+  profile: UserProfile,
+  capability: Capability
+): void {
+  if (!hasCapability(profile, capability)) {
+    throw new AuthorizationError(
+      `Insufficient permissions: ${capability} required`
+    );
+  }
+}
+
+export { canSeeMoney, hasCapability };
 
 /**
  * Check if user owns the resource or is admin

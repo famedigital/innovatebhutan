@@ -13,6 +13,9 @@ export default function AdminPage() {
     tickets: 0,
     revenue: 0,
     projects: 0,
+    needsQuote: 0,
+    unpaidInvoices: 0,
+    expiringAMC: 0,
     loading: true
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
@@ -67,6 +70,9 @@ export default function AdminPage() {
           tickets: s.openTickets || 0,
           revenue: s.monthlyRevenue || 0,
           projects: s.projects || s.activeProjects || 0,
+          needsQuote: s.needsQuote || 0,
+          unpaidInvoices: s.unpaidInvoices || s.pendingInvoices || 0,
+          expiringAMC: s.expiringAMC || 0,
           loading: false,
         });
         setRecentActivity(result.data.recentActivity?.slice(0, 5) || []);
@@ -113,6 +119,9 @@ export default function AdminPage() {
         tickets: openTickets || 0,
         revenue: income,
         projects: projects || 0,
+        needsQuote: 0,
+        unpaidInvoices: 0,
+        expiringAMC: 0,
         loading: false,
       });
 
@@ -169,6 +178,36 @@ export default function AdminPage() {
             <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">{a.sub}</p>
           </a>
         ))}
+      </div>
+
+      {/* Ops attention — Wave B */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <a
+          href="/admin/projects?status=needs_quote"
+          className="rounded-xl border bg-card p-4 hover:bg-muted/40 transition-colors"
+        >
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Needs quote</p>
+          <p className="text-2xl font-semibold tabular-nums mt-1">{stats.needsQuote}</p>
+          <p className="text-xs text-muted-foreground mt-1">Jobs waiting for price</p>
+        </a>
+        <a
+          href="/admin/invoice?status=sent"
+          className="rounded-xl border bg-card p-4 hover:bg-muted/40 transition-colors"
+        >
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Unpaid invoices</p>
+          <p className="text-2xl font-semibold tabular-nums mt-1">{stats.unpaidInvoices}</p>
+          <p className="text-xs text-muted-foreground mt-1">Sent or overdue</p>
+        </a>
+        <a
+          href="/admin/amc?status=expiring"
+          className="rounded-xl border bg-card p-4 hover:bg-muted/40 transition-colors"
+        >
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">AMC · 30 days</p>
+          <p className={`text-2xl font-semibold tabular-nums mt-1 ${stats.expiringAMC > 0 ? "text-amber-700 dark:text-amber-400" : ""}`}>
+            {stats.expiringAMC}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">Renewals due soon</p>
+        </a>
       </div>
 
       {/* Key Metrics */}

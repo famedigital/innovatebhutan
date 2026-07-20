@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { invoiceService } from "@/lib/services/invoiceService";
 import { createInvoiceSchema, invoiceQuerySchema } from "@/lib/validations/invoice";
-import { requireApiAuth, requireStaffOrAdmin, formatApiError, getClientIp } from "@/lib/auth/api-auth";
+import { requireApiAuth, requireStaffOrAdmin, requireSeeMoney, formatApiError, getClientIp } from "@/lib/auth/api-auth";
 import { checkRateLimit, rateLimitPresets } from "@/lib/rate-limit/rate-limiter";
 import { isApiError, RateLimitError } from "@/lib/errors";
 import { validateRequest, validateQueryParams } from "@/lib/validations/validation";
@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     console.log('[API /api/invoices] GET request received');
     const authContext = await requireApiAuth(req);
     requireStaffOrAdmin(authContext.profile);
+    requireSeeMoney(authContext.profile);
     console.log('[API /api/invoices] Auth check passed for user:', authContext.user.id, 'role:', authContext.profile.role);
 
     const searchParams = req.nextUrl.searchParams;
@@ -86,6 +87,7 @@ export async function POST(req: NextRequest) {
 
     const authContext = await requireApiAuth(req);
     requireStaffOrAdmin(authContext.profile);
+    requireSeeMoney(authContext.profile);
     console.log('[API /api/invoices] Auth check passed for user:', authContext.user.id, 'role:', authContext.profile.role);
 
     const body = await req.json();

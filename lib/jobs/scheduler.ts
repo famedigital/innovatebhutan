@@ -10,6 +10,7 @@
 import { amcExpiryCheckJob } from "./jobs/amc-expiry-check";
 import { invoiceOverdueCheckJob } from "./jobs/invoice-overdue-check";
 import { payrollReminderJob } from "./jobs/payroll-reminder";
+import { ticketSlaBreachJob } from "./jobs/ticket-sla-breach";
 
 export interface JobResult {
   success: boolean;
@@ -53,6 +54,13 @@ const jobs: Record<string, Job> = {
     description: "Check for pending payroll and generate reminders (optional, for notification integration).",
     schedule: "0 10 25 * *", // 25th of each month at 10 AM
     run: payrollReminderJob,
+  },
+  "ticket-sla-breach": {
+    id: "ticket-sla-breach",
+    name: "Ticket SLA Breach Check",
+    description: "Mark open/started tickets past sla_due_at and notify assignee + money people.",
+    schedule: "0 * * * *", // hourly
+    run: ticketSlaBreachJob,
   },
 };
 

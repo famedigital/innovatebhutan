@@ -1,5 +1,5 @@
 /* Innovates Bhutan ERP — Service Worker */
-const CACHE = "innovates-erp-v3";
+const CACHE = "innovates-erp-v4";
 const PRECACHE = [
   "/",
   "/login/",
@@ -23,6 +23,22 @@ self.addEventListener("activate", (event) => {
     )
   );
   self.clients.claim();
+});
+
+self.addEventListener("sync", (event) => {
+  if (event.tag === "offline-mutations") {
+    event.waitUntil(
+      self.clients.matchAll({ type: "window" }).then((clients) => {
+        clients.forEach((c) => c.postMessage({ type: "FLUSH_OFFLINE_QUEUE" }));
+      })
+    );
+  }
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {

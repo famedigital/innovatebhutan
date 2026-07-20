@@ -133,6 +133,10 @@ export default function ClientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(initialTab);
   const [showEdit, setShowEdit] = useState(false);
+  const [showPortalInvite, setShowPortalInvite] = useState(false);
+  const [portalInviteEmail, setPortalInviteEmail] = useState("");
+  const [portalInviteUrl, setPortalInviteUrl] = useState<string | null>(null);
+  const [portalInviteBusy, setPortalInviteBusy] = useState(false);
   const [team, setTeam] = useState<TeamRow[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [assignStaffId, setAssignStaffId] = useState("");
@@ -353,6 +357,18 @@ export default function ClientDetailPage() {
             <Badge variant="outline">
               {client.active ? "Active" : "Inactive"}
             </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPortalInviteEmail(client.email || "");
+                setPortalInviteUrl(null);
+                setShowPortalInvite(true);
+              }}
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Portal invite
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
               <Edit className="w-4 h-4 mr-2" />
               Edit
@@ -872,6 +888,79 @@ export default function ClientDetailPage() {
           }}
         />
       )}
+
+      <Dialog open={showPortalInvite} onOpenChange={setShowPortalInvite}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite to client portal</DialogTitle>
+            <DialogDescription>
+              Send an invite-only link. Client sets a password at{" "}
+              <code className="text-xs">/portal/accept</code>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Email</label>
+              <Input
+                type="email"
+                value={portalInviteEmail}
+                onChange={(e) => setPortalInviteEmail(e.target.value)}
+                placeholder="client@company.bt"
+              />
+            </div>
+            {portalInviteUrl && (
+              <div className="rounded-md border bg-muted/40 p-3 space-y-2">
+                <p className="text-xs text-muted-foreground">Invite link (copy & share)</p>
+                <Input readOnly value={portalInviteUrl} className="text-xs" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(portalInviteUrl);
+                    toast.success("Link copied");
+                  }}
+                >
+                  Copy link
+                </Button>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPortalInvite(false)}>
+              Close
+            </Button>
+            <Button
+              disabled={portalInviteBusy || !portalInviteEmail}
+              onClick={async () => {
+                setPortalInviteBusy(true);
+                try {
+                  const res = await fetch("/api/portal/invite", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      clientId: client.id,
+                      email: portalInviteEmail,
+                    }),
+                  });
+                  const json = await res.json();
+                  if (!json.success) {
+                    toast.error(json.error || "Invite failed");
+                    return;
+                  }
+                  setPortalInviteUrl(json.data.inviteUrl);
+                  toast.success("Invite created");
+                } catch {
+                  toast.error("Network error");
+                } finally {
+                  setPortalInviteBusy(false);
+                }
+              }}
+            >
+              {portalInviteBusy ? "Creating…" : "Create invite"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AmcRenewalDesk
         amc={renewAmc}

@@ -89,6 +89,7 @@ export interface StockIssueDTO {
   rate?: string;
   referenceType?: string;
   referenceId?: number;
+  serialNo?: string;
   remarks?: string;
   postingDate?: Date;
 }
@@ -362,8 +363,9 @@ export class InventoryService {
       binId: data.binId,
       quantity: -data.quantity, // Negative for issue
       type: "issue",
-      referenceType: data.referenceType,
+      referenceType: data.referenceType || (data.referenceId ? "project" : undefined),
       referenceId: data.referenceId,
+      serialNo: data.serialNo,
       rate: data.rate,
       amount: data.rate && data.quantity
         ? (parseFloat(data.rate) * data.quantity).toString()

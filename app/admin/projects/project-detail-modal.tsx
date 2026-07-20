@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, Plus, Trash2, Edit2, Calendar, Clock, User, CheckCircle2, Circle, AlertCircle, Loader2, RefreshCw, Building2, DollarSign, Save, XCircle } from "lucide-react";
+import { X, Plus, Trash2, Edit2, Calendar, Clock, User, CheckCircle2, Circle, AlertCircle, Loader2, RefreshCw, Building2, DollarSign, Save, XCircle, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useUserProfile } from "@/hooks/use-user-profile";
+import { ProjectMoneyStatusPanel } from "./project-money-status-panel";
+import {
+  PROJECT_STATUS_COLORS,
+  PROJECT_STATUS_LABELS,
+} from "@/lib/projects/statusUi";
+import { formatNu } from "@/lib/projects/statusUi";
+import { renderWorkOrderPdf } from "@/lib/projects/renderWorkOrderPdf";
+import { fetchOrQueue, isQueuedResult } from "@/lib/pwa/offline-queue";
 
 type Task = {
   id: number;
@@ -72,7 +81,12 @@ export function ProjectDetailModal({
   onClose: () => void;
   onUpdated: () => void;
 }) {
+  const { canSeeMoney } = useUserProfile();
   const [loading, setLoading] = useState(true);
+  const [detailProject, setDetailProject] = useState<any>(project);
+  const [moneySummary, setMoneySummary] = useState<any>(
+    project.moneySummary || null
+  );
   const [tasks, setTasks] = useState<Task[]>([]);
   const [stats, setStats] = useState<ProjectStats | null>(null);
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -108,13 +122,23 @@ export function ProjectDetailModal({
     try {
       setLoading(true);
 
-      const [tasksRes, statsRes] = await Promise.all([
+      const [detailRes, tasksRes, statsRes] = await Promise.all([
+        fetch(`/api/projects/${project.id}`),
         fetch(`/api/projects/${project.id}/tasks`),
         fetch(`/api/projects/${project.id}/progress`),
       ]);
 
+      const detailResult = await detailRes.json();
       const tasksResult = await tasksRes.json();
       const statsResult = await statsRes.json();
+
+      if (detailResult.success) {
+        const p = detailResult.data?.project || detailResult.data;
+        if (p) {
+          setDetailProject({ ...project, ...p });
+          setMoneySummary(p.moneySummary || detailResult.data?.moneySummary || null);
+        }
+      }
 
       if (tasksResult.success) {
         setTasks(
@@ -140,7 +164,7 @@ export function ProjectDetailModal({
     } finally {
       setLoading(false);
     }
-  }, [project.id]);
+  }, [project]);
 
   useEffect(() => {
     fetchProjectData();
@@ -274,11 +298,17 @@ export function ProjectDetailModal({
 
   const handleUpdateProject = async (field: string, value: any) => {
     try {
-      const response = await fetch(`/api/projects/${project.id}`, {
+      const response = await fetchOrQueue(`/api/projects/${project.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ [field]: value }),
+        queueLabel: `Update project ${project.id}`,
       });
+
+      if (isQueuedResult(response)) {
+        toast.message("Saved offline — will sync when online");
+        return;
+      }
 
       const result = await response.json();
 
@@ -400,24 +430,31 @@ export function ProjectDetailModal({
             ) : (
               <>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-base sm:text-xl font-semibold truncate">{project.name}</h2>
-                  <Badge className={statusConfig[project.status]?.color || ""}>
-                    {project.status?.replace("_", " ") || "Unknown"}
+                  <h2 className="text-base sm:text-xl font-semibold truncate">{detailProject.name}</h2>
+                  <Badge
+                    variant="outline"
+                    className={PROJECT_STATUS_COLORS[detailProject.status] || ""}
+                  >
+                    {PROJECT_STATUS_LABELS[detailProject.status] ||
+                      detailProject.status?.replace(/_/g, " ") ||
+                      "Unknown"}
                   </Badge>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs sm:text-sm text-muted-foreground">
                   <span className="flex items-center gap-1 min-w-0">
                     <Building2 className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{project.clientName || "-"}</span>
+                    <span className="truncate">{detailProject.clientName || project.clientName || "-"}</span>
                   </span>
                   <span className="flex items-center gap-1 min-w-0">
                     <User className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{project.leadName || "-"}</span>
+                    <span className="truncate">{detailProject.leadName || project.leadName || "-"}</span>
                   </span>
-                  {project.budget && (
+                  {canSeeMoney && (moneySummary?.quotedTotal || detailProject.budget) && (
                     <span className="flex items-center gap-1">
                       <DollarSign className="w-3 h-3" />
-                      Nu. {project.budget}
+                      {moneySummary?.quotedTotal
+                        ? formatNu(moneySummary.quotedTotal)
+                        : `Nu. ${detailProject.budget}`}
                     </span>
                   )}
                   <span>Progress: {loading ? "..." : `${stats?.progressPercentage || 0}%`}</span>
@@ -432,10 +469,64 @@ export function ProjectDetailModal({
                 <span className="hidden sm:inline">Edit</span>
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={async () => {
+                try {
+                  const blob = await renderWorkOrderPdf({
+                    projectName: detailProject.name || project.name,
+                    projectId: project.id,
+                    clientName:
+                      detailProject.clientName || project.clientName || undefined,
+                    clientPhone:
+                      detailProject.clientPhone || project.clientPhone || undefined,
+                    productKey:
+                      detailProject.productKey || project.productKey || undefined,
+                    status: detailProject.status || project.status,
+                    description:
+                      detailProject.description || project.description || undefined,
+                    tasks: tasks.map((t) => ({
+                      title: t.title,
+                      status: t.status,
+                    })),
+                  });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `WO-${project.id}-${(detailProject.name || "job")
+                    .replace(/\s+/g, "-")
+                    .slice(0, 40)}.pdf`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch (err) {
+                  console.error(err);
+                  toast.error("Could not generate work order PDF");
+                }
+              }}
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Work order</span>
+            </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
               <X className="w-5 h-5" />
             </Button>
           </div>
+        </div>
+
+        {/* Wave A: money + status pipeline */}
+        <div className="px-4 pt-3">
+          <ProjectMoneyStatusPanel
+            projectId={project.id}
+            status={detailProject.status || project.status}
+            moneySummary={moneySummary}
+            canSeeMoney={canSeeMoney}
+            onUpdated={() => {
+              fetchProjectData();
+              onUpdated();
+            }}
+          />
         </div>
 
         {/* Edit Form - Extended Fields */}
@@ -451,8 +542,12 @@ export function ProjectDetailModal({
                     placeholder="0.00"
                     value={projectForm.budget}
                     onChange={(e) => setProjectForm({ ...projectForm, budget: e.target.value })}
+                    disabled={!canSeeMoney}
                   />
                 </div>
+                {!canSeeMoney && (
+                  <p className="text-[10px] text-muted-foreground">Money hidden for your role</p>
+                )}
               </div>
 
               <div className="space-y-2">

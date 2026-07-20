@@ -1,12 +1,21 @@
 import { ticketRepository } from "@/lib/repositories/ticketRepository";
 import type { CreateTicketInput, UpdateTicketInput } from "@/lib/validations/ticket";
 import { writeAuditLog } from "@/lib/audit/writeAuditLog";
+import { notificationService } from "@/lib/services/notificationService";
 
-const PRIORITY_SLA_HOURS: Record<string, number> = {
+export const PRIORITY_SLA_HOURS: Record<string, number> = {
   high: 4,
   medium: 24,
   low: 72,
 };
+
+export function computeSlaDueAt(
+  priority: string | null | undefined,
+  from: Date = new Date()
+): Date {
+  const hours = PRIORITY_SLA_HOURS[priority || "medium"] || 24;
+  return new Date(from.getTime() + hours * 60 * 60 * 1000);
+}
 
 function makePublicId() {
   return `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random()
@@ -71,18 +80,25 @@ export class TicketService {
       status?: string | null;
       priority?: string | null;
       createdAt?: Date | null;
+      slaDueAt?: Date | string | null;
+      slaBreachedAt?: Date | string | null;
     }
   >(ticket: T) {
     const createdAt = ticket.createdAt ? new Date(ticket.createdAt) : new Date();
-    const slaHours = PRIORITY_SLA_HOURS[ticket.priority || "medium"] || 24;
-    const slaDeadline = new Date(createdAt.getTime() + slaHours * 60 * 60 * 1000);
+    const slaDeadline = ticket.slaDueAt
+      ? new Date(ticket.slaDueAt)
+      : computeSlaDueAt(ticket.priority, createdAt);
     const waiting =
       ticket.status === "open" || ticket.status === "started";
-    const isBreached = waiting && new Date() > slaDeadline;
+    const isBreached = Boolean(
+      ticket.slaBreachedAt || (waiting && new Date() > slaDeadline)
+    );
     return {
       ...ticket,
       slaBreach: isBreached,
+      sla_breach: isBreached,
       slaDeadline,
+      sla_deadline: slaDeadline,
     };
   }
 
@@ -136,16 +152,19 @@ export class TicketService {
   }
 
   async createTicket(data: CreateTicketInput, operatorId?: number) {
+    const priority = data.priority || "medium";
     const ticket = await this.repository.createTicket({
       publicId: makePublicId(),
       clientId: data.clientId,
       subject: data.subject,
       description: data.description,
-      priority: data.priority || "medium",
+      priority,
       assignedTo: data.assignedTo,
       status: "open",
       productKey: data.productKey || null,
       source: data.source || "call_centre",
+      billable: data.billable ?? false,
+      slaDueAt: computeSlaDueAt(priority),
     });
     await writeAuditLog({
       operatorId,
@@ -154,6 +173,19 @@ export class TicketService {
       entityId: ticket.id,
       details: { subject: ticket.subject, clientId: ticket.clientId },
     });
+
+    if (data.assignedTo) {
+      try {
+        await notificationService.notifyTicketAssigned(
+          data.assignedTo,
+          ticket.id,
+          ticket.publicId || `TKT-${ticket.id}`,
+          ticket.subject
+        );
+      } catch (err) {
+        console.error("[Ticket] assign notify failed:", err);
+      }
+    }
 
     if (data.startAndNotify && data.assignedTo) {
       return this.startTicket(ticket.id, operatorId);
@@ -282,14 +314,45 @@ export class TicketService {
       }
     }
 
+    const nextPriority = data.priority ?? existing.priority;
+    const priorityChanged =
+      data.priority !== undefined && data.priority !== existing.priority;
+
     const ticket = await this.repository.updateTicket(id, {
       subject: data.subject,
       description: data.description,
       status: data.status,
       priority: data.priority,
       productKey: data.productKey,
+      billable: data.billable,
+      ...(priorityChanged
+        ? {
+            slaDueAt: computeSlaDueAt(
+              nextPriority,
+              existing.createdAt ? new Date(existing.createdAt) : new Date()
+            ),
+            slaBreachedAt: null,
+          }
+        : {}),
       ...(data.assignedTo !== undefined ? { assignedTo: data.assignedTo } : {}),
     });
+
+    if (
+      data.assignedTo &&
+      data.assignedTo !== existing.assignedTo
+    ) {
+      try {
+        await notificationService.notifyTicketAssigned(
+          data.assignedTo,
+          id,
+          existing.publicId || `TKT-${id}`,
+          data.subject || existing.subject
+        );
+      } catch (err) {
+        console.error("[Ticket] assign notify failed:", err);
+      }
+    }
+
     await writeAuditLog({
       operatorId,
       action: "UPDATE",
@@ -297,7 +360,7 @@ export class TicketService {
       entityId: id,
       details: { before: existing, after: data },
     });
-    return ticket;
+    return this.withSla(ticket);
   }
 
   async deleteTicket(id: number, operatorId?: number) {

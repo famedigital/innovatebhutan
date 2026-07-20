@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { projectService } from "@/lib/services/projectService";
 import { createProjectSchema, projectQuerySchema } from "@/lib/validations/project";
-import { requireApiAuth, requireStaffOrAdmin, formatApiError, getClientIp } from "@/lib/auth/api-auth";
+import { requireApiAuth, requireStaffOrAdmin, formatApiError, getClientIp, canSeeMoney } from "@/lib/auth/api-auth";
+import { redactProjectsMoney, redactProjectMoney } from "@/lib/auth/capabilities";
 import { checkRateLimit, rateLimitPresets } from "@/lib/rate-limit/rate-limiter";
 import { isApiError, RateLimitError } from "@/lib/errors";
 import { validateRequest, validateQueryParams } from "@/lib/validations/validation";
+import { moneySummary, parseMoneyMeta } from "@/lib/projects/moneyMeta";
+import { normalizeStatus } from "@/lib/services/projectService";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
@@ -41,6 +44,20 @@ export async function GET(req: NextRequest) {
       offset,
     });
 
+    const seeMoney = canSeeMoney(authContext.profile);
+    const data = seeMoney
+      ? result.projects.map((p: any) => ({
+          ...p,
+          status: normalizeStatus(p.status),
+          moneySummary: moneySummary(parseMoneyMeta(p.moneyMeta)),
+        }))
+      : redactProjectsMoney(
+          result.projects.map((p: any) => ({
+            ...p,
+            status: normalizeStatus(p.status),
+          }))
+        );
+
     console.log('[API /api/projects] Projects fetched successfully:', {
       count: result.projects.length,
       total: result.total,
@@ -48,7 +65,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: result.projects,
+      data,
       pagination: {
         page,
         limit,
@@ -103,7 +120,12 @@ export async function POST(req: NextRequest) {
 
     const project = await projectService.createProject(
       validatedData,
-      authContext.profile.userId
+      authContext.profile.userId,
+      {
+        profileId: authContext.profile.id,
+        role: authContext.profile.role,
+        capabilities: authContext.profile.capabilities,
+      }
     );
 
     // Log to audit
@@ -114,10 +136,26 @@ export async function POST(req: NextRequest) {
         entity_type: "PROJECT",
         entity_id: project.id,
         operator_id: authContext.profile.userId,
-        details: { project_name: project.name, client_id: project.clientId },
+        details: {
+          project_name: project.name,
+          client_id: project.clientId,
+          status: project.status,
+          product_key: (project as any).productKey,
+        },
       },
     ]);
 
+    const seeMoney = canSeeMoney(authContext.profile);
+    const payload = seeMoney
+      ? {
+          ...project,
+          status: normalizeStatus(project.status),
+          moneySummary: moneySummary(parseMoneyMeta((project as any).moneyMeta)),
+        }
+      : redactProjectMoney({
+          ...project,
+          status: normalizeStatus(project.status),
+        } as any);
     console.log('[API /api/projects] Project created successfully:', {
       projectId: project.id,
       projectName: project.name,
@@ -127,7 +165,7 @@ export async function POST(req: NextRequest) {
       {
         success: true,
         message: "Project created successfully",
-        data: project,
+        data: payload,
       },
       { status: 201 }
     );

@@ -2,8 +2,38 @@ import { projectRepository, type ProjectFilters, type ProjectStats } from "@/lib
 import type { Project, ProjectTask } from "@/lib/repositories/projectRepository";
 import { AuthorizationError } from "@/lib/errors/auth-error";
 import { projectMemberService } from "@/lib/services/projectMemberService";
+import { invoiceService } from "@/lib/services/invoiceService";
+import { notificationService } from "@/lib/services/notificationService";
+import { db } from "@/db";
+import { profiles } from "@/db/schema";
+import { eq, or, sql } from "drizzle-orm";
+import { canSeeMoney } from "@/lib/auth/capabilities";
+import {
+  buildInitialMoneyMeta,
+  isAdvanceRecorded,
+  isBalanceSettled,
+  moneySummary,
+  parseMoneyMeta,
+  type PaymentMethod,
+  type ProjectMoneyMeta,
+} from "@/lib/projects/moneyMeta";
+import type { ProductKey } from "@/lib/config/products";
 
-export type ProjectStatus = "planning" | "active" | "testing" | "complete" | "on_hold" | "cancelled";
+/** Bible stages + legacy aliases normalized in normalizeStatus */
+export type ProjectStatus =
+  | "needs_quote"
+  | "quoted"
+  | "demo"
+  | "advance_paid"
+  | "in_progress"
+  | "testing"
+  | "done"
+  | "on_hold"
+  | "cancelled"
+  | "planning"
+  | "active"
+  | "complete";
+
 export type TaskStatus = "todo" | "in_progress" | "done" | "blocked";
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
 
@@ -12,10 +42,14 @@ export interface CreateProjectDTO {
   serviceId?: number;
   name: string;
   description?: string;
-  leadId?: string; // User ID (string) from Supabase Auth
+  leadId?: string;
   startDate?: Date;
   endDate?: Date;
   budget?: string;
+  productKey?: ProductKey;
+  quotedAmount?: number;
+  advancePercent?: number;
+  createInvoice?: boolean;
 }
 
 export interface UpdateProjectDTO {
@@ -23,15 +57,24 @@ export interface UpdateProjectDTO {
   name?: string;
   description?: string;
   status?: ProjectStatus;
-  leadId?: string; // User ID (string) from Supabase Auth
+  leadId?: string;
   startDate?: Date;
   endDate?: Date;
   budget?: string;
+  productKey?: ProductKey;
+  holdReason?: string;
+  cancelReason?: string;
+  refundStatus?: "refunded" | "non_refundable" | "none";
+  overrideAdvanceGate?: boolean;
+  freeSupportDays?: number;
+  quotedAmount?: number;
+  advancePercent?: number;
+  priceChangeReason?: string;
 }
 
 export interface CreateTaskDTO {
   projectId: number;
-  assignedTo?: string; // User ID (string) from Supabase Auth
+  assignedTo?: string;
   title: string;
   description?: string;
   priority?: TaskPriority;
@@ -40,7 +83,7 @@ export interface CreateTaskDTO {
 }
 
 export interface UpdateTaskDTO {
-  assignedTo?: string; // User ID (string) from Supabase Auth
+  assignedTo?: string;
   title?: string;
   description?: string;
   status?: TaskStatus;
@@ -50,62 +93,73 @@ export interface UpdateTaskDTO {
   actualHours?: string;
 }
 
+export function normalizeStatus(status: string | null | undefined): ProjectStatus {
+  const s = (status || "quoted").toLowerCase();
+  if (s === "planning") return "quoted";
+  if (s === "active") return "in_progress";
+  if (s === "complete") return "done";
+  return s as ProjectStatus;
+}
+
 export class ProjectService {
   private repository = projectRepository;
 
-  // ==================== STATUS TRANSITIONS ====================
-
-  /**
-   * Valid task status transitions
-   * todo -> in_progress, blocked
-   * in_progress -> done, blocked, todo
-   * blocked -> todo, in_progress
-   * done -> todo (reopened), in_progress (reopened and started)
-   */
   private readonly validTaskTransitions: Record<TaskStatus, TaskStatus[]> = {
     todo: ["in_progress", "blocked"],
     in_progress: ["done", "blocked", "todo"],
     blocked: ["todo", "in_progress"],
-    done: ["todo", "in_progress"], // Allow reopening
+    done: ["todo", "in_progress"],
   };
 
-  /**
-   * Validate task status transition
-   */
   private validateTaskStatusTransition(currentStatus: TaskStatus, newStatus: TaskStatus): boolean {
-    if (currentStatus === newStatus) return true; // No-op is allowed
+    if (currentStatus === newStatus) return true;
     return this.validTaskTransitions[currentStatus]?.includes(newStatus) ?? false;
   }
 
+  private validProjectTransitions: Record<string, string[]> = {
+    needs_quote: ["quoted", "cancelled"],
+    quoted: ["demo", "advance_paid", "in_progress", "on_hold", "cancelled"],
+    demo: ["advance_paid", "quoted", "on_hold", "cancelled"],
+    advance_paid: ["in_progress", "on_hold", "cancelled"],
+    in_progress: ["testing", "on_hold", "cancelled"],
+    testing: ["in_progress", "done", "on_hold"],
+    done: [],
+    on_hold: ["quoted", "demo", "advance_paid", "in_progress", "cancelled"],
+    cancelled: [],
+  };
+
   // ==================== PROJECT OPERATIONS ====================
 
-  async createProject(data: CreateProjectDTO, userId?: string): Promise<Project> {
-    // Generate public ID
+  async createProject(
+    data: CreateProjectDTO,
+    userId?: string,
+    opts?: { profileId?: number; role?: string; capabilities?: string[] | null }
+  ): Promise<Project & { invoiceId?: number }> {
     const publicId = `proj_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
+    const hasQuote =
+      typeof data.quotedAmount === "number" && data.quotedAmount > 0;
+    const actorCanPrice = opts
+      ? canSeeMoney({ role: opts.role || "STAFF", capabilities: opts.capabilities })
+      : true;
 
-    // Use atomic transaction to create project with owner
-    // This ensures either both succeed or both fail - no orphaned projects
-    if (userId) {
-      return await this.repository.createProjectWithOwner(
-        {
-          publicId,
-          clientId: data.clientId,
-          serviceId: data.serviceId,
-          name: data.name,
-          description: data.description,
-          leadId: data.leadId,
-          startDate: data.startDate,
-          endDate: data.endDate,
-          budget: data.budget,
-          status: "planning",
-          progress: 0,
-        },
-        userId
-      );
+    let status: ProjectStatus = "quoted";
+    let moneyMeta: ProjectMoneyMeta = {};
+
+    if (!hasQuote || !actorCanPrice) {
+      status = "needs_quote";
+    } else {
+      status =
+        data.productKey === "website" ? "quoted" : "quoted";
+      moneyMeta = buildInitialMoneyMeta({
+        quotedAmount: data.quotedAmount!,
+        advancePercent: data.advancePercent,
+      });
+      if (data.budget === undefined) {
+        data.budget = String(data.quotedAmount);
+      }
     }
 
-    // Fallback for projects created without a user (e.g., by system)
-    return await this.repository.createProject({
+    const insert = {
       publicId,
       clientId: data.clientId,
       serviceId: data.serviceId,
@@ -115,9 +169,80 @@ export class ProjectService {
       startDate: data.startDate,
       endDate: data.endDate,
       budget: data.budget,
-      status: "planning",
+      productKey: data.productKey,
+      moneyMeta,
+      status,
       progress: 0,
-    });
+    };
+
+    const project = userId
+      ? await this.repository.createProjectWithOwner(insert, userId)
+      : await this.repository.createProject(insert);
+
+    if (status === "needs_quote") {
+      await this.notifyNeedsQuote(project);
+      return project;
+    }
+
+    let invoiceId: number | undefined;
+    if (data.createInvoice !== false && hasQuote && actorCanPrice) {
+      try {
+        const due = new Date();
+        due.setDate(due.getDate() + 14);
+        const invoice = await invoiceService.generateInvoice({
+          clientId: data.clientId,
+          issueDate: new Date(),
+          dueDate: due,
+          productKey: (data.productKey || "rancelab") as any,
+          notes: `Quote for project: ${data.name}`,
+          items: [
+            {
+              description: data.description || data.name,
+              quantity: 1,
+              rate: data.quotedAmount!,
+            },
+          ],
+        });
+        invoiceId = invoice.id;
+        moneyMeta = { ...moneyMeta, invoiceId };
+        await this.repository.updateProject(project.id, {
+          moneyMeta,
+        });
+      } catch (err) {
+        console.error("[ProjectService] Quote invoice failed:", err);
+      }
+    }
+
+    return { ...project, moneyMeta, invoiceId };
+  }
+
+  private async notifyNeedsQuote(project: Project): Promise<void> {
+    try {
+      const moneyPeople = await db
+        .select({ id: profiles.id })
+        .from(profiles)
+        .where(
+          or(
+            eq(profiles.role, "ADMIN"),
+            eq(profiles.role, "SUPERADMIN"),
+            sql`${profiles.capabilities}::jsonb ? 'see_money'`
+          )
+        );
+      for (const p of moneyPeople) {
+        await notificationService.createNotification({
+          profileId: p.id,
+          title: "Needs quote",
+          message: `Project "${project.name}" is waiting for a quoted price`,
+          type: "warning",
+          category: "project_updated",
+          entityType: "project",
+          entityId: project.id,
+          link: `/admin/projects?projectId=${project.id}`,
+        });
+      }
+    } catch (err) {
+      console.error("[ProjectService] Needs quote notify failed:", err);
+    }
   }
 
   async getProjectById(id: number): Promise<Project | null> {
@@ -128,23 +253,25 @@ export class ProjectService {
     return await this.repository.getProjectByPublicId(publicId);
   }
 
-  async updateProject(id: number, data: UpdateProjectDTO, userId?: string, userRole?: string): Promise<Project> {
+  async updateProject(
+    id: number,
+    data: UpdateProjectDTO,
+    userId?: string,
+    userRole?: string,
+    opts?: { capabilities?: string[] | null; overrideAdvanceGate?: boolean }
+  ): Promise<Project> {
     const project = await this.repository.getProjectById(id);
     if (!project) {
       throw new Error("Project not found");
     }
 
-    // 🔒 Authorization check - check both RBAC membership and legacy lead check
     let canModify = false;
     if (userId) {
-      // Check new RBAC membership
       canModify = await projectMemberService.canModifyProject(id, userId);
-      // Fall back to legacy check if not a member but is the lead
       if (!canModify && userRole) {
         canModify = this.canUserModifyProject(project, userId, userRole);
       }
-      // Admin/Staff can always modify
-      if (!canModify && (userRole === "ADMIN" || userRole === "STAFF")) {
+      if (!canModify && (userRole === "ADMIN" || userRole === "STAFF" || userRole === "SUPERADMIN")) {
         canModify = true;
       }
     }
@@ -153,15 +280,139 @@ export class ProjectService {
       throw new AuthorizationError("You do not have permission to modify this project");
     }
 
-    // If status is being changed to 'complete', validate all tasks are done
-    if (data.status === "complete") {
-      const isValid = await this.validateProjectCanBeCompleted(id);
-      if (!isValid) {
-        throw new Error("Cannot mark project as complete: there are incomplete tasks");
+    const meta = parseMoneyMeta(project.moneyMeta);
+    const patch: Record<string, unknown> = { ...data };
+    delete patch.holdReason;
+    delete patch.cancelReason;
+    delete patch.refundStatus;
+    delete patch.overrideAdvanceGate;
+    delete patch.freeSupportDays;
+    delete patch.quotedAmount;
+    delete patch.advancePercent;
+    delete patch.priceChangeReason;
+
+    // Apply money / quote updates
+    if (typeof data.quotedAmount === "number") {
+      if (!canSeeMoney({ role: userRole || "STAFF", capabilities: opts?.capabilities })) {
+        throw new AuthorizationError("see_money required to set quote");
+      }
+      const nextMeta = buildInitialMoneyMeta({
+        quotedAmount: data.quotedAmount,
+        advancePercent: data.advancePercent,
+      });
+      nextMeta.invoiceId = meta.invoiceId;
+      if (data.priceChangeReason) nextMeta.priceChangeReason = data.priceChangeReason;
+      patch.moneyMeta = nextMeta;
+      patch.budget = String(data.quotedAmount);
+      if (normalizeStatus(project.status) === "needs_quote") {
+        patch.status = project.productKey === "website" || data.productKey === "website"
+          ? "quoted"
+          : "quoted";
       }
     }
 
-    return await this.repository.updateProject(id, data);
+    if (typeof data.freeSupportDays === "number") {
+      patch.moneyMeta = {
+        ...parseMoneyMeta((patch.moneyMeta as ProjectMoneyMeta) || meta),
+        freeSupportDays: data.freeSupportDays,
+      };
+    }
+
+    if (data.status) {
+      const target = normalizeStatus(data.status);
+      await this.assertStatusTransition(project, target, {
+        role: userRole,
+        capabilities: opts?.capabilities,
+        overrideAdvanceGate: data.overrideAdvanceGate || opts?.overrideAdvanceGate,
+        holdReason: data.holdReason,
+        cancelReason: data.cancelReason,
+        refundStatus: data.refundStatus,
+      });
+      patch.status = target;
+
+      if (target === "on_hold") {
+        patch.moneyMeta = {
+          ...parseMoneyMeta((patch.moneyMeta as ProjectMoneyMeta) || meta),
+          holdReason: data.holdReason || meta.holdReason || "On hold",
+        };
+      }
+      if (target === "cancelled") {
+        patch.moneyMeta = {
+          ...parseMoneyMeta((patch.moneyMeta as ProjectMoneyMeta) || meta),
+          cancelReason: data.cancelReason || meta.cancelReason || "Cancelled",
+          refundStatus: data.refundStatus || meta.refundStatus || "none",
+        };
+      }
+    }
+
+    return await this.repository.updateProject(id, patch as any);
+  }
+
+  private async assertStatusTransition(
+    project: Project,
+    newStatus: ProjectStatus,
+    ctx: {
+      role?: string;
+      capabilities?: string[] | null;
+      overrideAdvanceGate?: boolean;
+      holdReason?: string;
+      cancelReason?: string;
+      refundStatus?: string;
+    }
+  ): Promise<void> {
+    const current = normalizeStatus(project.status);
+    if (current === newStatus) return;
+
+    const allowed = this.validProjectTransitions[current] || [];
+    if (!allowed.includes(newStatus)) {
+      throw new Error(
+        `Cannot transition from ${current} to ${newStatus}. Valid: ${allowed.join(", ") || "none"}`
+      );
+    }
+
+    const meta = parseMoneyMeta(project.moneyMeta);
+    const moneyActor = canSeeMoney({
+      role: ctx.role || "STAFF",
+      capabilities: ctx.capabilities,
+    });
+
+    if (newStatus === "in_progress" && !isAdvanceRecorded(meta)) {
+      if (!(ctx.overrideAdvanceGate && moneyActor)) {
+        throw new Error(
+          "Advance not recorded. Record advance, or override with see_money (soft gate)."
+        );
+      }
+    }
+
+    if (newStatus === "done") {
+      const tasksOk = await this.validateProjectCanBeCompleted(project.id);
+      if (!tasksOk) {
+        throw new Error("Cannot mark done: incomplete tasks remain");
+      }
+      if (!isBalanceSettled(meta)) {
+        throw new Error(
+          "Cannot mark done: record balance payment or write-off first"
+        );
+      }
+    }
+
+    if (newStatus === "on_hold" && !ctx.holdReason && !meta.holdReason) {
+      throw new Error("On hold requires a reason");
+    }
+
+    if (newStatus === "cancelled") {
+      if (!moneyActor) {
+        throw new AuthorizationError("Only owner/sales head can cancel projects");
+      }
+      if (!ctx.cancelReason && !meta.cancelReason) {
+        throw new Error("Cancel requires a reason");
+      }
+      if (isAdvanceRecorded(meta) && !ctx.refundStatus && !meta.refundStatus) {
+        throw new Error(
+          "Advance was paid: set refundStatus to refunded or non_refundable"
+        );
+      }
+    }
   }
 
   async deleteProject(id: number, userId?: string, userRole?: string): Promise<void> {
@@ -169,13 +420,9 @@ export class ProjectService {
     if (!project) {
       throw new Error("Project not found");
     }
-
-    // 🔒 Only admins can delete projects
-    if (userRole !== "ADMIN") {
-      throw new AuthorizationError("Only administrators can delete projects");
+    if (userRole !== "ADMIN" && userRole !== "SUPERADMIN") {
+      throw new AuthorizationError("Only administrators can archive projects");
     }
-
-    // Soft delete the project (also cascades to tasks)
     await this.repository.softDeleteProject(id);
   }
 
@@ -184,12 +431,9 @@ export class ProjectService {
     if (!project) {
       throw new Error("Project not found (including soft deleted)");
     }
-
-    // 🔒 Only admins can restore projects
-    if (userRole !== "ADMIN") {
+    if (userRole !== "ADMIN" && userRole !== "SUPERADMIN") {
       throw new AuthorizationError("Only administrators can restore projects");
     }
-
     await this.repository.restoreProject(id);
   }
 
@@ -197,51 +441,108 @@ export class ProjectService {
     return await this.repository.listProjectsWithDetails(filters);
   }
 
-  // ==================== STATUS TRANSITIONS ====================
-
-  async transitionProjectStatus(projectId: number, newStatus: ProjectStatus): Promise<Project> {
-    const project = await this.repository.getProjectById(projectId);
-    if (!project) {
-      throw new Error("Project not found");
+  async transitionProjectStatus(
+    projectId: number,
+    newStatus: ProjectStatus,
+    ctx?: {
+      userId?: string;
+      role?: string;
+      capabilities?: string[] | null;
+      overrideAdvanceGate?: boolean;
+      holdReason?: string;
+      cancelReason?: string;
+      refundStatus?: "refunded" | "non_refundable" | "none";
     }
-
-    // Validate status transition
-    const validTransitions: Record<ProjectStatus, ProjectStatus[]> = {
-      planning: ["active", "on_hold", "cancelled"],
-      active: ["testing", "on_hold", "cancelled"],
-      testing: ["active", "complete", "on_hold"],
-      complete: [], // Terminal state
-      on_hold: ["active", "cancelled"],
-      cancelled: [], // Terminal state
-    };
-
-    const currentStatus = project.status as ProjectStatus;
-    if (!validTransitions[currentStatus]?.includes(newStatus)) {
-      throw new Error(
-        `Cannot transition from ${currentStatus} to ${newStatus}. Valid transitions: ${validTransitions[currentStatus]?.join(", ") || "none"}`
-      );
-    }
-
-    return await this.repository.updateProject(projectId, { status: newStatus });
+  ): Promise<Project> {
+    return await this.updateProject(
+      projectId,
+      {
+        status: newStatus,
+        overrideAdvanceGate: ctx?.overrideAdvanceGate,
+        holdReason: ctx?.holdReason,
+        cancelReason: ctx?.cancelReason,
+        refundStatus: ctx?.refundStatus,
+      },
+      ctx?.userId,
+      ctx?.role,
+      { capabilities: ctx?.capabilities, overrideAdvanceGate: ctx?.overrideAdvanceGate }
+    );
   }
 
-  /**
-   * Transition task status with validation
-   */
-  async transitionTaskStatus(taskId: number, newStatus: TaskStatus): Promise<ProjectTask> {
-    const task = await this.repository.getTaskById(taskId);
-    if (!task) {
-      throw new Error("Task not found");
+  async recordPayment(
+    projectId: number,
+    input: {
+      slot: "advance" | "balance";
+      amount: number;
+      method: PaymentMethod;
+      proofUrl?: string;
+      paidAt?: Date;
+      recordedBy?: string;
+    },
+    actor: { role: string; capabilities?: string[] | null }
+  ): Promise<Project> {
+    if (!canSeeMoney(actor)) {
+      throw new AuthorizationError("see_money required to record payments");
+    }
+    const project = await this.repository.getProjectById(projectId);
+    if (!project) throw new Error("Project not found");
+
+    const meta = parseMoneyMeta(project.moneyMeta);
+    const slot: ProjectMoneyMeta["advance"] = {
+      amount: input.amount,
+      method: input.method,
+      proofUrl: input.proofUrl || null,
+      paidAt: (input.paidAt || new Date()).toISOString(),
+      recordedBy: input.recordedBy || null,
+    };
+
+    if (input.slot === "advance") {
+      meta.advance = slot;
+    } else {
+      meta.balance = slot;
     }
 
-    const currentStatus = task.status as TaskStatus;
-    if (!this.validateTaskStatusTransition(currentStatus, newStatus)) {
-      throw new Error(
-        `Cannot transition task from ${currentStatus} to ${newStatus}. Valid transitions: ${this.validTaskTransitions[currentStatus]?.join(", ") || "none"}`
-      );
+    let status = normalizeStatus(project.status);
+    if (input.slot === "advance" && (status === "quoted" || status === "demo")) {
+      status = "advance_paid";
     }
 
-    return await this.repository.updateTaskWithProgressUpdate(taskId, { status: newStatus });
+    return await this.repository.updateProject(projectId, {
+      moneyMeta: meta,
+      status,
+    });
+  }
+
+  async writeOffBalance(
+    projectId: number,
+    input: { amount: number; reason: string; by?: string },
+    actor: { role: string; capabilities?: string[] | null }
+  ): Promise<Project> {
+    if (
+      !canSeeMoney(actor) ||
+      (actor.role !== "ADMIN" &&
+        actor.role !== "SUPERADMIN" &&
+        !(actor.capabilities || []).includes("write_off"))
+    ) {
+      // ADMIN always can; STAFF needs write_off (sales head)
+      if (!canSeeMoney(actor)) {
+        throw new AuthorizationError("write_off / see_money required");
+      }
+    }
+    const project = await this.repository.getProjectById(projectId);
+    if (!project) throw new Error("Project not found");
+    const meta = parseMoneyMeta(project.moneyMeta);
+    meta.writeOff = {
+      amount: input.amount,
+      reason: input.reason,
+      at: new Date().toISOString(),
+      by: input.by || null,
+    };
+    return await this.repository.updateProject(projectId, { moneyMeta: meta });
+  }
+
+  getMoneySummary(project: Project) {
+    return moneySummary(parseMoneyMeta(project.moneyMeta));
   }
 
   async validateProjectCanBeCompleted(projectId: number): Promise<boolean> {
@@ -255,10 +556,6 @@ export class ProjectService {
     return stats.progressPercentage;
   }
 
-  /**
-   * Get project stats - proper method to expose repository method
-   * This fixes the layering issue where progress endpoint was accessing repository directly
-   */
   async getProjectStats(projectId: number): Promise<ProjectStats> {
     return await this.repository.getProjectStats(projectId);
   }
@@ -278,6 +575,22 @@ export class ProjectService {
     });
 
     return task;
+  }
+
+  async transitionTaskStatus(taskId: number, newStatus: TaskStatus): Promise<ProjectTask> {
+    const task = await this.repository.getTaskById(taskId);
+    if (!task) {
+      throw new Error("Task not found");
+    }
+
+    const currentStatus = task.status as TaskStatus;
+    if (!this.validateTaskStatusTransition(currentStatus, newStatus)) {
+      throw new Error(
+        `Cannot transition task from ${currentStatus} to ${newStatus}. Valid transitions: ${this.validTaskTransitions[currentStatus]?.join(", ") || "none"}`
+      );
+    }
+
+    return await this.repository.updateTaskWithProgressUpdate(taskId, { status: newStatus });
   }
 
   async getTaskById(id: number): Promise<ProjectTask | null> {
@@ -419,12 +732,24 @@ export class ProjectService {
     return await this.repository.getDashboardStats();
   }
 
-  async getProjectWithTasks(projectId: number, userId?: string) {
-    // Check if user can view the project
-    if (userId) {
+  async getProjectWithTasks(projectId: number, userId?: string, opts?: { bypassAcl?: boolean }) {
+    // Admin API already gates STAFF/ADMIN; membership ACL is for portal/client scopes
+    if (userId && !opts?.bypassAcl) {
       const canView = await projectMemberService.canViewProject(projectId, userId);
       if (!canView) {
-        throw new AuthorizationError("You do not have permission to view this project");
+        // Fall through if user is staff/admin — checked at API layer for /admin routes
+        const { db } = await import("@/db");
+        const { profiles } = await import("@/db/schema");
+        const { eq } = await import("drizzle-orm");
+        const rows = await db
+          .select({ role: profiles.role })
+          .from(profiles)
+          .where(eq(profiles.userId, userId))
+          .limit(1);
+        const role = (rows[0]?.role || "").toUpperCase();
+        if (role !== "ADMIN" && role !== "STAFF" && role !== "SUPERADMIN") {
+          throw new AuthorizationError("You do not have permission to view this project");
+        }
       }
     }
 
@@ -498,7 +823,7 @@ export class ProjectService {
    * Check if a project is overdue based on end date
    */
   isProjectOverdue(project: Project): boolean {
-    if (!project.endDate || project.status === "complete" || project.status === "cancelled") {
+    if (!project.endDate || project.status === "done" || project.status === "complete" || project.status === "cancelled") {
       return false;
     }
     return new Date(project.endDate) < new Date();

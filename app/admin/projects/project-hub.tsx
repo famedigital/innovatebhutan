@@ -35,6 +35,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useUserProfile } from "@/hooks/use-user-profile";
+import {
+  PROJECT_STATUS_COLORS,
+  PROJECT_STATUS_LABELS,
+  PROJECT_STATUSES,
+  formatNu,
+} from "@/lib/projects/statusUi";
 
 type Project = {
   id: number;
@@ -51,6 +58,16 @@ type Project = {
   leadId?: string;
   serviceName?: string;
   publicId?: string;
+  productKey?: string;
+  moneySummary?: {
+    quotedTotal: number;
+    advanceDue: number;
+    advancePaid: number;
+    balanceDue: number;
+    balancePaid: number;
+    writeOff: number;
+    outstanding: number;
+  };
 };
 
 type Client = { id: number; name: string };
@@ -58,22 +75,16 @@ type Lead = { id: string; name: string };
 
 type ViewMode = "table" | "calendar";
 
-const statusColors: Record<string, string> = {
-  planning: "bg-gray-50 text-gray-600 border-gray-200",
-  active: "bg-green-50 text-green-600 border-green-200",
-  testing: "bg-amber-50 text-amber-600 border-amber-200",
-  complete: "bg-blue-50 text-blue-600 border-blue-200",
-  on_hold: "bg-orange-50 text-orange-600 border-orange-200",
-  cancelled: "bg-red-50 text-red-600 border-red-200",
-};
+const statusColors = PROJECT_STATUS_COLORS;
 
-function formatBudget(value?: string) {
+function formatBudget(value?: string, moneySummary?: Project["moneySummary"]) {
+  if (moneySummary?.quotedTotal != null && moneySummary.quotedTotal > 0) {
+    return formatNu(moneySummary.quotedTotal);
+  }
   if (!value) return "—";
   const n = parseFloat(value);
   if (Number.isNaN(n)) return "—";
-  if (n >= 1_000_000) return `Nu. ${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `Nu. ${(n / 1_000).toFixed(1)}k`;
-  return `Nu. ${n.toLocaleString()}`;
+  return formatNu(n);
 }
 
 function ProgressBar({ value }: { value: number }) {
@@ -94,6 +105,7 @@ function ProgressBar({ value }: { value: number }) {
 }
 
 export function ProjectHub() {
+  const { canSeeMoney } = useUserProfile();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [projects, setProjects] = useState<Project[]>([]);
@@ -314,11 +326,13 @@ export function ProjectHub() {
                   }}
                   className={cn(
                     "size-1.5 rounded-full",
-                    p.status === "active"
+                    p.status === "in_progress" || p.status === "active"
                       ? "bg-emerald-500"
-                      : p.status === "complete"
+                      : p.status === "done" || p.status === "complete"
                         ? "bg-blue-500"
-                        : "bg-muted-foreground/50"
+                        : p.status === "needs_quote"
+                          ? "bg-amber-500"
+                          : "bg-muted-foreground/50"
                   )}
                 />
               ))}
@@ -388,12 +402,20 @@ export function ProjectHub() {
     setShowDetail(true);
   };
 
-  const totalBudget = projects
-    .filter((p) => p.budget)
-    .reduce((sum, p) => sum + parseFloat(p.budget || "0"), 0);
+  const totalBudget = canSeeMoney
+    ? projects.reduce((sum, p) => {
+        const q = p.moneySummary?.quotedTotal ?? parseFloat(p.budget || "0");
+        return sum + (Number.isNaN(q) ? 0 : q);
+      }, 0)
+    : 0;
 
-  const activeCount = projects.filter((p) => p.status === "active").length;
-  const completeCount = projects.filter((p) => p.status === "complete").length;
+  const activeCount = projects.filter((p) =>
+    ["in_progress", "active", "advance_paid", "testing", "demo"].includes(p.status)
+  ).length;
+  const completeCount = projects.filter((p) =>
+    ["done", "complete"].includes(p.status)
+  ).length;
+  const needsQuoteCount = projects.filter((p) => p.status === "needs_quote").length;
 
   return (
     <div className="space-y-4">
@@ -426,12 +448,11 @@ export function ProjectHub() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="planning">Planning</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="testing">Testing</SelectItem>
-              <SelectItem value="complete">Complete</SelectItem>
-              <SelectItem value="on_hold">On Hold</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
+              {PROJECT_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {PROJECT_STATUS_LABELS[s]}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -627,6 +648,16 @@ export function ProjectHub() {
           </Card>
           <Card className="shadow-none">
             <CardContent className="p-3 sm:p-4">
+              <p className="text-xl sm:text-2xl font-semibold tabular-nums text-amber-600">
+                {needsQuoteCount}
+              </p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                Needs quote
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-none">
+            <CardContent className="p-3 sm:p-4">
               <p className="text-xl sm:text-2xl font-semibold tabular-nums">
                 {completeCount}
               </p>
@@ -638,10 +669,10 @@ export function ProjectHub() {
           <Card className="shadow-none">
             <CardContent className="p-3 sm:p-4">
               <p className="text-lg sm:text-xl font-semibold tabular-nums truncate">
-                {formatBudget(String(totalBudget))}
+                {canSeeMoney ? formatNu(totalBudget) : "—"}
               </p>
               <p className="text-[10px] sm:text-xs text-muted-foreground">
-                Budget (page)
+                Quoted (page)
               </p>
             </CardContent>
           </Card>
@@ -718,14 +749,17 @@ export function ProjectHub() {
                         statusColors[project.status]
                       )}
                     >
-                      {project.status.replace("_", " ")}
+                      {PROJECT_STATUS_LABELS[project.status] ||
+                        project.status.replace(/_/g, " ")}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <ProgressBar value={project.progress || 0} />
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatBudget(project.budget)}
+                    {canSeeMoney
+                      ? formatBudget(project.budget, project.moneySummary)
+                      : "—"}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                     {project.startDate
@@ -783,13 +817,16 @@ export function ProjectHub() {
                           statusColors[project.status]
                         )}
                       >
-                        {project.status.replace("_", " ")}
+                        {PROJECT_STATUS_LABELS[project.status] ||
+                          project.status.replace(/_/g, " ")}
                       </Badge>
                       <div className="flex-1 min-w-[5rem] max-w-[8rem]">
                         <ProgressBar value={project.progress || 0} />
                       </div>
                       <span className="text-[10px] text-muted-foreground">
-                        {formatBudget(project.budget)}
+                        {canSeeMoney
+                          ? formatBudget(project.budget, project.moneySummary)
+                          : "—"}
                       </span>
                     </div>
                   </ItemContent>

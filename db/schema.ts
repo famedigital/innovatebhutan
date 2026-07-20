@@ -102,6 +102,8 @@ export const profiles = pgTable("profiles", {
   userId: text("user_id").notNull().unique(), // Supabase Auth UUID
   fullName: varchar("full_name", { length: 255 }),
   role: varchar("role", { length: 50 }).notNull().default("CLIENT"), // ADMIN, STAFF, CLIENT
+  /** see_money | cancel_project | write_off | provision_users | adjust_stock */
+  capabilities: jsonb("capabilities").$type<string[]>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -151,6 +153,9 @@ export const tickets = pgTable("tickets", {
   priority: varchar("priority", { length: 50 }).default("medium"), // low, medium, high
   productKey: varchar("product_key", { length: 50 }), // rancelab | website | cctv
   source: varchar("source", { length: 50 }).default("call_centre"), // call_centre | whatsapp | portal
+  billable: boolean("billable").default(false),
+  slaDueAt: timestamp("sla_due_at"),
+  slaBreachedAt: timestamp("sla_breached_at"),
   acknowledgedAt: timestamp("acknowledged_at"),
   acknowledgedBy: integer("acknowledged_by").references(() => profiles.id),
   groupNotifiedAt: timestamp("group_notified_at"),
@@ -162,6 +167,7 @@ export const tickets = pgTable("tickets", {
   productIdx: index("idx_tickets_product").on(table.productKey),
   statusIdx: index("idx_tickets_status").on(table.status),
   assignedIdx: index("idx_tickets_assigned").on(table.assignedTo),
+  slaDueIdx: index("idx_tickets_sla_due").on(table.slaDueAt),
 }));
 
 /**
@@ -347,11 +353,14 @@ export const projects = pgTable("projects", {
   serviceId: integer("service_id").references(() => services.id),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  status: varchar("status", { length: 50 }).default("planning"), // planning, active, testing, complete, on_hold, cancelled
+  /** Bible: needs_quote|quoted|demo|advance_paid|in_progress|testing|done|on_hold|cancelled */
+  status: varchar("status", { length: 50 }).default("quoted"),
   leadId: text("lead_id"), // References profiles.user_id (Supabase Auth)
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
   budget: decimal("budget", { precision: 15, scale: 2 }), // Project budget
+  productKey: varchar("product_key", { length: 50 }), // rancelab|pelbu_pos|website|cctv|networking
+  moneyMeta: jsonb("money_meta").$type<Record<string, unknown>>().default({}),
   progress: integer("progress").default(0), // Cached progress 0-100
   deletedAt: timestamp("deleted_at"), // Soft delete timestamp
   createdAt: timestamp("created_at").defaultNow(),
@@ -362,6 +371,7 @@ export const projects = pgTable("projects", {
   publicIdx: index("idx_projects_public").on(table.publicId),
   leadIdIdx: index("idx_projects_lead_id").on(table.leadId),
   deletedAtIdx: index("idx_projects_deleted_at").on(table.deletedAt),
+  productKeyIdx: index("idx_projects_product_key").on(table.productKey),
 }));
 
 /**
@@ -1669,8 +1679,15 @@ export const clientPortalAccess = pgTable("client_portal_access", {
 
   // Access details
   clientId: integer("client_id").references(() => clients.id).notNull(),
-  userId: integer("user_id"), // Links to Supabase auth.users
+  userId: integer("user_id"), // legacy integer link (unused for auth)
+  authUserId: text("auth_user_id"), // Supabase Auth UUID
+  profileId: integer("profile_id").references(() => profiles.id),
   accessLevel: varchar("access_level", { length: 50 }).default("basic"), // basic/standard/admin
+
+  // Invite
+  inviteEmail: varchar("invite_email", { length: 255 }),
+  inviteToken: varchar("invite_token", { length: 64 }),
+  inviteExpiresAt: timestamp("invite_expires_at"),
 
   // Features and permissions
   features: jsonb("features"), // Array of enabled features
@@ -1696,6 +1713,26 @@ export const clientPortalAccess = pgTable("client_portal_access", {
   clientIdx: index("idx_client_portal_client").on(table.clientId),
   userIdx: index("idx_client_portal_user").on(table.userId),
   activeIdx: index("idx_client_portal_active").on(table.isActive),
+  inviteTokenIdx: index("idx_cpa_invite_token").on(table.inviteToken),
+  authUserIdx: index("idx_cpa_auth_user").on(table.authUserId),
+}));
+
+/**
+ * Client payment proof uploads (M-BoB / cheque screenshots)
+ */
+export const portalPaymentProofs = pgTable("portal_payment_proofs", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  invoiceId: integer("invoice_id").references(() => invoices.id),
+  method: varchar("method", { length: 50 }).default("mbob"),
+  proofUrl: text("proof_url").notNull(),
+  notes: text("notes"),
+  status: varchar("status", { length: 50 }).default("submitted"),
+  submittedByProfileId: integer("submitted_by_profile_id").references(() => profiles.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("idx_portal_proofs_client").on(table.clientId),
+  invoiceIdx: index("idx_portal_proofs_invoice").on(table.invoiceId),
 }));
 
 // ============================================================================

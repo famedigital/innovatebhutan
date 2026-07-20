@@ -1,6 +1,11 @@
 # Innovate Bhutan ERP — Project Brain (Single Source of Truth)
 
-This file is the **canonical, high-signal map** of the Innovate Bhutan ERP. Any engineer/agent should read this first to understand **what exists**, **where it lives**, and **how workflows are supposed to work**.
+> **Business rules (how the company runs):** [`docs/erp-bible/00-company-operating-system.md`](docs/erp-bible/00-company-operating-system.md)  
+> **Module requirements:** [`docs/erp-bible/01-module-requirements.md`](docs/erp-bible/01-module-requirements.md)  
+> **Bible ↔ code gaps:** [`docs/erp-bible/02-gap-map.md`](docs/erp-bible/02-gap-map.md)  
+> When business workflow and this technical brain disagree, **prefer the erp-bible** and update code (or amend the bible deliberately).
+
+This file is the **canonical technical map** of the Innovate Bhutan ERP. Any engineer/agent should read the erp-bible first for *what the business needs*, then this file for *where code lives*.
 
 ## What this repo is
 - **Product**: ERP/Admin system for Innovate Bhutan (plus public website + directory).

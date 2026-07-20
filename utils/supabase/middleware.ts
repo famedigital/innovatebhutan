@@ -45,6 +45,7 @@ export async function updateSession(request: NextRequest) {
     !isApiRoute &&
     !pathname.startsWith('/login') &&
     !pathname.startsWith('/auth') &&
+    !pathname.startsWith('/portal/accept') &&
     !pathname.startsWith('/client') &&
     !isPublicPage(pathname)
   ) {
@@ -65,7 +66,7 @@ export async function updateSession(request: NextRequest) {
 
     if (!canAccessRoute(role, pathname)) {
       const url = request.nextUrl.clone()
-      url.pathname = role === 'CLIENT' ? '/client' : '/login'
+      url.pathname = role === 'CLIENT' ? '/portal' : '/login'
       return NextResponse.redirect(url)
     }
   }
@@ -83,6 +84,7 @@ function isPublicPage(pathname: string) {
     '/support',
     '/privacy',
     '/login',
+    '/portal/accept',
     '/client',
     '/directory',
     '/api/directory',

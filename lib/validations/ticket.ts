@@ -25,6 +25,7 @@ export const createTicketSchema = z.object({
   assignedTo: z.number().int().positive().optional(),
   productKey: ticketProductSchema.optional(),
   source: ticketSourceSchema.optional(),
+  billable: z.boolean().optional(),
   /** After create: assign + start + return WA group notify payload */
   startAndNotify: z.boolean().optional(),
 });
@@ -36,6 +37,7 @@ export const updateTicketSchema = z.object({
   priority: ticketPrioritySchema.optional(),
   assignedTo: z.number().int().positive().nullable().optional(),
   productKey: ticketProductSchema.optional(),
+  billable: z.boolean().optional(),
 });
 
 export const createTicketMessageSchema = z.object({

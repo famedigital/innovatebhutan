@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { sql, eq, and, gte, lte, desc, count } from "drizzle-orm";
+import { sql, eq, and, gte, lte, desc, count, or } from "drizzle-orm";
 import {
   clients,
   projects,
@@ -21,6 +21,8 @@ interface SummaryStats {
   monthlyExpenses: number;
   activeProjects: number;
   pendingInvoices: number;
+  unpaidInvoices: number;
+  needsQuote: number;
   totalEmployees: number;
   pendingPayroll: number;
   activeAMC: number;
@@ -79,6 +81,8 @@ export async function GET(req: NextRequest) {
       pendingPayrollCount,
       activeAMCCount,
       expiringAMCCount,
+      needsQuoteCount,
+      unpaidInvoiceCount,
       recentInvoices,
       recentProjects,
       recentTickets,
@@ -88,7 +92,9 @@ export async function GET(req: NextRequest) {
       db
         .select({ count: count() })
         .from(projects)
-        .where(eq(projects.status, "active")),
+        .where(
+          sql`${projects.status} IN ('in_progress', 'advance_paid', 'testing', 'active')`
+        ),
       db
         .select({ count: count() })
         .from(tickets)
@@ -118,7 +124,9 @@ export async function GET(req: NextRequest) {
       db
         .select({ count: count() })
         .from(projects)
-        .where(eq(projects.status, "active")),
+        .where(
+          sql`${projects.status} IN ('in_progress', 'advance_paid', 'testing', 'active')`
+        ),
       db
         .select({ count: count() })
         .from(invoices)
@@ -136,11 +144,23 @@ export async function GET(req: NextRequest) {
         .select({ count: count() })
         .from(amcs)
         .where(
-          and(
-            eq(amcs.status, "active"),
-            sql`${amcs.endDate} <= NOW() + INTERVAL '30 days'`
+          or(
+            eq(amcs.status, "expiring"),
+            and(
+              sql`${amcs.status} IN ('active', 'expiring')`,
+              sql`${amcs.endDate} <= NOW() + INTERVAL '30 days'`,
+              sql`${amcs.endDate} >= NOW()`
+            )
           )
         ),
+      db
+        .select({ count: count() })
+        .from(projects)
+        .where(eq(projects.status, "needs_quote")),
+      db
+        .select({ count: count() })
+        .from(invoices)
+        .where(sql`${invoices.status} IN ('sent', 'overdue')`),
       db
         .select()
         .from(invoices)
@@ -182,6 +202,8 @@ export async function GET(req: NextRequest) {
       monthlyExpenses: monthlyExpense[0]?.total || 0,
       activeProjects: activeProjectCount[0]?.count || 0,
       pendingInvoices: pendingInvoiceCount[0]?.count || 0,
+      unpaidInvoices: unpaidInvoiceCount[0]?.count || 0,
+      needsQuote: needsQuoteCount[0]?.count || 0,
       totalEmployees: employeeCount[0]?.count || 0,
       pendingPayroll: pendingPayrollCount[0]?.count || 0,
       activeAMC: activeAMCCount[0]?.count || 0,

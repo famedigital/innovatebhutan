@@ -31,6 +31,7 @@ export function TicketHub() {
     priority: "medium",
     description: "",
     assignedTo: "",
+    billable: false,
   });
   const [clientSearch, setClientSearch] = useState("");
   const [staff, setStaff] = useState<Array<{ id: number; fullName: string | null }>>([]);
@@ -118,6 +119,7 @@ export function TicketHub() {
         assignedTo: newTicket.assignedTo
           ? parseInt(newTicket.assignedTo)
           : undefined,
+        billable: newTicket.billable || undefined,
       }),
     });
     const result = await response.json();
@@ -133,6 +135,7 @@ export function TicketHub() {
         priority: "medium",
         description: "",
         assignedTo: "",
+        billable: false,
       });
       setClientSearch("");
       fetchTickets();
@@ -381,6 +384,17 @@ export function TicketHub() {
                   onChange={(e) => setNewTicket({...newTicket, description: e.target.value})}
                 />
               </div>
+
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={newTicket.billable}
+                  onChange={(e) =>
+                    setNewTicket({ ...newTicket, billable: e.target.checked })
+                  }
+                />
+                Billable (non-AMC / chargeable support)
+              </label>
 
             </div>
 

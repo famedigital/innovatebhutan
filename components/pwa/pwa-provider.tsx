@@ -76,7 +76,25 @@ export function PwaProvider({ children }: { children: ReactNode }) {
     if ("serviceWorker" in navigator && window.isSecureContext) {
       navigator.serviceWorker
         .register("/sw.js", { updateViaCache: "none" })
+        .then((reg) => {
+          const requestSync = () => {
+            if ("sync" in reg && typeof (reg as ServiceWorkerRegistration & { sync?: { register: (t: string) => Promise<void> } }).sync?.register === "function") {
+              (reg as ServiceWorkerRegistration & { sync: { register: (t: string) => Promise<void> } }).sync
+                .register("offline-mutations")
+                .catch(() => {});
+            }
+          };
+          window.addEventListener("online", requestSync);
+        })
         .catch(() => {});
+
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data?.type === "FLUSH_OFFLINE_QUEUE") {
+          import("@/lib/pwa/offline-queue")
+            .then((m) => m.flushOfflineQueue())
+            .catch(() => {});
+        }
+      });
     }
 
     return () => {
