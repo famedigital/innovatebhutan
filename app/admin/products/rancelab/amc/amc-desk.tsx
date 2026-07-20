@@ -396,6 +396,7 @@ export default function AmcDeskPage({
       case 'expired': return 'border-destructive/30 bg-destructive/10 text-destructive';
       case 'expiring': return 'border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200';
       case 'cancelled': return 'border-border bg-muted text-muted-foreground';
+      case 'renewed': return 'border-border bg-muted text-muted-foreground';
       default: return 'border-border bg-muted text-muted-foreground';
     }
   };
@@ -687,6 +688,11 @@ export default function AmcDeskPage({
                     <DropdownMenuItem onClick={() => setRenewAMC(amc)}>
                       View details
                     </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href={`/admin/clients/${amc.clientId}?tab=amc`}>
+                        AMC log on client
+                      </Link>
+                    </DropdownMenuItem>
                     {amc.clientWhatsapp && (
                       <DropdownMenuItem asChild>
                         <a
@@ -781,6 +787,11 @@ export default function AmcDeskPage({
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => setRenewAMC(amc)}>
                       View details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href={`/admin/clients/${amc.clientId}?tab=amc`}>
+                        AMC log on client
+                      </Link>
                     </DropdownMenuItem>
                     {amc.clientWhatsapp && (
                       <DropdownMenuItem asChild>

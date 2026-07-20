@@ -69,7 +69,10 @@ interface ClientDetails {
     endDate: string;
     amount: string;
     status: string;
+    productKey?: string | null;
+    renewedFrom?: number | null;
     renewedTo?: number | null;
+    createdAt?: string;
   }>;
   invoices?: Array<{
     id: number;
@@ -105,6 +108,7 @@ function statusBadge(status: string) {
     expiring: "border-amber-200 text-amber-800 bg-amber-50",
     expired: "border-destructive/30 text-destructive",
     cancelled: "text-muted-foreground",
+    renewed: "border-border bg-muted text-muted-foreground",
     paid: "border-border bg-secondary",
     open: "border-border bg-secondary",
     in_progress: "border-amber-200 text-amber-800",
@@ -299,7 +303,9 @@ export default function ClientDetailPage() {
       today.setHours(0, 0, 0, 0);
       const days = Math.ceil((end.getTime() - today.getTime()) / 86400000);
       let status = amc.status;
-      if (status !== "cancelled" && !amc.renewedTo) {
+      if (amc.renewedTo) {
+        status = "renewed";
+      } else if (status !== "cancelled") {
         if (days < 0) status = "expired";
         else if (days <= 30) status = "expiring";
         else status = "active";
@@ -307,8 +313,12 @@ export default function ClientDetailPage() {
       return { ...amc, status, days };
     }) || [];
 
-  const activeAmcs = liveAmcs.filter(
+  const tipAmcs = liveAmcs.filter((a) => !a.renewedTo);
+  const activeAmcs = tipAmcs.filter(
     (a) => a.status === "active" || a.status === "expiring"
+  );
+  const amcLog = [...liveAmcs].sort(
+    (a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
   );
   const contractValue = activeAmcs.reduce(
     (s, a) => s + (parseFloat(a.amount) || 0),
@@ -570,7 +580,7 @@ export default function ClientDetailPage() {
         <TabsContent value="amc" className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              Renew in-place — stay on this client hub
+              Current year on top · full renewal history in the log below
             </p>
             <Button variant="outline" size="sm" asChild>
               <Link href={`/admin/amc?clientId=${client.id}&from=client`}>
@@ -579,45 +589,122 @@ export default function ClientDetailPage() {
               </Link>
             </Button>
           </div>
+
           {liveAmcs.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center border rounded-md">
               No contracts yet
             </p>
           ) : (
-            <div className="space-y-2">
-              {liveAmcs.map((amc) => (
-                <div
-                  key={amc.id}
-                  className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium text-sm">
-                        {amc.contractNumber}
-                      </span>
-                      {statusBadge(amc.status)}
-                    </div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      Ends {new Date(amc.endDate).toLocaleDateString()}
-                      {" · "}
-                      Nu. {(parseFloat(amc.amount) || 0).toLocaleString()}
-                    </p>
-                  </div>
-                  {amc.status !== "cancelled" && !amc.renewedTo && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="shrink-0"
-                      onClick={() => openRenew(amc)}
+            <>
+              <section className="space-y-2">
+                <h3 className="text-sm font-semibold">Current contracts</h3>
+                {tipAmcs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground rounded-md border px-3 py-6 text-center">
+                    No live tip-of-chain contracts
+                  </p>
+                ) : (
+                  tipAmcs.map((amc) => (
+                    <div
+                      key={amc.id}
+                      className="flex flex-col gap-2 rounded-md border border-primary/20 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between"
                     >
-                      <RotateCcw className="w-4 h-4 mr-2" />
-                      Renew
-                    </Button>
-                  )}
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-sm">
+                            {amc.contractNumber}
+                          </span>
+                          {statusBadge(amc.status)}
+                          {amc.productKey ? (
+                            <Badge variant="secondary" className="text-[10px]">
+                              {amc.productKey}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(amc.startDate).toLocaleDateString()} –{" "}
+                          {new Date(amc.endDate).toLocaleDateString()}
+                          {" · "}
+                          Nu. {(parseFloat(amc.amount) || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      {amc.status !== "cancelled" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0"
+                          onClick={() => openRenew(amc)}
+                        >
+                          <RotateCcw className="w-4 h-4 mr-2" />
+                          Renew
+                        </Button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </section>
+
+              <section className="space-y-3">
+                <div>
+                  <h3 className="text-sm font-semibold">AMC log</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Renewal chain for this client (Y01 → Y02…). Superseded years
+                    stay here for history — not on the main AMC desk.
+                  </p>
                 </div>
-              ))}
-            </div>
+                <ol className="relative space-y-0 border-l border-border ml-2">
+                  {amcLog.map((amc, index) => {
+                    const next = amc.renewedTo
+                      ? liveAmcs.find((x) => x.id === amc.renewedTo)
+                      : null;
+                    const isTip = !amc.renewedTo;
+                    return (
+                      <li key={amc.id} className="relative pb-5 pl-5 last:pb-0">
+                        <span
+                          className={`absolute -left-1.5 top-1.5 size-3 rounded-full border-2 border-background ${
+                            isTip
+                              ? "bg-primary"
+                              : amc.status === "renewed"
+                                ? "bg-muted-foreground/40"
+                                : "bg-muted-foreground"
+                          }`}
+                        />
+                        <div className="rounded-md border bg-card px-3 py-2.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-medium">
+                              {amc.contractNumber}
+                            </span>
+                            {statusBadge(amc.status)}
+                            {isTip ? (
+                              <Badge className="text-[10px]">Current</Badge>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {new Date(amc.startDate).toLocaleDateString()} –{" "}
+                            {new Date(amc.endDate).toLocaleDateString()}
+                            {" · "}
+                            Nu. {(parseFloat(amc.amount) || 0).toLocaleString()}
+                          </p>
+                          {next ? (
+                            <p className="mt-1.5 text-xs text-muted-foreground">
+                              Renewed →{" "}
+                              <span className="font-medium text-foreground">
+                                {next.contractNumber}
+                              </span>
+                            </p>
+                          ) : null}
+                          {amc.renewedFrom && !next ? (
+                            <p className="mt-1.5 text-xs text-muted-foreground">
+                              Continues from prior year
+                            </p>
+                          ) : null}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </section>
+            </>
           )}
         </TabsContent>
 

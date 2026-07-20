@@ -16,6 +16,8 @@ export interface AMCFilters {
   owner?: "all" | "mine" | "unclaimed" | "today";
   /** employees.id for mine/today filters */
   focalEmployeeId?: number;
+  /** When true, include superseded years (renewedTo set). Default: tip-of-chain only. */
+  includeHistory?: boolean;
   limit?: number;
   offset?: number;
 }
@@ -158,6 +160,7 @@ export class AMCRepository {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       conditions.push(ne(amcs.status, "cancelled"));
+      conditions.push(isNull(amcs.renewedTo));
       conditions.push(lt(amcs.endDate, today));
     } else if (filters.status === "expiring") {
       const today = new Date();
@@ -165,6 +168,7 @@ export class AMCRepository {
       const soon = new Date(today);
       soon.setDate(soon.getDate() + 30);
       conditions.push(ne(amcs.status, "cancelled"));
+      conditions.push(isNull(amcs.renewedTo));
       conditions.push(gte(amcs.endDate, today));
       conditions.push(lte(amcs.endDate, soon));
     } else if (filters.status === "active") {
@@ -172,7 +176,13 @@ export class AMCRepository {
       soon.setHours(0, 0, 0, 0);
       soon.setDate(soon.getDate() + 30);
       conditions.push(ne(amcs.status, "cancelled"));
+      conditions.push(isNull(amcs.renewedTo));
       conditions.push(sql`${amcs.endDate} > ${soon}`);
+    } else if (!filters.status || filters.status === "all") {
+      // Ops list: tip of renewal chain only (history lives on client AMC log)
+      if (!filters.includeHistory) {
+        conditions.push(isNull(amcs.renewedTo));
+      }
     }
     if (filters.search) {
       conditions.push(

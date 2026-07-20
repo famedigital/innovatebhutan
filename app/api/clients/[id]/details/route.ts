@@ -50,11 +50,15 @@ export async function GET(
           endDate: amcs.endDate,
           amount: amcs.amount,
           status: amcs.status,
+          productKey: amcs.productKey,
+          renewedFrom: amcs.renewedFrom,
+          renewedTo: amcs.renewedTo,
+          createdAt: amcs.createdAt,
         })
         .from(amcs)
         .where(eq(amcs.clientId, clientId))
-        .orderBy(desc(amcs.createdAt))
-        .limit(10),
+        .orderBy(desc(amcs.endDate))
+        .limit(50),
 
       db
         .select({

@@ -13,7 +13,7 @@ import {
   type RancelabRemittance,
 } from "@/lib/amc/renewal";
 
-export type AMCStatus = "active" | "expiring" | "expired" | "cancelled";
+export type AMCStatus = "active" | "expiring" | "expired" | "cancelled" | "renewed";
 
 export interface CreateAMCDTO {
   clientId: number;
@@ -137,7 +137,10 @@ export class AMCService {
 
     // Derive display status from endDate in-memory (no per-row DB writes — those caused Vercel 504s)
     const amcs = result.amcs.map((amc) => {
-      if (amc.status === "cancelled" || amc.renewedTo) return amc;
+      if (amc.status === "cancelled") return amc;
+      if (amc.renewedTo) {
+        return { ...amc, status: "renewed" as const };
+      }
       return { ...amc, status: this.calculateStatus(amc.endDate) };
     });
 
@@ -491,6 +494,10 @@ export class AMCService {
       amount: renewalData.amount,
       status: this.calculateStatus(renewalData.endDate),
       renewedFrom: oldAMC.id,
+      productKey:
+        (oldAMC as { productKey?: string | null }).productKey ||
+        (oldAMC.meta as { productKey?: string } | null)?.productKey ||
+        "rancelab",
       notes: renewalData.notes,
       meta: {
         renewedFromPipeline: {
@@ -538,10 +545,11 @@ export class AMCService {
 
   private validateStatusTransition(currentStatus: AMCStatus, newStatus: AMCStatus): void {
     const validTransitions: Record<AMCStatus, AMCStatus[]> = {
-      active: ["expiring", "expired", "cancelled"],
-      expiring: ["active", "expired", "cancelled"],
+      active: ["expiring", "expired", "cancelled", "renewed"],
+      expiring: ["active", "expired", "cancelled", "renewed"],
       expired: ["active"], // Can reactivate expired contracts
       cancelled: [], // Terminal state
+      renewed: [], // Superseded by next year — history only
     };
 
     if (currentStatus === newStatus) return;
