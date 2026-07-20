@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AppSidebar } from "@/components/app-sidebar";
 import { MobileBottomNav } from "@/components/admin/mobile-bottom-nav";
@@ -22,6 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/utils/supabase/client";
 
 export default function AdminLayout({
@@ -30,13 +32,21 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClient();
 
+  // Clear stuck dialog/sheet body locks that can block all clicks after nav
   useEffect(() => {
-    checkUser();
+    document.body.style.pointerEvents = "";
+    document.body.removeAttribute("data-scroll-locked");
+    document.body.style.overflow = "";
+  }, [pathname]);
+
+  useEffect(() => {
+    void checkUser();
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -72,51 +82,55 @@ export default function AdminLayout({
   };
 
   return (
-    <SidebarProvider defaultOpen>
+    <SidebarProvider>
       <AppSidebar />
-      <SidebarInset className="min-h-svh">
-        <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-3 sm:px-6 bg-background z-20 sticky top-0">
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-semibold truncate">Innovates ERP</span>
-              <span className="text-[10px] text-muted-foreground md:hidden">
-                Mobile desk · open on desktop for detail
-              </span>
-              <span className="hidden md:inline text-xs text-muted-foreground">
-                Admin · full detail workspace
-              </span>
-            </div>
+      <SidebarInset>
+        <header className="bg-background sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b px-3 sm:px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator
+            orientation="vertical"
+            className="mr-2 hidden h-4 md:block"
+          />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-sm font-semibold">Innovates ERP</span>
+            <span className="hidden text-xs text-muted-foreground md:inline">
+              Admin workspace
+            </span>
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
             <div className="hidden sm:block">
               <InstallAppButton size="sm" variant="ghost" />
             </div>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hidden gap-2 text-muted-foreground sm:inline-flex"
               onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-muted rounded-lg text-sm text-muted-foreground hover:bg-accent transition-colors"
-              aria-label="Search"
             >
-              <Search className="w-4 h-4" />
-              <span className="hidden sm:inline text-xs">Search...</span>
-            </button>
-
-            <Button variant="ghost" size="icon" className="hidden sm:inline-flex" asChild>
-              <a href="/admin/notifications/">
-                <Bell size={18} />
-              </a>
+              <Search className="size-4" />
+              <span className="text-xs">Search</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden sm:inline-flex"
+              asChild
+            >
+              <Link href="/admin/notifications">
+                <Bell className="size-4" />
+              </Link>
             </Button>
             <ThemeToggle />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="p-1 h-auto rounded-full">
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                <Button variant="ghost" className="h-auto rounded-full p-1">
+                  <div className="bg-primary flex size-8 items-center justify-center rounded-full">
                     {loading ? (
-                      <Loader2 className="w-4 h-4 text-primary-foreground animate-spin" />
+                      <Loader2 className="size-4 animate-spin text-primary-foreground" />
                     ) : (
-                      <User className="w-4 h-4 text-primary-foreground" />
+                      <User className="size-4 text-primary-foreground" />
                     )}
                   </div>
                 </Button>
@@ -127,7 +141,7 @@ export default function AdminLayout({
                     <span className="font-medium">
                       {user?.email?.split("@")[0] || "Admin"}
                     </span>
-                    <span className="text-xs text-muted-foreground font-normal">
+                    <span className="text-xs font-normal text-muted-foreground">
                       {user?.email || "admin@innovates.bt"}
                     </span>
                   </div>
@@ -136,26 +150,22 @@ export default function AdminLayout({
                 <div className="px-2 py-1.5 sm:hidden">
                   <InstallAppButton fullWidth size="sm" />
                 </div>
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={() => router.push("/admin/settings")}
-                >
-                  <Key className="w-4 h-4 mr-2" />
+                <DropdownMenuItem onClick={() => router.push("/admin/settings")}>
+                  <Key className="mr-2 size-4" />
                   API Settings
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="cursor-pointer"
                   onClick={() => router.push("/admin/notifications")}
                 >
-                  <Settings className="w-4 h-4 mr-2" />
+                  <Settings className="mr-2 size-4" />
                   Notifications
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="cursor-pointer text-destructive"
+                  className="text-destructive"
                   onClick={handleSignOut}
                 >
-                  <LogOut className="w-4 h-4 mr-2" />
+                  <LogOut className="mr-2 size-4" />
                   Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -163,22 +173,27 @@ export default function AdminLayout({
           </div>
         </header>
 
-        {searchOpen && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
-            <div className="absolute inset-0 bg-black/20" onClick={() => setSearchOpen(false)} />
-            <div className="relative w-full max-w-lg bg-background rounded-xl shadow-2xl overflow-hidden border">
-              <div className="flex items-center gap-3 p-4 border-b">
-                <Search className="w-5 h-5 text-muted-foreground" />
+        {searchOpen ? (
+          <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-20">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/20"
+              aria-label="Close search"
+              onClick={() => setSearchOpen(false)}
+            />
+            <div className="relative w-full max-w-lg overflow-hidden rounded-xl border bg-background shadow-lg">
+              <div className="flex items-center gap-3 border-b p-4">
+                <Search className="size-5 text-muted-foreground" />
                 <Input
                   placeholder="Search clients, tickets, AMC..."
-                  className="border-none focus-visible:ring-0 text-sm"
+                  className="border-none focus-visible:ring-0"
                   autoFocus
                 />
               </div>
-              <div className="p-2 grid grid-cols-2 gap-1">
+              <div className="grid grid-cols-2 gap-1 p-2">
                 {[
                   { label: "RanceLab", href: "/admin/products/rancelab" },
-                  { label: "AMC", href: "/admin/products/rancelab/amc" },
+                  { label: "AMC", href: "/admin/amc" },
                   { label: "Tickets", href: "/admin/tickets" },
                   { label: "Clients", href: "/admin/clients" },
                   { label: "Projects", href: "/admin/projects" },
@@ -192,7 +207,7 @@ export default function AdminLayout({
                       setSearchOpen(false);
                       router.push(item.href);
                     }}
-                    className="flex items-center px-3 py-3 rounded-lg hover:bg-muted text-left text-sm font-medium"
+                    className="rounded-lg px-3 py-3 text-left text-sm font-medium hover:bg-muted"
                   >
                     {item.label}
                   </button>
@@ -200,11 +215,11 @@ export default function AdminLayout({
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 bg-background pb-24 md:pb-8">
+        <div className="flex flex-1 flex-col gap-4 p-4 pb-24 md:p-6 md:pb-6">
           {children}
-        </main>
+        </div>
 
         <MobileBottomNav />
       </SidebarInset>

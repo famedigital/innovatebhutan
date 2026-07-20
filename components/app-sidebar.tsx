@@ -1,8 +1,9 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Zap } from "lucide-react";
+import { GalleryVerticalEnd } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,6 +15,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { navigationConfig } from "@/lib/config/navigation";
@@ -22,41 +25,51 @@ function pathActive(pathname: string, href: string) {
   const clean = pathname.replace(/\/$/, "") || "/";
   const target = href.replace(/\/$/, "") || "/";
   if (target === "/admin") return clean === "/admin";
-  return clean === target || clean.startsWith(target + "/");
+  return clean === target || clean.startsWith(`${target}/`);
 }
 
-export function AppSidebar() {
-  const { profile, loading } = useUserProfile();
-  const userRole = profile?.role || "CLIENT";
+/**
+ * Standard shadcn sidebar (collapsible icon + rail), wired to ERP nav.
+ * @see https://ui.shadcn.com/docs/components/sidebar
+ */
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const { profile, loading } = useUserProfile();
+  const { isMobile, setOpenMobile } = useSidebar();
+  const userRole = profile?.role || "CLIENT";
 
-  const filteredNav = navigationConfig
-    .filter((group) => {
-      if (!group.roles) return true;
-      return group.roles.includes(userRole);
-    })
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => {
-        if (!item.roles) return true;
-        return item.roles.includes(userRole);
-      }),
-    }))
-    .filter((group) => group.items.length > 0);
+  const filteredNav = React.useMemo(
+    () =>
+      navigationConfig
+        .filter((group) => !group.roles || group.roles.includes(userRole))
+        .map((group) => ({
+          ...group,
+          items: group.items.filter(
+            (item) => !item.roles || item.roles.includes(userRole)
+          ),
+        }))
+        .filter((group) => group.items.length > 0),
+    [userRole]
+  );
+
+  const closeMobile = React.useCallback(() => {
+    if (isMobile) setOpenMobile(false);
+  }, [isMobile, setOpenMobile]);
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/admin">
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
-                  <Zap className="h-5 w-5 text-primary-foreground" />
+              <Link href="/admin" onClick={closeMobile}>
+                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                  <GalleryVerticalEnd className="size-4" />
                 </div>
-                <span className="text-base font-semibold tracking-tight">
-                  innovates.bt
-                </span>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-medium">innovates.bt</span>
+                  <span className="truncate text-xs">ERP Admin</span>
+                </div>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -76,12 +89,9 @@ export function AppSidebar() {
                       isActive={pathActive(pathname, item.href)}
                       tooltip={item.title}
                     >
-                      <Link href={item.href}>
+                      <Link href={item.href} onClick={closeMobile} prefetch>
                         <item.icon />
                         <span>{item.title}</span>
-                        {item.badge ? (
-                          <span className="ml-auto text-xs">{item.badge}</span>
-                        ) : null}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -96,8 +106,8 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
-                <span className="text-sm font-medium text-foreground">
+              <div className="bg-sidebar-accent flex aspect-square size-8 items-center justify-center rounded-lg">
+                <span className="text-sm font-medium">
                   {profile?.fullName?.charAt(0).toUpperCase() || "U"}
                 </span>
               </div>
@@ -105,7 +115,7 @@ export function AppSidebar() {
                 <span className="truncate font-medium">
                   {loading ? "…" : profile?.fullName || "User"}
                 </span>
-                <span className="truncate text-xs text-muted-foreground">
+                <span className="truncate text-xs">
                   {loading ? "…" : profile?.role || "—"}
                 </span>
               </div>
@@ -113,6 +123,7 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }
