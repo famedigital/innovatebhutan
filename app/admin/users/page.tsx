@@ -108,7 +108,14 @@ export default function UsersAdminPage() {
             : undefined;
         throw new Error(detail || json.error || "Create failed");
       }
-      toast.success(json.message || "Staff created");
+      if (json.warning || !json.data?.employeeId) {
+        toast.warning(
+          json.message ||
+            "User created, but employee record missing — open a client page once to backfill assign list."
+        );
+      } else {
+        toast.success(json.message || "Staff created");
+      }
       setCreateOpen(false);
       setForm(emptyForm);
       load();

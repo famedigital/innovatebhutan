@@ -5,7 +5,7 @@
 
 import { db } from "@/db";
 import { teamAssignments, employees, problems, profiles } from "@/db/schema";
-import { eq, desc, and, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, sql, inArray, isNull } from "drizzle-orm";
 
 export type TeamAssignment = typeof teamAssignments.$inferSelect;
 export type NewTeamAssignment = typeof teamAssignments.$inferInsert;
@@ -142,6 +142,47 @@ export async function getTeamWorkloadOverview(): Promise<Array<{
 }
 
 /**
+ * Create missing employee rows for STAFF/ADMIN profiles.
+ * Assignments use employees.id — auth users alone cannot be assigned.
+ */
+export async function ensureEmployeesForStaffProfiles(): Promise<number> {
+  try {
+    const missing = await db
+      .select({
+        id: profiles.id,
+        fullName: profiles.fullName,
+        role: profiles.role,
+      })
+      .from(profiles)
+      .leftJoin(employees, eq(employees.profileId, profiles.id))
+      .where(
+        and(
+          sql`UPPER(TRIM(COALESCE(${profiles.role}, ''))) IN ('STAFF', 'ADMIN', 'SUPERADMIN')`,
+          isNull(employees.id)
+        )
+      );
+
+    if (missing.length === 0) return 0;
+
+    for (const profile of missing) {
+      const role = String(profile.role || "").toUpperCase();
+      await db.insert(employees).values({
+        profileId: profile.id,
+        designation:
+          role === "ADMIN" || role === "SUPERADMIN" ? "Administrator" : "Staff",
+        status: "active",
+        availability: "available",
+      });
+    }
+
+    return missing.length;
+  } catch (error) {
+    console.error("ensureEmployeesForStaffProfiles failed:", error);
+    return 0;
+  }
+}
+
+/**
  * Get available team members for assignment
  */
 export async function getAvailableTeamMembers(skill?: string): Promise<Array<{
@@ -152,6 +193,9 @@ export async function getAvailableTeamMembers(skill?: string): Promise<Array<{
   skills: string[];
   specializations: string[];
 }>> {
+  // Backfill employee rows for staff logins that were created without HR records
+  await ensureEmployeesForStaffProfiles();
+
   try {
     // Assignable = anyone with an employee row who is not terminated/inactive.
     // (Strict status='active' hid staff with null/legacy statuses.)

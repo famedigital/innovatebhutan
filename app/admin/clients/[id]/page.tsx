@@ -177,6 +177,12 @@ export default function ClientDetailPage() {
 
       if (teamJson.success) setTeam(teamJson.data || []);
       setStaff(memberList);
+      if (memberList.length === 0) {
+        toast.message("No assignable staff yet", {
+          description:
+            "Staff need an Employees record. Creating under Users & Roles should add one — refresh this page after deploy.",
+        });
+      }
     } catch {
       toast.error("Failed to load client");
     } finally {
@@ -533,7 +539,8 @@ export default function ClientDetailPage() {
                   <SelectContent>
                     {staff.length === 0 ? (
                       <div className="px-2 py-3 text-sm text-muted-foreground">
-                        No staff employees found. Add them under Users & Roles.
+                        No staff found. Create STAFF under Users & Roles, then
+                        refresh this page.
                       </div>
                     ) : (
                       staff.map((s) => (

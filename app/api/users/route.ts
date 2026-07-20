@@ -305,6 +305,7 @@ export async function POST(req: NextRequest) {
       }
 
       let employeeId: number | null = null;
+      let employeeError: string | null = null;
       if (
         data.createEmployee &&
         (data.role === "STAFF" || data.role === "ADMIN")
@@ -326,6 +327,7 @@ export async function POST(req: NextRequest) {
                 phone: data.phone || undefined,
                 email: data.email,
                 status: "active",
+                availability: "available",
               })
               .returning({ id: employees.id });
             employeeId = emp?.id ?? null;
@@ -333,7 +335,9 @@ export async function POST(req: NextRequest) {
             employeeId = existingEmp[0].id;
           }
         } catch (empErr) {
-          console.warn("[users] employee create skipped:", empErr);
+          employeeError =
+            empErr instanceof Error ? empErr.message : "Employee create failed";
+          console.error("[users] employee create failed:", empErr);
         }
       }
 
@@ -342,7 +346,24 @@ export async function POST(req: NextRequest) {
         role: data.role,
         via: "direct-create",
         employeeId,
+        employeeError,
       });
+
+      if (data.createEmployee && !employeeId) {
+        return NextResponse.json(
+          {
+            success: true,
+            warning: true,
+            data: { ...profile, employeeId: null },
+            error:
+              employeeError ||
+              "User created but employee record missing — they will not appear in client assign until fixed.",
+            message:
+              "Login works, but assign-to-client needs an Employees row. Open Clients again (auto-backfill) or add them under Employees.",
+          },
+          { status: 201 }
+        );
+      }
 
       return NextResponse.json({
         success: true,
