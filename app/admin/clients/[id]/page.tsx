@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -883,6 +884,9 @@ export default function ClientDetailPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>New ticket — {client.name}</DialogTitle>
+            <DialogDescription>
+              Create a support ticket for this client.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>

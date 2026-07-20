@@ -61,14 +61,23 @@ export async function GET(req: NextRequest) {
       })
       .from(profiles);
 
-    // Apply role filter if provided
+    // Apply role filter if provided (case-insensitive)
     if (roleFilter) {
-      const roles = roleFilter.split(",").map((r) => r.trim()).filter(Boolean);
+      const roles = roleFilter
+        .split(",")
+        .map((r) => r.trim().toUpperCase())
+        .filter(Boolean);
       if (roles.length === 1) {
-        query.where(eq(profiles.role, roles[0]));
+        query.where(
+          sql`UPPER(TRIM(COALESCE(${profiles.role}, ''))) = ${roles[0]}`
+        );
       } else if (roles.length > 1) {
-        const roleConditions = roles.map(role => eq(profiles.role, role));
-        query.where(or(...roleConditions));
+        query.where(
+          sql`UPPER(TRIM(COALESCE(${profiles.role}, ''))) IN (${sql.join(
+            roles.map((r) => sql`${r}`),
+            sql`, `
+          )})`
+        );
       }
     }
 

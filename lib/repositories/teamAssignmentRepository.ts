@@ -171,7 +171,6 @@ export async function ensureEmployeesForStaffProfiles(): Promise<number> {
         designation:
           role === "ADMIN" || role === "SUPERADMIN" ? "Administrator" : "Staff",
         status: "active",
-        availability: "available",
       });
     }
 

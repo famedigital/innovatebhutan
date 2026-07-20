@@ -327,7 +327,7 @@ export async function POST(req: NextRequest) {
                 phone: data.phone || undefined,
                 email: data.email,
                 status: "active",
-                availability: "available",
+                authId: userId,
               })
               .returning({ id: employees.id });
             employeeId = emp?.id ?? null;

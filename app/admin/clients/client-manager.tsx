@@ -27,6 +27,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -557,11 +558,11 @@ export function ClientManager() {
                 ? "Assign focal person"
                 : "Assign backup staff"}
             </DialogTitle>
+            <DialogDescription>
+              Apply to {selected.size} selected client
+              {selected.size === 1 ? "" : "s"}.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Apply to {selected.size} selected client
-            {selected.size === 1 ? "" : "s"}.
-          </p>
           <Select value={bulkStaffId} onValueChange={setBulkStaffId}>
             <SelectTrigger>
               <SelectValue placeholder="Select staff member" />

@@ -31,8 +31,19 @@ export async function GET(request: NextRequest) {
     }
 
     if (view === "members") {
-      const data = await teamManagementService.getAvailableTeamMembers();
-      return NextResponse.json({ success: true, data });
+      const { listAssignableStaff } = await import(
+        "@/lib/admin/assignable-staff-server"
+      );
+      const result = await listAssignableStaff();
+      return NextResponse.json({
+        success: true,
+        data: result.data,
+        meta: {
+          count: result.data.length,
+          backfilled: result.backfilled,
+          errors: result.errors.length ? result.errors : undefined,
+        },
+      });
     }
 
     if (view === "performance") {
