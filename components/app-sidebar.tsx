@@ -1,6 +1,8 @@
 "use client";
 
-import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Zap } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,18 +16,20 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useUserProfile } from "@/hooks/use-user-profile";
-import { navigationConfig, type NavGroup } from "@/lib/config/navigation";
-import { usePathname } from "next/navigation";
-import { Zap } from "lucide-react";
-import { useSidebar } from "@/components/ui/sidebar";
+import { navigationConfig } from "@/lib/config/navigation";
+
+function pathActive(pathname: string, href: string) {
+  const clean = pathname.replace(/\/$/, "") || "/";
+  const target = href.replace(/\/$/, "") || "/";
+  if (target === "/admin") return clean === "/admin";
+  return clean === target || clean.startsWith(target + "/");
+}
 
 export function AppSidebar() {
   const { profile, loading } = useUserProfile();
   const userRole = profile?.role || "CLIENT";
   const pathname = usePathname();
-  const { open, setOpen } = useSidebar();
 
-  // Filter navigation based on user role
   const filteredNav = navigationConfig
     .filter((group) => {
       if (!group.roles) return true;
@@ -41,22 +45,23 @@ export function AppSidebar() {
     .filter((group) => group.items.length > 0);
 
   return (
-    <div
-      className="group/sidebar"
-      onMouseEnter={() => !open && setOpen(true)}
-      onMouseLeave={() => open && setOpen(false)}
-    >
-      <Sidebar collapsible="icon">
-        <SidebarHeader>
-          <div className="flex items-center gap-2 px-2 py-1">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
-              <Zap className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-semibold tracking-tight">
-              innovates.bt
-            </span>
-          </div>
-        </SidebarHeader>
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild>
+              <Link href="/admin">
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
+                  <Zap className="h-5 w-5 text-primary-foreground" />
+                </div>
+                <span className="text-base font-semibold tracking-tight">
+                  innovates.bt
+                </span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
 
       <SidebarContent>
         {filteredNav.map((group) => (
@@ -68,16 +73,16 @@ export function AppSidebar() {
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname === item.href}
+                      isActive={pathActive(pathname, item.href)}
                       tooltip={item.title}
                     >
-                      <a href={item.href}>
-                        <item.icon className="h-4 w-4" />
+                      <Link href={item.href}>
+                        <item.icon />
                         <span>{item.title}</span>
-                        {item.badge && (
+                        {item.badge ? (
                           <span className="ml-auto text-xs">{item.badge}</span>
-                        )}
-                      </a>
+                        ) : null}
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -96,12 +101,12 @@ export function AppSidebar() {
                   {profile?.fullName?.charAt(0).toUpperCase() || "U"}
                 </span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">
-                  {profile?.fullName || loading ? "Loading..." : "User"}
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">
+                  {loading ? "…" : profile?.fullName || "User"}
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  {profile?.role || loading ? "..." : "CLIENT"}
+                <span className="truncate text-xs text-muted-foreground">
+                  {loading ? "…" : profile?.role || "—"}
                 </span>
               </div>
             </SidebarMenuButton>
@@ -109,6 +114,5 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
-    </div>
   );
 }

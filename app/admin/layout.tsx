@@ -32,7 +32,6 @@ export default function AdminLayout({
   const [searchOpen, setSearchOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -73,7 +72,7 @@ export default function AdminLayout({
   };
 
   return (
-    <SidebarProvider defaultOpen={false} open={sidebarOpen} onOpenChange={setSidebarOpen}>
+    <SidebarProvider defaultOpen>
       <AppSidebar />
       <SidebarInset className="min-h-svh">
         <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-3 sm:px-6 bg-background z-20 sticky top-0">

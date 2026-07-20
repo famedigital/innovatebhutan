@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-} from "@/components/ui/drawer";
-import { ScrollArea } from "@/components/ui/scroll-area";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { navigationConfig } from "@/lib/config/navigation";
@@ -42,25 +41,31 @@ export function MobileMoreDrawer({ open, onOpenChange }: Props) {
   const cleanPath = pathname.replace(/\/$/, "") || "/";
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="md:hidden max-h-[85vh] pb-[env(safe-area-inset-bottom)]">
-        <DrawerHeader className="text-left pb-2">
-          <DrawerTitle>Menu</DrawerTitle>
-          <DrawerDescription>All admin modules</DrawerDescription>
-        </DrawerHeader>
-        <ScrollArea className="max-h-[65vh] px-4 pb-6">
-          <div className="space-y-5">
-            {filteredNav.map((group) => (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="bottom"
+        className="md:hidden flex h-[85vh] max-h-[85vh] flex-col gap-0 rounded-t-xl p-0"
+      >
+        <SheetHeader className="shrink-0 border-b px-4 py-3 text-left">
+          <SheetTitle>Menu</SheetTitle>
+          <SheetDescription>All admin modules</SheetDescription>
+        </SheetHeader>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <div className="space-y-4">
+            {filteredNav.map((group, index) => (
               <div key={group.title}>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <p className="mb-1.5 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {group.title}
                 </p>
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col">
                   {group.items.map((item) => {
                     const target = item.href.replace(/\/$/, "") || "/";
                     const active =
                       cleanPath === target ||
-                      cleanPath.startsWith(target + "/");
+                      (target !== "/admin" &&
+                        cleanPath.startsWith(target + "/")) ||
+                      (target === "/admin" && cleanPath === "/admin");
                     const Icon = item.icon;
                     return (
                       <Link
@@ -68,9 +73,9 @@ export function MobileMoreDrawer({ open, onOpenChange }: Props) {
                         href={item.href}
                         onClick={() => onOpenChange(false)}
                         className={cn(
-                          "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
+                          "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm",
                           active
-                            ? "bg-accent text-foreground font-medium"
+                            ? "bg-accent font-medium text-accent-foreground"
                             : "text-foreground hover:bg-muted"
                         )}
                       >
@@ -81,19 +86,18 @@ export function MobileMoreDrawer({ open, onOpenChange }: Props) {
                           )}
                         />
                         <span className="flex-1">{item.title}</span>
-                        {active && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-premium" />
-                        )}
                       </Link>
                     );
                   })}
                 </div>
-                <Separator className="mt-4" />
+                {index < filteredNav.length - 1 ? (
+                  <Separator className="mt-3" />
+                ) : null}
               </div>
             ))}
           </div>
-        </ScrollArea>
-      </DrawerContent>
-    </Drawer>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

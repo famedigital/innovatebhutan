@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { db } from "@/db";
-import { profiles, auditLogs } from "@/db/schema";
+import { profiles, auditLogs, employees } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import {
   requireApiAuth,
@@ -13,10 +13,15 @@ import { checkRateLimit, rateLimitPresets } from "@/lib/rate-limit/rate-limiter"
 import { isApiError, RateLimitError } from "@/lib/errors";
 import { z } from "zod";
 
-const inviteSchema = z.object({
+const createUserSchema = z.object({
   email: z.string().email(),
   fullName: z.string().min(1).max(255),
+  password: z.string().min(8, "Password must be at least 8 characters"),
   role: z.enum(["ADMIN", "STAFF", "CLIENT"]).default("STAFF"),
+  designation: z.string().max(100).optional(),
+  department: z.string().max(100).optional(),
+  phone: z.string().max(20).optional(),
+  createEmployee: z.boolean().optional().default(true),
 });
 
 const updateRoleSchema = z.object({
@@ -27,6 +32,9 @@ const updateRoleSchema = z.object({
 function adminSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!url || !key) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
   return createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -120,42 +128,44 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (action === "invite") {
-      const data = inviteSchema.parse(body);
+    // Direct create (no email invite) — preferred for staff onboarding
+    if (action === "create" || action === "invite") {
+      const data = createUserSchema.parse({
+        ...body,
+        // invite path used to omit password; require create now
+        password: body.password,
+        createEmployee:
+          body.createEmployee !== undefined
+            ? body.createEmployee
+            : dataRoleWantsEmployee(body.role),
+      });
+
       const supabase = adminSupabase();
 
-      let userId: string | null = null;
-      let message = "Invite sent";
-
-      const { data: invited, error } =
-        await supabase.auth.admin.inviteUserByEmail(data.email, {
-          data: { full_name: data.fullName, role: data.role },
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || ""}/login`,
+      const { data: created, error: createErr } =
+        await supabase.auth.admin.createUser({
+          email: data.email,
+          password: data.password,
+          email_confirm: true,
+          user_metadata: {
+            full_name: data.fullName,
+            role: data.role,
+          },
         });
 
-      if (error || !invited?.user) {
-        const { data: created, error: createErr } =
-          await supabase.auth.admin.createUser({
-            email: data.email,
-            email_confirm: true,
-            user_metadata: { full_name: data.fullName, role: data.role },
-          });
-
-        if (createErr || !created.user) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: error?.message || createErr?.message || "Invite failed",
-            },
-            { status: 400 }
-          );
-        }
-        userId = created.user.id;
-        message =
-          "User created. They can use password recovery from login if needed.";
-      } else {
-        userId = invited.user.id;
+      if (createErr || !created.user) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              createErr?.message ||
+              "Failed to create auth user. Check email is unique and service role key is set.",
+          },
+          { status: 400 }
+        );
       }
+
+      const userId = created.user.id;
 
       const existing = await db
         .select()
@@ -165,7 +175,7 @@ export async function POST(req: NextRequest) {
 
       let profile = existing[0];
       if (!profile) {
-        const [created] = await db
+        const [inserted] = await db
           .insert(profiles)
           .values({
             userId,
@@ -173,7 +183,7 @@ export async function POST(req: NextRequest) {
             role: data.role,
           })
           .returning();
-        profile = created;
+        profile = inserted;
       } else {
         const [updated] = await db
           .update(profiles)
@@ -183,16 +193,48 @@ export async function POST(req: NextRequest) {
         profile = updated;
       }
 
+      let employeeId: number | null = null;
+      if (
+        data.createEmployee &&
+        (data.role === "STAFF" || data.role === "ADMIN")
+      ) {
+        const existingEmp = await db
+          .select({ id: employees.id })
+          .from(employees)
+          .where(eq(employees.profileId, profile.id))
+          .limit(1);
+
+        if (!existingEmp[0]) {
+          const [emp] = await db
+            .insert(employees)
+            .values({
+              profileId: profile.id,
+              designation: data.designation || "Staff",
+              department: data.department || undefined,
+              phone: data.phone || undefined,
+              email: data.email,
+              status: "active",
+            })
+            .returning({ id: employees.id });
+          employeeId = emp?.id ?? null;
+        } else {
+          employeeId = existingEmp[0].id;
+        }
+      }
+
       await writeAudit(auth.profile.id, "CREATE", profile.id, {
         email: data.email,
         role: data.role,
-        via: "invite",
+        via: "direct-create",
+        employeeId,
       });
 
       return NextResponse.json({
         success: true,
-        data: profile,
-        message,
+        data: { ...profile, employeeId },
+        message: employeeId
+          ? "Staff created with login and employee record"
+          : "User created with login",
       });
     }
 
@@ -213,4 +255,8 @@ export async function POST(req: NextRequest) {
       : 500;
     return NextResponse.json(formatApiError(error), { status });
   }
+}
+
+function dataRoleWantsEmployee(role: unknown) {
+  return role === "STAFF" || role === "ADMIN" || role === undefined;
 }

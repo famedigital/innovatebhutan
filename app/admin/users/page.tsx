@@ -17,6 +17,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -38,16 +39,21 @@ type ProfileRow = {
   createdAt?: string;
 };
 
+const emptyForm = {
+  email: "",
+  fullName: "",
+  password: "",
+  role: "STAFF",
+  designation: "",
+  phone: "",
+};
+
 export default function UsersAdminPage() {
   const [rows, setRows] = useState<ProfileRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inviteOpen, setInviteOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({
-    email: "",
-    fullName: "",
-    role: "STAFF",
-  });
+  const [form, setForm] = useState(emptyForm);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,9 +73,13 @@ export default function UsersAdminPage() {
     void load();
   }, [load]);
 
-  const invite = async () => {
-    if (!form.email || !form.fullName) {
-      toast.error("Email and name required");
+  const createStaff = async () => {
+    if (!form.email || !form.fullName || !form.password) {
+      toast.error("Name, email, and password are required");
+      return;
+    }
+    if (form.password.length < 8) {
+      toast.error("Password must be at least 8 characters");
       return;
     }
     setBusy(true);
@@ -77,16 +87,25 @@ export default function UsersAdminPage() {
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "invite", ...form }),
+        body: JSON.stringify({
+          action: "create",
+          email: form.email.trim(),
+          fullName: form.fullName.trim(),
+          password: form.password,
+          role: form.role,
+          designation: form.designation.trim() || undefined,
+          phone: form.phone.trim() || undefined,
+          createEmployee: form.role === "STAFF" || form.role === "ADMIN",
+        }),
       });
       const json = await res.json();
-      if (!json.success) throw new Error(json.error || "Invite failed");
-      toast.success(json.message || "Invited");
-      setInviteOpen(false);
-      setForm({ email: "", fullName: "", role: "STAFF" });
+      if (!json.success) throw new Error(json.error || "Create failed");
+      toast.success(json.message || "Staff created");
+      setCreateOpen(false);
+      setForm(emptyForm);
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Invite failed");
+      toast.error(e instanceof Error ? e.message : "Create failed");
     } finally {
       setBusy(false);
     }
@@ -116,7 +135,7 @@ export default function UsersAdminPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Users & Roles"
-        description="Invite staff, set ADMIN / STAFF / CLIENT roles"
+        description="Create staff logins directly (email + password). No invite email."
         breadcrumbs={[
           { label: "Admin", href: "/admin" },
           { label: "System" },
@@ -130,9 +149,9 @@ export default function UsersAdminPage() {
               />
               Refresh
             </Button>
-            <Button size="sm" onClick={() => setInviteOpen(true)}>
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
               <UserPlus className="mr-2 h-4 w-4" />
-              Invite user
+              Add staff
             </Button>
           </>
         }
@@ -151,13 +170,19 @@ export default function UsersAdminPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={4}
+                  className="text-center text-muted-foreground"
+                >
                   Loading…
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={4}
+                  className="text-center text-muted-foreground"
+                >
                   No profiles yet
                 </TableCell>
               </TableRow>
@@ -195,27 +220,47 @@ export default function UsersAdminPage() {
         </Table>
       </div>
 
-      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Invite user</DialogTitle>
+            <DialogTitle>Add staff</DialogTitle>
+            <DialogDescription>
+              Creates a login immediately. Share the password with them — no
+              invite email is sent.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className="text-xs text-muted-foreground">Full name</label>
+              <label className="text-xs text-muted-foreground">Full name *</label>
               <Input
                 value={form.fullName}
                 onChange={(e) =>
                   setForm({ ...form, fullName: e.target.value })
                 }
+                placeholder="Tashi Wangchuk"
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">Email</label>
+              <label className="text-xs text-muted-foreground">Email *</label>
               <Input
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="staff@company.bt"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">
+                Password * (min 8)
+              </label>
+              <Input
+                type="password"
+                value={form.password}
+                onChange={(e) =>
+                  setForm({ ...form, password: e.target.value })
+                }
+                placeholder="Temporary password"
+                autoComplete="new-password"
               />
             </div>
             <div>
@@ -228,19 +273,45 @@ export default function UsersAdminPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ADMIN">ADMIN</SelectItem>
                   <SelectItem value="STAFF">STAFF</SelectItem>
+                  <SelectItem value="ADMIN">ADMIN</SelectItem>
                   <SelectItem value="CLIENT">CLIENT</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {(form.role === "STAFF" || form.role === "ADMIN") && (
+              <>
+                <div>
+                  <label className="text-xs text-muted-foreground">
+                    Designation
+                  </label>
+                  <Input
+                    value={form.designation}
+                    onChange={(e) =>
+                      setForm({ ...form, designation: e.target.value })
+                    }
+                    placeholder="Support engineer"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Phone</label>
+                  <Input
+                    value={form.phone}
+                    onChange={(e) =>
+                      setForm({ ...form, phone: e.target.value })
+                    }
+                    placeholder="+975…"
+                  />
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setInviteOpen(false)}>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={invite} disabled={busy}>
-              {busy ? "Sending…" : "Send invite"}
+            <Button onClick={createStaff} disabled={busy}>
+              {busy ? "Creating…" : "Create staff"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -30,7 +30,7 @@ export function AdminPageHeader({
   className,
 }: Props) {
   return (
-    <div className={cn("space-y-3 animate-in fade-in-0 duration-300", className)}>
+    <div className={cn("space-y-3", className)}>
       {breadcrumbs && breadcrumbs.length > 0 ? (
         <Breadcrumb>
           <BreadcrumbList>

@@ -334,7 +334,7 @@ export function ClientManager() {
       </div>
 
       {selected.size > 0 ? (
-        <div className="sticky top-14 z-10 flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-sm animate-in slide-in-from-top-2 duration-200">
+        <div className="sticky top-14 z-10 flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-sm">
           <span className="text-sm font-medium">
             {selected.size} selected
           </span>
