@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireApiAuth, requireStaffOrAdmin, formatApiError } from "@/lib/auth/api-auth";
+import { clientService } from "@/lib/services/clientService";
 
 /**
  * PATCH /api/clients/[id] - Update a client
@@ -111,22 +112,24 @@ export async function PATCH(
 }
 
 /**
- * DELETE /api/clients/[id] - Delete a client
+ * DELETE /api/clients/[id] - Archive (soft-delete) a client
  *
- * Deletes a client by ID.
+ * Soft-archives a client by ID. Hard deletes are blocked by related
+ * invoices/projects/AMCs and are forbidden by product rules.
  *
  * SECURITY: Requires authenticated user with STAFF or ADMIN role
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Authenticate and authorize
     const authContext = await requireApiAuth(req);
     requireStaffOrAdmin(authContext.profile);
 
-    const clientId = parseInt(params.id);
+    const { id } = await params;
+    const clientId = parseInt(id, 10);
     if (isNaN(clientId)) {
       return NextResponse.json(
         { success: false, error: "Invalid client ID" },
@@ -134,9 +137,15 @@ export async function DELETE(
       );
     }
 
-    await db.delete(clients).where(eq(clients.id, clientId));
+    const archived = await clientService.deleteClient(clientId);
+    if (!archived) {
+      return NextResponse.json(
+        { success: false, error: "Client not found" },
+        { status: 404 }
+      );
+    }
 
-    console.log("[API /api/clients/[id]] Deleted client:", clientId);
+    console.log("[API /api/clients/[id]] Archived client:", clientId);
 
     return NextResponse.json({
       success: true,

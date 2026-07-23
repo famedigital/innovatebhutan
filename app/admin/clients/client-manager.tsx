@@ -152,6 +152,9 @@ export function ClientManager() {
   const filteredClients = useMemo(() => {
     const q = searchTerm.toLowerCase().trim();
     return clients.filter((client) => {
+      // Deleted/archived clients are soft-deleted (active=false) and hidden here
+      if (client.active === false) return false;
+
       const matchesSearch =
         !q ||
         (client.name || "").toLowerCase().includes(q) ||
@@ -525,6 +528,13 @@ export function ClientManager() {
                         }}
                       >
                         Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => handleDeleteClient(client.id)}
+                      >
+                        Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

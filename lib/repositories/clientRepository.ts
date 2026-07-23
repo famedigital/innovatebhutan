@@ -47,8 +47,18 @@ export class ClientRepository {
     return row;
   }
 
+  /** Soft-archive: keep related invoices/projects/AMCs intact. */
   async delete(id: number) {
-    await db.delete(clients).where(eq(clients.id, id));
+    const [row] = await db
+      .update(clients)
+      .set({
+        active: false,
+        isActive: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(clients.id, id))
+      .returning({ id: clients.id });
+    return row || null;
   }
 }
 

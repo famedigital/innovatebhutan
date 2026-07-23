@@ -37,6 +37,7 @@ export class ClientService {
     return this.repository.update(id, data as any);
   }
 
+  /** Soft-archive client (no hard delete — FK + product rules). */
   deleteClient(id: number) {
     return this.repository.delete(id);
   }
