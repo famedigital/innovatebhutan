@@ -15,20 +15,24 @@ export class ClientService {
     name: string;
     email?: string;
     phone?: string;
+    whatsapp?: string;
     address?: string;
     city?: string;
     country?: string;
     contactPerson?: string;
+    notes?: string;
     active?: boolean;
   }) {
     return this.repository.create({
       name: data.name,
       email: data.email,
       phone: data.phone,
+      whatsapp: data.whatsapp,
       address: data.address,
       city: data.city,
       country: data.country || "Bhutan",
       contactPerson: data.contactPerson,
+      notes: data.notes,
       active: data.active ?? true,
     });
   }

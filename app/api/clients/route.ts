@@ -35,9 +35,11 @@ export async function POST(req: NextRequest) {
       contactPerson,
       email,
       phone,
+      whatsapp,
       address,
       city,
       country,
+      notes,
       active,
     } = body;
 
@@ -63,9 +65,11 @@ export async function POST(req: NextRequest) {
       contactPerson: contactPerson?.trim(),
       email: email?.trim(),
       phone: phone?.trim(),
+      whatsapp: whatsapp?.trim(),
       address: address?.trim(),
       city: city?.trim(),
       country: country?.trim(),
+      notes: notes?.trim(),
       active: active !== undefined ? active : true,
     });
 

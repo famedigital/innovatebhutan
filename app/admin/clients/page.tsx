@@ -1,3 +1,6 @@
+"use client";
+
+import { useCallback, useState } from "react";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
 import { ClientManager } from "./client-manager";
@@ -5,6 +8,11 @@ import { NodeEnrollmentModal } from "./node-enrollment-modal";
 import { BulkIngestionModal } from "./bulk-ingestion-modal";
 
 export default function ClientsPage() {
+  const [listKey, setListKey] = useState(0);
+  const refreshClients = useCallback(() => {
+    setListKey((k) => k + 1);
+  }, []);
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -18,12 +26,13 @@ export default function ClientsPage() {
           <>
             <BulkIngestionModal
               trigger={<Button variant="outline">Bulk Import</Button>}
+              onImported={refreshClients}
             />
             <NodeEnrollmentModal trigger={<Button>Add Client</Button>} />
           </>
         }
       />
-      <ClientManager />
+      <ClientManager key={listKey} />
     </div>
   );
 }
