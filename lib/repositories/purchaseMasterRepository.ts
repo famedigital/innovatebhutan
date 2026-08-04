@@ -10,6 +10,7 @@ export type NewPurchaseMasterItem = typeof purchaseMasterItems.$inferInsert;
 export interface PurchaseMasterFilters {
   status?: string;
   search?: string;
+  supplierId?: number;
   limit?: number;
   offset?: number;
 }
@@ -24,14 +25,17 @@ export class PurchaseMasterRepository {
   async list(
     filters: PurchaseMasterFilters = {}
   ): Promise<{ purchases: PurchaseMasterWithItems[]; total: number }> {
-    const conditions: any[] = [];
+    const conditions: ReturnType<typeof eq>[] = [];
 
     if (filters.status) {
       conditions.push(eq(purchaseMasters.status, filters.status));
     }
+    if (filters.supplierId) {
+      conditions.push(eq(purchaseMasters.supplierId, filters.supplierId));
+    }
     if (filters.search) {
       conditions.push(
-        sql`(${purchaseMasters.supplierName} ILIKE ${"%" + filters.search + "%"} OR ${purchaseMasters.billReferenceNo} ILIKE ${"%" + filters.search + "%"})`
+        sql`(${purchaseMasters.supplierName} ILIKE ${"%" + filters.search + "%"} OR ${purchaseMasters.billReferenceNo} ILIKE ${"%" + filters.search + "%"} OR ${purchaseMasters.publicId} ILIKE ${"%" + filters.search + "%"})`
       );
     }
 
@@ -42,7 +46,7 @@ export class PurchaseMasterRepository {
         .select()
         .from(purchaseMasters)
         .where(whereClause)
-        .orderBy(desc(purchaseMasters.purchaseDate), desc(purchaseMasters.createdAt))
+        .orderBy(desc(purchaseMasters.createdAt))
         .limit(filters.limit || 50)
         .offset(filters.offset || 0),
       this.db.select({ count: count() }).from(purchaseMasters).where(whereClause),
@@ -123,39 +127,14 @@ export class PurchaseMasterRepository {
     return row || null;
   }
 
-  async replaceItems(
-    purchaseId: number,
-    items: Array<Omit<NewPurchaseMasterItem, "purchaseId">>
-  ): Promise<PurchaseMasterItem[]> {
-    return await this.db.transaction(async (tx) => {
-      await tx
-        .delete(purchaseMasterItems)
-        .where(eq(purchaseMasterItems.purchaseId, purchaseId));
-      if (items.length === 0) return [];
-      return await tx
-        .insert(purchaseMasterItems)
-        .values(
-          items.map((item, index) => ({
-            ...item,
-            purchaseId,
-            sortOrder: item.sortOrder ?? index,
-          }))
-        )
-        .returning();
-    });
-  }
-
-  async delete(id: number): Promise<boolean> {
-    return await this.db.transaction(async (tx) => {
-      await tx
-        .delete(purchaseMasterItems)
-        .where(eq(purchaseMasterItems.purchaseId, id));
-      const [row] = await tx
-        .delete(purchaseMasters)
-        .where(eq(purchaseMasters.id, id))
-        .returning({ id: purchaseMasters.id });
-      return Boolean(row);
-    });
+  /** Soft cancel: set status to cancelled (keep line items / history). */
+  async softCancel(id: number): Promise<PurchaseMaster | null> {
+    const [row] = await this.db
+      .update(purchaseMasters)
+      .set({ status: "cancelled", updatedAt: new Date() })
+      .where(eq(purchaseMasters.id, id))
+      .returning();
+    return row || null;
   }
 }
 

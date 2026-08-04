@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
     const result = await purchaseMasterService.list({
       status: query.status,
       search: query.search,
+      supplierId: query.supplierId,
     });
 
     return NextResponse.json({

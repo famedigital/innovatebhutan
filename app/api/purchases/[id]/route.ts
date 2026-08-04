@@ -70,12 +70,13 @@ export async function DELETE(
 
     const { id } = await params;
     const purchaseId = validateId(id, "Purchase ID");
-    const deleted = await purchaseMasterService.delete(purchaseId);
-    if (!deleted) throw new NotFoundError("Purchase");
+    const purchase = await purchaseMasterService.softCancel(purchaseId);
+    if (!purchase) throw new NotFoundError("Purchase");
 
     return NextResponse.json({
       success: true,
-      message: "Purchase deleted successfully",
+      data: purchase,
+      message: "Purchase cancelled successfully",
     });
   } catch (error) {
     console.error("[API /api/purchases/[id]] DELETE error:", error);

@@ -12,22 +12,6 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-export function computeLandedCost(input: {
-  totalPurchaseAmount?: number;
-  gstPaid?: number;
-  declarationFees?: number;
-  freightCharges?: number;
-  totalFreightCharges?: number;
-}): number {
-  return round2(
-    (input.totalPurchaseAmount || 0) +
-      (input.gstPaid || 0) +
-      (input.declarationFees || 0) +
-      (input.freightCharges || 0) +
-      (input.totalFreightCharges || 0)
-  );
-}
-
 export class PurchaseMasterService {
   private repository = purchaseMasterRepository;
 
@@ -40,40 +24,36 @@ export class PurchaseMasterService {
   }
 
   async create(data: CreatePurchaseMasterInput, createdBy?: string) {
-    const itemsFromBody = data.items;
-    let totalPurchaseAmount = data.totalPurchaseAmount ?? 0;
-    if (!totalPurchaseAmount && itemsFromBody.length > 0) {
-      totalPurchaseAmount = round2(
-        itemsFromBody.reduce((sum, item) => sum + item.quantity * item.costPrice, 0)
-      );
-    }
-
-    const totalLandedCost = computeLandedCost({
-      totalPurchaseAmount,
-      gstPaid: data.gstPaid,
-      declarationFees: data.declarationFees,
-      freightCharges: data.freightCharges,
-      totalFreightCharges: data.totalFreightCharges,
-    });
-
-    const lineItems = itemsFromBody.map((item, index) => {
-      const tax = item.taxAmount ?? 0;
-      const finalCost = round2(item.quantity * item.costPrice + tax);
+    const lineItems = data.items.map((item, index) => {
+      const finalCost = round2(item.quantity * item.costPrice + (item.taxAmount ?? 0));
       return {
         productName: item.productName,
         productMasterId: item.productMasterId ?? null,
         quantity: item.quantity,
         costPrice: String(item.costPrice),
-        taxAmount: String(tax),
+        taxAmount: String(item.taxAmount ?? 0),
         finalCost: String(finalCost),
         mrp: item.mrp != null ? String(item.mrp) : null,
-        sortOrder: index,
+        sortOrder: item.sortOrder ?? index,
       };
     });
 
+    const totalPurchaseAmount = round2(
+      lineItems.reduce((sum, item) => sum + Number(item.finalCost), 0)
+    );
+    const gstPaid = data.gstPaid ?? 0;
+    const declarationFees = data.declarationFees ?? 0;
+    const freightCharges = data.freightCharges ?? 0;
+    const totalFreightCharges = data.totalFreightCharges ?? 0;
+    const totalLandedCost = round2(
+      totalPurchaseAmount + gstPaid + declarationFees + freightCharges + totalFreightCharges
+    );
+
+    const publicId = `pur-${randomUUID()}`;
+
     return this.repository.createWithItems(
       {
-        publicId: `pur-${randomUUID().slice(0, 8)}`,
+        publicId,
         supplierName: data.supplierName,
         supplierId: data.supplierId ?? null,
         billReferenceNo: data.billReferenceNo ?? null,
@@ -82,13 +62,13 @@ export class PurchaseMasterService {
         creditDays: data.creditDays ?? 0,
         advancePayment: String(data.advancePayment ?? 0),
         totalPurchaseAmount: String(totalPurchaseAmount),
-        gstPaid: String(data.gstPaid ?? 0),
-        declarationFees: String(data.declarationFees ?? 0),
-        freightCharges: String(data.freightCharges ?? 0),
-        totalFreightCharges: String(data.totalFreightCharges ?? 0),
+        gstPaid: String(gstPaid),
+        declarationFees: String(declarationFees),
+        freightCharges: String(freightCharges),
+        totalFreightCharges: String(totalFreightCharges),
         totalLandedCost: String(totalLandedCost),
         salesRate: data.salesRate != null ? String(data.salesRate) : null,
-        status: data.status ?? "draft",
+        status: data.status ?? "saved",
         invoiceUploadUrl: data.invoiceUploadUrl ?? null,
         notes: data.notes ?? null,
         createdBy: createdBy ?? null,
@@ -101,27 +81,7 @@ export class PurchaseMasterService {
     const existing = await this.repository.getById(id);
     if (!existing) return null;
 
-    const totalPurchaseAmount =
-      data.totalPurchaseAmount ?? Number(existing.totalPurchaseAmount || 0);
-    const gstPaid = data.gstPaid ?? Number(existing.gstPaid || 0);
-    const declarationFees =
-      data.declarationFees ?? Number(existing.declarationFees || 0);
-    const freightCharges =
-      data.freightCharges ?? Number(existing.freightCharges || 0);
-    const totalFreightCharges =
-      data.totalFreightCharges ?? Number(existing.totalFreightCharges || 0);
-
-    const totalLandedCost = computeLandedCost({
-      totalPurchaseAmount,
-      gstPaid,
-      declarationFees,
-      freightCharges,
-      totalFreightCharges,
-    });
-
-    const patch: Record<string, unknown> = {
-      totalLandedCost: String(totalLandedCost),
-    };
+    const patch: Record<string, unknown> = {};
     if (data.supplierName !== undefined) patch.supplierName = data.supplierName;
     if (data.supplierId !== undefined) patch.supplierId = data.supplierId;
     if (data.billReferenceNo !== undefined) patch.billReferenceNo = data.billReferenceNo;
@@ -129,9 +89,6 @@ export class PurchaseMasterService {
     if (data.paymentTimeline !== undefined) patch.paymentTimeline = data.paymentTimeline;
     if (data.creditDays !== undefined) patch.creditDays = data.creditDays;
     if (data.advancePayment !== undefined) patch.advancePayment = String(data.advancePayment);
-    if (data.totalPurchaseAmount !== undefined) {
-      patch.totalPurchaseAmount = String(data.totalPurchaseAmount);
-    }
     if (data.gstPaid !== undefined) patch.gstPaid = String(data.gstPaid);
     if (data.declarationFees !== undefined) patch.declarationFees = String(data.declarationFees);
     if (data.freightCharges !== undefined) patch.freightCharges = String(data.freightCharges);
@@ -145,31 +102,41 @@ export class PurchaseMasterService {
     if (data.invoiceUploadUrl !== undefined) patch.invoiceUploadUrl = data.invoiceUploadUrl;
     if (data.notes !== undefined) patch.notes = data.notes;
 
-    await this.repository.update(id, patch);
+    // Recalculate landed cost when cost components change
+    const gstPaid =
+      data.gstPaid !== undefined ? data.gstPaid : Number(existing.gstPaid || 0);
+    const declarationFees =
+      data.declarationFees !== undefined
+        ? data.declarationFees
+        : Number(existing.declarationFees || 0);
+    const freightCharges =
+      data.freightCharges !== undefined
+        ? data.freightCharges
+        : Number(existing.freightCharges || 0);
+    const totalFreightCharges =
+      data.totalFreightCharges !== undefined
+        ? data.totalFreightCharges
+        : Number(existing.totalFreightCharges || 0);
+    const totalPurchaseAmount = Number(existing.totalPurchaseAmount || 0);
 
-    if (data.items) {
-      const lineItems = data.items.map((item, index) => {
-        const tax = item.taxAmount ?? 0;
-        const finalCost = round2(item.quantity * item.costPrice + tax);
-        return {
-          productName: item.productName,
-          productMasterId: item.productMasterId ?? null,
-          quantity: item.quantity,
-          costPrice: String(item.costPrice),
-          taxAmount: String(tax),
-          finalCost: String(finalCost),
-          mrp: item.mrp != null ? String(item.mrp) : null,
-          sortOrder: index,
-        };
-      });
-      await this.repository.replaceItems(id, lineItems);
+    if (
+      data.gstPaid !== undefined ||
+      data.declarationFees !== undefined ||
+      data.freightCharges !== undefined ||
+      data.totalFreightCharges !== undefined
+    ) {
+      patch.totalLandedCost = String(
+        round2(
+          totalPurchaseAmount + gstPaid + declarationFees + freightCharges + totalFreightCharges
+        )
+      );
     }
 
-    return this.repository.getById(id);
+    return this.repository.update(id, patch);
   }
 
-  async delete(id: number) {
-    return this.repository.delete(id);
+  softCancel(id: number) {
+    return this.repository.softCancel(id);
   }
 }
 
