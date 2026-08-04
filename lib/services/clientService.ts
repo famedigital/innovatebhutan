@@ -16,10 +16,15 @@ export class ClientService {
     email?: string;
     phone?: string;
     whatsapp?: string;
+    whatsappGroupLink?: string;
     address?: string;
+    address2?: string;
     city?: string;
+    state?: string;
     country?: string;
     contactPerson?: string;
+    businessName?: string;
+    businessType?: string;
     notes?: string;
     active?: boolean;
   }) {
@@ -28,10 +33,15 @@ export class ClientService {
       email: data.email,
       phone: data.phone,
       whatsapp: data.whatsapp,
+      whatsappGroupLink: data.whatsappGroupLink,
       address: data.address,
+      address2: data.address2,
       city: data.city,
+      state: data.state,
       country: data.country || "Bhutan",
       contactPerson: data.contactPerson,
+      businessName: data.businessName,
+      businessType: data.businessType,
       notes: data.notes,
       active: data.active ?? true,
     });

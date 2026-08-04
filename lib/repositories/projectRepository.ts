@@ -706,6 +706,61 @@ export class ProjectRepository {
       .where(eq(projects.leadId, leadId))
       .orderBy(desc(projects.createdAt));
   }
+
+  /**
+   * Implementor / assignee queue: non-deleted projects with client name + ops fields.
+   */
+  async listQueue(filters: {
+    assigneeRole?: string;
+    leadId?: string;
+    limit?: number;
+    offset?: number;
+  } = {}) {
+    const conditions = [isNull(projects.deletedAt)];
+
+    if (filters.assigneeRole) {
+      conditions.push(eq(projects.assigneeRole, filters.assigneeRole));
+    }
+    if (filters.leadId) {
+      conditions.push(eq(projects.leadId, filters.leadId));
+    }
+
+    const whereClause = and(...conditions);
+
+    const [rows, totalResult] = await Promise.all([
+      this.db
+        .select({
+          id: projects.id,
+          publicId: projects.publicId,
+          name: projects.name,
+          status: projects.status,
+          clientId: projects.clientId,
+          clientName: clients.name,
+          leadId: projects.leadId,
+          assigneeRole: projects.assigneeRole,
+          productMasterStatus: projects.productMasterStatus,
+          trainingPlan: projects.trainingPlan,
+          categoryType: projects.categoryType,
+          preferredInstallDate: projects.preferredInstallDate,
+          quotationId: projects.quotationId,
+          progress: projects.progress,
+          createdAt: projects.createdAt,
+          updatedAt: projects.updatedAt,
+        })
+        .from(projects)
+        .leftJoin(clients, eq(projects.clientId, clients.id))
+        .where(whereClause)
+        .orderBy(desc(projects.createdAt))
+        .limit(filters.limit || 100)
+        .offset(filters.offset || 0),
+      this.db.select({ count: count() }).from(projects).where(whereClause),
+    ]);
+
+    return {
+      projects: rows,
+      total: Number(totalResult[0]?.count || 0),
+    };
+  }
 }
 
 // Singleton instance

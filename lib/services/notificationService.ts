@@ -21,6 +21,8 @@ export type NotificationCategory =
   | "needs_quote"
   | "portal_amc_renew"
   | "portal_payment_proof"
+  | "advance_deposited"
+  | "quotation_sent"
   | "system";
 
 export type NotificationType = "info" | "warning" | "critical" | "success";

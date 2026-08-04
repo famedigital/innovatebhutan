@@ -438,6 +438,15 @@ export class ProjectService {
     await this.repository.restoreProject(id);
   }
 
+  listQueue(filters: {
+    assigneeRole?: string;
+    leadId?: string;
+    limit?: number;
+    offset?: number;
+  } = {}) {
+    return this.repository.listQueue(filters);
+  }
+
   async listProjects(filters: ProjectFilters = {}) {
     return await this.repository.listProjectsWithDetails(filters);
   }
@@ -508,10 +517,36 @@ export class ProjectService {
       status = "advance_paid";
     }
 
-    return await this.repository.updateProject(projectId, {
+    const updated = await this.repository.updateProject(projectId, {
       moneyMeta: meta,
       status,
     });
+
+    if (input.slot === "advance") {
+      try {
+        const admins = await db
+          .select({ id: profiles.id })
+          .from(profiles)
+          .where(eq(profiles.role, "ADMIN"));
+
+        for (const admin of admins) {
+          await notificationService.createNotification({
+            profileId: admin.id,
+            title: "Advance deposited",
+            message: `Advance deposited for project ${project.name} (#${project.id})`,
+            type: "success",
+            category: "advance_deposited",
+            entityType: "project",
+            entityId: project.id,
+            link: `/admin/projects`,
+          });
+        }
+      } catch (err) {
+        console.error("[ProjectService.recordPayment] notification failed:", err);
+      }
+    }
+
+    return updated;
   }
 
   async writeOffBalance(
