@@ -281,17 +281,21 @@ export default function AdminPage() {
           <CardContent className="p-4">
             <h3 className="font-medium mb-4">Quick Actions</h3>
             <div className="space-y-2">
-              <Button variant="outline" className="w-full justify-start border-border h-11" onClick={() => window.location.href = '/admin/clients'}>
+              <Button variant="outline" className="w-full justify-start border-border h-11" onClick={() => window.location.href = '/admin/clients?new=1'}>
                 <Users className="w-4 h-4 mr-2" />
                 Add New Client
+              </Button>
+              <Button variant="outline" className="w-full justify-start border-border h-11" onClick={() => window.location.href = '/admin/projects?existing=1'}>
+                <Briefcase className="w-4 h-4 mr-2" />
+                New Project (existing client)
+              </Button>
+              <Button variant="outline" className="w-full justify-start border-border h-11" onClick={() => window.location.href = '/admin/quotations'}>
+                <DollarSign className="w-4 h-4 mr-2" />
+                New Quotation
               </Button>
               <Button variant="outline" className="w-full justify-start border-border h-11" onClick={() => window.location.href = '/admin/tickets'}>
                 <Ticket className="w-4 h-4 mr-2" />
                 Create Ticket
-              </Button>
-              <Button variant="outline" className="w-full justify-start border-border h-11" onClick={() => window.location.href = '/admin/projects'}>
-                <Briefcase className="w-4 h-4 mr-2" />
-                New Project
               </Button>
               <Button className="w-full justify-start h-11" onClick={() => window.location.href = '/admin/whatsapp'}>
                 <MessageSquare className="w-4 h-4 mr-2" />
