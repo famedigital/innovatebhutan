@@ -5,7 +5,7 @@ import { useRef, useEffect, useState } from "react";
 import { Trophy, MapPin, Clock, Heart, TrendingUp, Award, Users, Target } from "lucide-react";
 
 const stats = [
-  { value: 12, suffix: "+ Years", label: "Industry Excellence", description: "Trusted Expertise", icon: Trophy, color: "from-yellow-500 to-orange-500" },
+  { value: 11, suffix: "+ Years", label: "Industry Excellence", description: "Trusted Expertise", icon: Trophy, color: "from-yellow-500 to-orange-500" },
   { value: 20, suffix: "/20", label: "National Coverage", description: "All Dzongkhags", icon: MapPin, color: "from-blue-500 to-cyan-500" },
   { value: 300, suffix: "+", label: "Active ERP Members", description: "Rancelab Partners", icon: Users, color: "from-purple-500 to-pink-500" },
   { value: 99, suffix: "%", label: "Client Retention", description: "Satisfaction Rate", icon: Heart, color: "from-green-500 to-emerald-500" },

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, TrendingUp, CheckCircle2, Quote } from "lucide-react";
+import { TrendingUp, CheckCircle2, Quote } from "lucide-react";
 import { CASE_STUDIES, getIndustries, type CaseStudy } from "@/lib/data/case-studies";
 
 /**
@@ -148,21 +148,13 @@ export function SuccessStoriesGrid() {
                   </motion.div>
                 )}
 
-                {/* Expand/Collapse & Results */}
+                {/* Expand/Collapse Results */}
                 <div className="flex items-center justify-between">
                   <button
                     onClick={() => setExpandedCard(expandedCard === study.id ? null : study.id)}
                     className="text-sm text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
                   >
                     {expandedCard === study.id ? "Show Less" : "View All Results"}
-                  </button>
-
-                  <button
-                    onClick={() => window.location.href = `/case-studies/${study.id}`}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-sm font-medium transition-all hover:shadow-md"
-                  >
-                    <span>Details</span>
-                    <ArrowRight className="w-3 h-3" />
                   </button>
                 </div>
 
@@ -192,21 +184,6 @@ export function SuccessStoriesGrid() {
         ))}
       </div>
 
-      {/* View All CTA */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="text-center mt-12"
-      >
-        <button
-          onClick={() => window.location.href = '/case-studies'}
-          className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-full font-semibold text-lg transition-all hover:shadow-xl hover:shadow-emerald-500/25 hover:-translate-y-0.5 active:translate-y-0"
-        >
-          <span>View All Case Studies</span>
-          <ArrowRight className="w-5 h-5" />
-        </button>
-      </motion.div>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { SocialIconLinks } from "@/components/social-icons";
 
 interface ContentItem {
   id: number;
@@ -24,7 +25,7 @@ export function FooterSectionDynamic() {
     phone: "+975 17268753",
     website: "www.innovates.bt",
   });
-  const [footerLinks, setFooterLinks] = useState<Record<string, FooterLink>>({
+  const [footerLinks] = useState<Record<string, FooterLink>>({
     services: {
       title: "Services",
       links: [
@@ -33,23 +34,6 @@ export function FooterSectionDynamic() {
         { name: "Biometric Access", href: "/services" },
         { name: "Hospitality Software", href: "/services" },
         { name: "Custom Development", href: "/services" },
-      ]
-    },
-    directory: {
-      title: "Directory",
-      links: [
-        { name: "Browse All", href: "/directory" },
-        { name: "By Category", href: "/directory" },
-        { name: "By Location", href: "/directory" },
-        { name: "List Your Business", href: "/directory" },
-      ]
-    },
-    company: {
-      title: "Company",
-      links: [
-        { name: "About Us", href: "/company" },
-        { name: "Our Team", href: "/company/team" },
-        { name: "Careers", href: "/company/careers" },
       ]
     },
     support: {
@@ -67,7 +51,6 @@ export function FooterSectionDynamic() {
   useEffect(() => {
     async function fetchFooterContent() {
       try {
-        // Fetch footer content from CMS
         const contentRes = await fetch("/api/website/content?page=home&section=footer");
         if (contentRes.ok) {
           const contentData = await contentRes.json();
@@ -112,12 +95,10 @@ export function FooterSectionDynamic() {
 
   return (
     <footer className="bg-[#030712] text-white">
-      {/* Main Footer */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
-          {/* Brand Column */}
-          <div className="col-span-2 md:col-span-4 lg:col-span-1 mb-8 lg:mb-0">
-            <Link href="/" className="group relative z-10 transition-transform hover:scale-105 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 lg:gap-12">
+          <div className="col-span-2 md:col-span-3 lg:col-span-2 mb-8 lg:mb-0">
+            <Link href="/" className="group relative z-10 transition-transform hover:scale-105 mb-6 inline-block">
               <motion.img
                 src="https://res.cloudinary.com/dr9a371tx/image/upload/q_auto/f_auto/v1776706698/footerinnovates6_xwzura.png"
                 alt="INNOVATES.bt"
@@ -132,19 +113,9 @@ export function FooterSectionDynamic() {
                 </a>
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              {["FB", "IG", "LI"].map((social) => (
-                <button
-                  key={social}
-                  className="w-9 h-9 bg-[#1F2937] rounded-lg flex items-center justify-center text-xs font-medium text-[#9CA3AF] hover:bg-[#14532D] hover:text-white transition-colors"
-                >
-                  {social}
-                </button>
-              ))}
-            </div>
+            <SocialIconLinks />
           </div>
 
-          {/* Links Columns */}
           {Object.values(footerLinks).map((section) => (
             <div key={section.title}>
               <h4 className="text-sm font-semibold text-white mb-4">{section.title}</h4>
@@ -165,7 +136,6 @@ export function FooterSectionDynamic() {
         </div>
       </div>
 
-      {/* Bottom Bar */}
       <div className="border-t border-[#1F2937]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">

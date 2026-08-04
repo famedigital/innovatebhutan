@@ -237,7 +237,7 @@ export function ProblemSolutionHero() {
 
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => window.location.href = '/contact'}
+                    onClick={() => window.location.href = '/#contact'}
                     className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-full font-semibold transition-all hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <span>See Full Case Study</span>

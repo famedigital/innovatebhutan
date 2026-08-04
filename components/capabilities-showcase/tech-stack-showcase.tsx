@@ -280,12 +280,14 @@ export function TechStackShowcase() {
         <p className="text-lg text-slate-700 dark:text-slate-300 mb-4">
           Need a specific technology or solution?
         </p>
-        <button
-          onClick={() => window.location.href = '/contact'}
+        <a
+          href="https://wa.me/97517268753?text=Hi%2C%20I%27d%20like%20to%20discuss%20our%20tech%20stack%20requirements"
+          target="_blank"
+          rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-full font-semibold transition-all hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5 active:translate-y-0"
         >
           <span>Discuss Your Tech Stack</span>
-        </button>
+        </a>
       </motion.div>
     </div>
   );

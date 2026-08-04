@@ -128,7 +128,7 @@ export function StatsSectionDynamic() {
     },
     {
       label: "Years Experience",
-      value: "12+",
+      value: "11+",
       description: "Industry expertise",
       icon_name: "Award",
       icon_color: "#F59E0B",

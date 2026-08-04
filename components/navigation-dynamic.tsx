@@ -179,16 +179,26 @@ export function NavigationDynamic() {
   const parentLinks = navLinks.filter(link => !link.parent_id);
   const getChildren = (parentId: number) => navLinks.filter(link => link.parent_id === parentId);
 
-  // Fallback to static links if API fails
+  // Fallback to static links if API fails (Company & Directory removed from public nav)
   const fallbackLinks: NavLink[] = [
     { id: 1, label: "Home", url: "/", parent_id: null, icon_name: "Home", open_in_new_tab: false, display_order: 1 },
     { id: 2, label: "Services", url: "/services", parent_id: null, icon_name: "Layers", open_in_new_tab: false, display_order: 2 },
-    { id: 3, label: "Company", url: "/company", parent_id: null, icon_name: "Building2", open_in_new_tab: false, display_order: 3 },
-    { id: 4, label: "Directory", url: "/directory", parent_id: null, icon_name: "Grid3X3", badge: "Live", open_in_new_tab: false, display_order: 4 },
-    { id: 5, label: "Support", url: "/support", parent_id: null, icon_name: "Headphones", open_in_new_tab: false, display_order: 5 },
+    { id: 5, label: "Support", url: "/support", parent_id: null, icon_name: "Headphones", open_in_new_tab: false, display_order: 3 },
   ];
 
-  const displayLinks = parentLinks.length > 0 ? parentLinks : fallbackLinks;
+  const hiddenNavPaths = ["/company", "/directory"];
+  const isHiddenNavLink = (link: NavLink) =>
+    hiddenNavPaths.some(
+      (path) =>
+        link.url === path ||
+        link.url.startsWith(`${path}/`) ||
+        link.label.toLowerCase() === "company" ||
+        link.label.toLowerCase() === "directory"
+    );
+
+  const displayLinks = (parentLinks.length > 0 ? parentLinks : fallbackLinks).filter(
+    (link) => !isHiddenNavLink(link)
+  );
 
   // Conditional rendering based on scroll state and company page
   const showFullNav = !isCompanyPage && (!isScrolled || scrollDirection === 'up' || scrollDirection === null);
@@ -513,15 +523,6 @@ export function NavigationDynamic() {
           >
             <Layers className="w-6 h-6 text-slate-600 dark:text-white/70" />
             <span className="text-[10px] font-semibold text-slate-600 dark:text-white/60 whitespace-nowrap">Services</span>
-          </a>
-
-          {/* Directory */}
-          <a
-            href="/directory"
-            className="flex flex-col items-center justify-center gap-1.5 min-w-0 flex-1 transition-all active:scale-95"
-          >
-            <Grid3X3 className="w-6 h-6 text-slate-600 dark:text-white/70" />
-            <span className="text-[10px] font-semibold text-slate-600 dark:text-white/60 whitespace-nowrap">Directory</span>
           </a>
 
           {/* Support */}

@@ -295,7 +295,7 @@ export function CompanyPhotoGallery() {
                 className="flex flex-wrap gap-4 pt-4"
               >
                 <button
-                  onClick={() => window.location.href = '/contact'}
+                  onClick={() => window.location.href = '/#contact'}
                   className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white rounded-full font-bold text-lg transition-all hover:shadow-2xl hover:shadow-emerald-500/30 hover:-translate-y-1"
                 >
                   <span>Start Your Journey</span>

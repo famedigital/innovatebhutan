@@ -378,7 +378,7 @@ function HelpCenterContent() {
                   WhatsApp Us Now
                 </a>
                 <a
-                  href="/contact"
+                  href="/#contact"
                   className="inline-flex items-center justify-center gap-3 px-10 py-5 bg-background border-2 border-border text-foreground font-black uppercase text-[11px] tracking-widest rounded-2xl hover:border-primary/30 hover:text-primary transition-all"
                 >
                   <ArrowRight className="w-5 h-5" />

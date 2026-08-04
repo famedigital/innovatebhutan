@@ -4,10 +4,6 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
-  MessageCircle,
-  Phone,
-  Mail,
-  FileText,
   Clock,
   Shield,
   Wrench,
@@ -19,38 +15,12 @@ import {
   HeadphonesIcon,
   CalendarCheck,
   Users,
-  MessageSquare,
-  Award
 } from "lucide-react";
-
-const supportServices = [
-  {
-    icon: MessageSquare,
-    title: "Rancelab Support",
-    description: "Dedicated WhatsApp support with staff teams for comprehensive ERP assistance",
-    href: "/support/help",
-    features: ["Day & Night Teams", "WhatsApp Groups", "Staff + Client + Accounts", "Real-time Response"]
-  },
-  {
-    icon: Shield,
-    title: "Warranty Coverage",
-    description: "Product warranty coverage and extended warranty options for all products",
-    href: "/support/warranty",
-    features: ["Hardware Warranty", "Software Support", "Extended Plans", "Quick Claims"]
-  },
-  {
-    icon: Wrench,
-    title: "Service Request",
-    description: "Submit service requests with priority levels and tracking",
-    href: "/support/service",
-    features: ["Priority Levels", "Quick Response", "Status Tracking", "Expert Team"]
-  }
-];
 
 const faqs = [
   {
     question: "What support options are available for Rancelab ERP?",
-    answer: "We provide dedicated WhatsApp support with specialized staff teams. Our service includes day-time and late-night shift teams, WhatsApp groups with staff, client, and accounts representatives, and real-time response for urgent issues."
+    answer: "We provide dedicated WhatsApp support with specialized staff teams. Our service includes WhatsApp groups with staff, client, and accounts representatives, and timely response during support hours."
   },
   {
     question: "Where is your support center located?",
@@ -58,7 +28,7 @@ const faqs = [
   },
   {
     question: "What are your support hours?",
-    answer: "Our dedicated support teams operate day and night shifts. Daytime team covers standard business hours while our late-night team ensures after-hours support for emergencies. WhatsApp support is available 24/7."
+    answer: "Our support hours are 9:00 AM to 7:00 PM. Please fill out the form and one of our support executives will reach you within 2 hours. Requests submitted after 7:00 PM will be handled on the next working day."
   },
   {
     question: "How do I request warranty service?",
@@ -75,7 +45,7 @@ const serviceTypes = [
   { icon: Shield, name: "Warranty Service", description: "Hardware & Software Claims" },
   { icon: CalendarCheck, name: "Annual Maintenance", description: "Preventive Maintenance" },
   { icon: HeadphonesIcon, name: "Remote Support", description: "WhatsApp & TeamViewer" },
-  { icon: Zap, name: "Emergency Support", description: "24/7 Urgent Assistance" },
+  { icon: Zap, name: "Priority Support", description: "During support hours" },
   { icon: Users, name: "On-site Service", description: "Technical Visits" },
 ];
 
@@ -222,6 +192,13 @@ function ServiceRequestForm() {
         />
       </div>
 
+      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground/70 leading-relaxed">
+        Please fill out the form — one of our support executives will reach you within{" "}
+        <strong className="text-foreground">2 hours</strong>. After{" "}
+        <strong className="text-foreground">7:00 PM</strong> we will look into your support the next working day.
+        Support hours: <strong className="text-primary">9:00 AM to 7:00 PM</strong>.
+      </div>
+
       <button
         type="submit"
         disabled={isSubmitting}
@@ -252,19 +229,32 @@ export function SupportContent() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-full mb-6">
               <HeadphonesIcon className="w-3.5 h-3.5 text-primary" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary">24/7 Support Hub</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary">Support Hub</span>
             </div>
 
             <h1 className="text-4xl lg:text-6xl font-black text-foreground mb-6 tracking-tighter leading-none dark:neon-text">
               Premium <span className="text-primary">Support</span> Center
             </h1>
 
-            <p className="text-base text-foreground/60 mb-10 leading-relaxed max-w-xl mx-auto">
+            <p className="text-base text-foreground/60 mb-6 leading-relaxed max-w-xl mx-auto">
               At <strong className="text-primary">innovates.bt</strong>, we understand that reliable after-sales support is crucial.
               Our dedicated support teams provide comprehensive assistance for Rancelab ERP, custom software, and all our technology solutions.
             </p>
 
+            <div className="max-w-2xl mx-auto mb-10 p-5 rounded-2xl bg-primary/5 border border-primary/20 text-left">
+              <p className="text-sm text-foreground/80 leading-relaxed">
+                Please fill out the form — one of our support executives will reach you within{" "}
+                <strong className="text-foreground">2 hours</strong>. After{" "}
+                <strong className="text-foreground">7:00 PM</strong> we will look into your support request the next working day.
+                Support hours: <strong className="text-primary">9:00 AM to 7:00 PM</strong>.
+              </p>
+            </div>
+
             <div className="flex flex-wrap justify-center gap-8 border-t border-border pt-8">
+              <div className="flex items-center gap-2.5 text-foreground/50">
+                <Clock className="w-4 h-4 text-primary" />
+                <span className="text-[10px] font-black tracking-widest uppercase">Hours: <span className="text-foreground">9:00 AM – 7:00 PM</span></span>
+              </div>
               <div className="flex items-center gap-2.5 text-foreground/50">
                 <Clock className="w-4 h-4 text-primary" />
                 <span className="text-[10px] font-black tracking-widest uppercase">Response: <span className="text-foreground">Within 2 Hours</span></span>
@@ -278,41 +268,6 @@ export function SupportContent() {
         </div>
       </section>
 
-      {/* 📡 SUPPORT SERVICES GRID */}
-      <section className="py-16 bg-card/30">
-        <div className="max-w-7xl mx-auto px-5">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl font-black text-foreground mb-3">Our Support Services</h2>
-            <p className="text-foreground/60">Comprehensive support solutions for your business</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {supportServices.map((service, i) => (
-              <motion.a
-                key={i}
-                href={service.href}
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="bg-card border border-border rounded-3xl p-8 text-center hover:border-primary/40 hover:shadow-2xl transition-all group relative overflow-hidden"
-              >
-                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-5 transition-all group-hover:scale-110 group-hover:bg-primary">
-                  <service.icon className="w-8 h-8 text-primary group-hover:text-black transition-all" />
-                </div>
-                <h3 className="text-lg font-black text-foreground uppercase tracking-widest mb-2">{service.title}</h3>
-                <p className="text-foreground/50 text-sm mb-6 leading-relaxed">{service.description}</p>
-                <ul className="space-y-2">
-                  {service.features.map((feature, fi) => (
-                    <li key={fi} className="flex items-center justify-center gap-2 text-xs text-foreground/40">
-                      <Award className="w-3 h-3 text-primary" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </motion.a>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* 🧩 SUPPORT FEATURES */}
       <section className="py-16 border-y border-border">
@@ -357,16 +312,16 @@ export function SupportContent() {
                 Dedicated <span className="text-primary">Support</span> Teams
               </h2>
               <p className="text-lg text-foreground/40 mb-10 leading-relaxed font-medium max-w-xl">
-                Our Rancelab support features dedicated staff teams operating day and night shifts. WhatsApp groups include staff,
-                client representatives, and accounts team for comprehensive assistance.
+                Our Rancelab support features dedicated staff teams during support hours (9:00 AM to 7:00 PM).
+                WhatsApp groups include staff, client representatives, and accounts team for comprehensive assistance.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
-                  { t: "Day & Night Teams", d: "Round-the-clock coverage" },
+                  { t: "Support Hours", d: "9:00 AM to 7:00 PM" },
                   { t: "WhatsApp Groups", d: "Staff + Client + Accounts" },
-                  { t: "Quick Response", d: "Within 2 hours response" },
-                  { t: "Professional Team", d: "Experienced technical staff" }
+                  { t: "Quick Response", d: "Within 2 hours (during hours)" },
+                  { t: "After Hours", d: "Next working day follow-up" }
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl">
                     <Zap className="w-4 h-4 text-primary" />

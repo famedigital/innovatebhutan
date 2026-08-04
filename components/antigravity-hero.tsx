@@ -249,7 +249,7 @@ export function AntigravityHero() {
         >
           {/* Primary CTA */}
           <a
-            href="#products"
+            href="/products"
             className="group relative px-8 py-4 bg-emerald-600 dark:bg-emerald-500 text-white dark:text-black rounded-full font-semibold text-base sm:text-lg transition-all hover:bg-emerald-700 dark:hover:bg-emerald-400 hover:shadow-xl hover:shadow-emerald-500/25 hover:-translate-y-0.5 active:translate-y-0"
           >
             <span className="flex items-center gap-2">
@@ -285,7 +285,7 @@ export function AntigravityHero() {
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>12+ Years</span>
+            <span>11+ Years</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

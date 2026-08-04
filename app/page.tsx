@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import { TopMarquee } from "@/components/top-marquee";
 import { AntigravityHero } from "@/components/antigravity-hero";
-import { ServiceDirectoryDynamic } from "@/components/service-directory-dynamic";
 import { ContactSectionDynamic } from "@/components/contact-section-dynamic";
 import { FooterSectionDynamic } from "@/components/footer-section-dynamic";
 import { WhatsAppButton } from "@/components/whatsapp-button";
@@ -75,7 +74,7 @@ export default function HomePage() {
               {[
                 { label: 'Clients Served', value: '350+' },
                 { label: 'Projects Delivered', value: '500+' },
-                { label: 'Years Experience', value: '12+' },
+                { label: 'Years Experience', value: '11+' },
                 { label: 'Success Rate', value: '98%' }
               ].map((stat, i) => (
                 <div key={i} className="text-center">
@@ -126,7 +125,7 @@ export default function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <a
-                  href="/contact"
+                  href="/#contact"
                   className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white dark:text-black rounded-full font-semibold text-lg transition-all hover:shadow-xl hover:shadow-emerald-500/25 hover:-translate-y-1 active:translate-y-0"
                 >
                   <span>Start Your Project</span>
@@ -142,19 +141,6 @@ export default function HomePage() {
               </div>
             </div>
           </motion.div>
-        </div>
-      </section>
-
-      {/* Services Section */}
-      <section className="py-16 bg-background">
-        <div className="max-w-[1600px] mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Our Services</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Comprehensive technology solutions tailored for your business needs
-            </p>
-          </div>
-          <ServiceDirectoryDynamic />
         </div>
       </section>
 

@@ -51,15 +51,6 @@ function ModernLogo() {
 const navLinks = [
   { name: "Home", href: "/" },
   { name: "Service Portal", href: "/services" },
-  { name: "Directory", href: "/directory" },
-  {
-    name: "Company",
-    submenu: [
-      { name: "About Us", href: "/company" },
-      { name: "Our Team", href: "/company/team" },
-      { name: "Careers", href: "/company/careers" },
-    ]
-  },
   {
     name: "Support Hub",
     submenu: [

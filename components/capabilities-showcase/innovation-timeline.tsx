@@ -24,7 +24,7 @@ export function InnovationTimeline() {
 
   const milestones: TimelineMilestone[] = [
     {
-      year: "2014",
+      year: "2015",
       title: "Founded",
       description: "Innovates Bhutan established with a vision to transform technology in the country.",
       icon: <Lightbulb className="w-6 h-6" />,
@@ -224,19 +224,21 @@ export function InnovationTimeline() {
             Join us on our journey as we continue to innovate and transform businesses across the country.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button
-              onClick={() => window.location.href = '/contact'}
+            <a
+              href="https://wa.me/97517268753?text=Hi%2C%20I%27d%20like%20to%20partner%20with%20Innovates"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-full font-semibold transition-all hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5 active:translate-y-0"
             >
               <span>Partner With Us</span>
               <Rocket className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => window.location.href = '/company'}
+            </a>
+            <a
+              href="/#contact"
               className="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 hover:border-emerald-600 dark:hover:border-emerald-400 rounded-full font-semibold transition-all"
             >
-              <span>Learn More</span>
-            </button>
+              <span>Get in Touch</span>
+            </a>
           </div>
         </div>
       </motion.div>
