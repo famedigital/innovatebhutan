@@ -30,6 +30,8 @@ export default function SettingsPage() {
     twilioSid: "",
     twilioToken: "",
     twilioPhone: "",
+    callmebotPhone: "",
+    callmebotApiKey: "",
     
     // Database
     supabaseUrl: "",
@@ -82,6 +84,8 @@ export default function SettingsPage() {
         twilioSid: map.twilio_sid || "",
         twilioToken: map.twilio_token || "",
         twilioPhone: map.twilio_phone || "",
+        callmebotPhone: map.callmebot_phone || "",
+        callmebotApiKey: map.callmebot_api_key || "",
         supabaseUrl: map.supabase_url || "",
         supabaseAnonKey: map.supabase_anon_key || "",
         cloudinaryName: map.cloudinary_name || "",
@@ -202,6 +206,24 @@ export default function SettingsPage() {
               <ApiField label="Account SID" field="twilioSid" placeholder="ACxxxxx" icon={Key} />
               <ApiField label="Auth Token" field="twilioToken" placeholder="xxxxx" icon={Key} />
               <ApiField label="Phone Number" field="twilioPhone" placeholder="+975xxxxx" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-[#25D366]" /> CallMeBot (WhatsApp Alerts)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <ApiField label="Phone (with country code)" field="callmebotPhone" placeholder="975XXXXXXXX" />
+              <ApiField label="API Key" field="callmebotApiKey" placeholder="your CallMeBot apikey" icon={Key} />
+              <div className="col-span-2 p-3 bg-[#F3F3F1] rounded-lg">
+                <p className="text-xs text-[#717171]">
+                  Alerts fire for support requests, contact forms, and lead capture.
+                  Get your key from callmebot.com (WhatsApp activate message). Env vars
+                  CALLMEBOT_PHONE / CALLMEBOT_API_KEY also work.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

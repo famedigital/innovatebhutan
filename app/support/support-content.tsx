@@ -4,210 +4,485 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
-  Clock,
-  Shield,
-  Wrench,
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Send,
-  MapPin,
-  Zap,
+  Clock,
   HeadphonesIcon,
-  CalendarCheck,
-  Users,
+  MapPin,
+  MonitorSmartphone,
+  Send,
+  Shield,
+  Wrench,
+  Zap,
 } from "lucide-react";
 
 const faqs = [
   {
-    question: "What support options are available for Rancelab ERP?",
-    answer: "We provide dedicated WhatsApp support with specialized staff teams. Our service includes WhatsApp groups with staff, client, and accounts representatives, and timely response during support hours."
+    question: "What support options are available?",
+    answer:
+      "Choose Information Support for product guidance with visuals, or Technical Support when software/hardware is not working. Submit the form and our team reaches you within 2 hours during support hours.",
   },
   {
     question: "Where is your support center located?",
-    answer: "Our support center is located at Express Highway, next to Green Kitchen in Thimphu. We're easily accessible and provide both on-site and remote support."
+    answer:
+      "Our support center is located at Express Highway, next to Green Kitchen in Thimphu. We're easily accessible and provide both on-site and remote support.",
   },
   {
     question: "What are your support hours?",
-    answer: "Our support hours are 9:00 AM to 7:00 PM. Please fill out the form and one of our support executives will reach you within 2 hours. Requests submitted after 7:00 PM will be handled on the next working day."
-  },
-  {
-    question: "How do I request warranty service?",
-    answer: "You can request warranty service through our Service Request portal or contact us directly via WhatsApp. Our team will guide you through the warranty claim process and provide quick resolution."
+    answer:
+      "Support hours are 9:00 AM to 7:00 PM. One of our support executives will reach you within 2 hours. Requests after 7:00 PM are handled the next working day.",
   },
   {
     question: "Do you offer support outside Thimphu?",
-    answer: "Yes, we provide support across Bhutan with remote troubleshooting available nationwide. For on-site support, we prioritize Thimphu, Paro, and Punakha with quick response times."
-  }
+    answer:
+      "Yes — remote troubleshooting nationwide. On-site support prioritizes Thimphu, Paro, and Punakha with quick response times.",
+  },
 ];
 
-const serviceTypes = [
-  { icon: Wrench, name: "Technical Support", description: "Rancelab ERP & Software" },
-  { icon: Shield, name: "Warranty Service", description: "Hardware & Software Claims" },
-  { icon: CalendarCheck, name: "Annual Maintenance", description: "Preventive Maintenance" },
-  { icon: HeadphonesIcon, name: "Remote Support", description: "WhatsApp & TeamViewer" },
-  { icon: Zap, name: "Priority Support", description: "During support hours" },
-  { icon: Users, name: "On-site Service", description: "Technical Visits" },
+const informationTopics = [
+  {
+    id: "products",
+    title: "Products & Solutions",
+    description: "See what we install for hotels, shops, and offices",
+    image:
+      "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=800&q=80",
+  },
+  {
+    id: "pricing",
+    title: "Pricing & Packages",
+    description: "Ask about quotes, AMC, and implementation costs",
+    image:
+      "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=800&q=80",
+  },
+  {
+    id: "how-to",
+    title: "How-to Guides",
+    description: "Training, setup walkthroughs, and best practices",
+    image:
+      "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80",
+  },
+  {
+    id: "demo",
+    title: "Demo / Walkthrough",
+    description: "Request a live demo of POS, ERP, or CCTV systems",
+    image:
+      "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80",
+  },
 ];
 
-function ServiceRequestForm() {
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    serviceType: "",
-    location: "",
-    description: ""
-  });
+const technicalTopics = [
+  {
+    id: "software-down",
+    title: "Software not working",
+    description: "App crashes, blank screens, or features failing",
+    icon: MonitorSmartphone,
+  },
+  {
+    id: "login",
+    title: "Login / Access issue",
+    description: "Cannot sign in, password reset, or user permissions",
+    icon: Shield,
+  },
+  {
+    id: "pos",
+    title: "POS / Billing issue",
+    description: "Receipts, inventory sync, or payment problems",
+    icon: Wrench,
+  },
+  {
+    id: "hardware",
+    title: "CCTV / Hardware",
+    description: "Cameras offline, DVR, printers, or networking",
+    icon: HeadphonesIcon,
+  },
+];
+
+type Step = "identity" | "category" | "details" | "done";
+
+function ProgressiveSupportForm() {
+  const [step, setStep] = useState<Step>("identity");
+  const [businessName, setBusinessName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [category, setCategory] = useState<"information" | "technical" | "">(
+    ""
+  );
+  const [topic, setTopic] = useState("");
+  const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const dzongkhags = [
-    "Thimphu", "Paro", "Punakha", "Wangdue Phodrang", "Phuentsholing",
-    "Bumthang", "Trongsa", "Zhemgang", "Bajoton", "Sarpang",
-    "Chhukha", "Dagana", "Tsirang", "Ha", "Samtse",
-    "Gasa", "Lhuentse", "Mongar", "Tashigang", "Tromshoen", "Yongkha", "Zhongar"
-  ];
+  const canContinueIdentity =
+    businessName.trim().length >= 2 && phone.trim().length >= 8;
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const submit = async () => {
+    if (!category || !topic) {
+      toast.error("Please select a support topic");
+      return;
+    }
+
     setIsSubmitting(true);
-
     try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const topicLabel =
+        category === "information"
+          ? informationTopics.find((t) => t.id === topic)?.title
+          : technicalTopics.find((t) => t.id === topic)?.title;
+
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
-          service: formData.serviceType,
-          message: formData.description,
-          formType: 'service-request'
-        })
+          name: businessName.trim(),
+          businessName: businessName.trim(),
+          phone: phone.trim(),
+          formType: "support-request",
+          supportCategory: category,
+          supportTopic: topicLabel || topic,
+          service: topicLabel || topic,
+          message:
+            message.trim() ||
+            `${category === "technical" ? "Technical" : "Information"} support request: ${topicLabel || topic}`,
+        }),
       });
 
       const result = await response.json();
-
       if (result.success) {
-        toast.success('Support Request Submitted!', {
-          description: 'Your support request has been received. Our team will contact you shortly.'
-        });
-        setFormData({
-          name: "",
-          phone: "",
-          email: "",
-          serviceType: "",
-          location: "",
-          description: ""
+        setStep("done");
+        toast.success("Support request submitted", {
+          description: "Our team will reach you within 2 hours during support hours.",
         });
       } else {
-        toast.error('Request Failed', {
-          description: result.error || 'Something went wrong. Please try again.'
+        toast.error("Request failed", {
+          description: result.error || "Please try again.",
         });
       }
-    } catch (error) {
-      toast.error('Network Error', {
-        description: 'Please check your connection and try again.'
+    } catch {
+      toast.error("Network error", {
+        description: "Please check your connection and try again.",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const reset = () => {
+    setStep("identity");
+    setBusinessName("");
+    setPhone("");
+    setCategory("");
+    setTopic("");
+    setMessage("");
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid sm:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-2">Full Name</label>
-          <input
-            type="text"
-            required
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-5 py-4 bg-background border border-border rounded-2xl text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-primary transition-all"
-            placeholder="Your Name"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-2">Phone Number</label>
-          <input
-            type="tel"
-            required
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            className="w-full px-5 py-4 bg-background border border-border rounded-2xl text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-primary transition-all"
-            placeholder="+975 XXX XXX"
-          />
-        </div>
+    <div className="space-y-6">
+      {/* Progress */}
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/40">
+        {[
+          { id: "identity", label: "Business" },
+          { id: "category", label: "Type" },
+          { id: "details", label: "Details" },
+        ].map((item, index) => {
+          const order = ["identity", "category", "details", "done"];
+          const current = order.indexOf(step);
+          const active = order.indexOf(item.id) <= current;
+          return (
+            <div key={item.id} className="flex items-center gap-2">
+              {index > 0 && <div className="h-px w-4 bg-border" />}
+              <span className={active ? "text-primary" : ""}>{item.label}</span>
+            </div>
+          );
+        })}
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-2">Email Address</label>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="w-full px-5 py-4 bg-background border border-border rounded-2xl text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-primary transition-all"
-            placeholder="your@email.com"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-2">Service Type</label>
-          <select
-            required
-            value={formData.serviceType}
-            onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
-            className="w-full px-5 py-4 bg-background border border-border rounded-2xl text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none transition-all"
+      <AnimatePresence mode="wait">
+        {step === "identity" && (
+          <motion.div
+            key="identity"
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            className="space-y-5"
           >
-            <option value="">Select Service Type</option>
-            {serviceTypes.map((type) => (
-              <option key={type.name} value={type.name}>{type.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+            <div>
+              <h3 className="text-lg font-black tracking-tight mb-1">
+                Start your support request
+              </h3>
+              <p className="text-sm text-foreground/50">
+                Enter your business name and mobile number first.
+              </p>
+            </div>
 
-      <div className="space-y-2">
-        <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-2">Location</label>
-        <select
-          required
-          value={formData.location}
-          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-          className="w-full px-5 py-4 bg-background border border-border rounded-2xl text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none transition-all"
-        >
-          <option value="">Select Your Location</option>
-          {dzongkhags.map((dz) => (
-            <option key={dz} value={dz}>{dz}</option>
-          ))}
-        </select>
-      </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-2">
+                Business Name
+              </label>
+              <input
+                type="text"
+                required
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                className="w-full px-5 py-4 bg-background border border-border rounded-2xl text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-primary transition-all"
+                placeholder="e.g. Silverpine Boutique"
+              />
+            </div>
 
-      <div className="space-y-2">
-        <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-2">Issue Description</label>
-        <textarea
-          required
-          rows={5}
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className="w-full px-5 py-4 bg-background border border-border rounded-2xl text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-primary resize-none transition-all"
-          placeholder="Please describe your issue or request..."
-        />
-      </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-2">
+                Mobile Number
+              </label>
+              <input
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-5 py-4 bg-background border border-border rounded-2xl text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-primary transition-all"
+                placeholder="+975 XXX XXXXX"
+              />
+            </div>
 
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground/70 leading-relaxed">
-        Please fill out the form — one of our support executives will reach you within{" "}
-        <strong className="text-foreground">2 hours</strong>. After{" "}
-        <strong className="text-foreground">7:00 PM</strong> we will look into your support the next working day.
-        Support hours: <strong className="text-primary">9:00 AM to 7:00 PM</strong>.
-      </div>
+            <button
+              type="button"
+              disabled={!canContinueIdentity}
+              onClick={() => setStep("category")}
+              className="w-full py-4 bg-primary text-[#020617] font-bold uppercase text-[10px] tracking-[0.3em] rounded-2xl flex items-center justify-center gap-2 disabled:opacity-40"
+            >
+              Continue <ArrowRight className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full py-5 bg-primary text-[#020617] font-bold uppercase text-[10px] tracking-[0.3em] rounded-2xl flex items-center justify-center gap-3 hover:bg-white hover:scale-[1.02] transition-all shadow-[0_0_20px_rgba(57,255,20,0.2)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-      >
-        <Send className="w-4 h-4" />
-        {isSubmitting ? 'Processing...' : 'Submit Request'}
-      </button>
-    </form>
+        {step === "category" && (
+          <motion.div
+            key="category"
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            className="space-y-5"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-black tracking-tight mb-1">
+                  How can we help?
+                </h3>
+                <p className="text-sm text-foreground/50">
+                  {businessName} · {phone}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep("identity")}
+                className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+              >
+                <ArrowLeft className="w-3 h-3" /> Edit
+              </button>
+            </div>
+
+            <div className="grid gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setCategory("information");
+                  setTopic("");
+                  setStep("details");
+                }}
+                className="text-left rounded-2xl border border-border overflow-hidden hover:border-primary/40 transition-all group"
+              >
+                <div className="relative h-32 overflow-hidden">
+                  <img
+                    src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1000&q=80"
+                    alt="Information support"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="absolute bottom-3 left-3 right-3 text-white">
+                    <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-300 mb-1">
+                      <BookOpen className="w-3.5 h-3.5" /> Information Support
+                    </div>
+                    <p className="text-sm font-semibold">
+                      Product info, pricing, demos — with clear visuals
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCategory("technical");
+                  setTopic("");
+                  setStep("details");
+                }}
+                className="text-left rounded-2xl border border-border overflow-hidden hover:border-primary/40 transition-all group"
+              >
+                <div className="relative h-32 overflow-hidden">
+                  <img
+                    src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1000&q=80"
+                    alt="Technical support"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="absolute bottom-3 left-3 right-3 text-white">
+                    <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-amber-300 mb-1">
+                      <Wrench className="w-3.5 h-3.5" /> Technical Support
+                    </div>
+                    <p className="text-sm font-semibold">
+                      Software not working, login issues, POS, CCTV & more
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {step === "details" && (
+          <motion.div
+            key="details"
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            className="space-y-5"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-black tracking-tight mb-1">
+                  {category === "information"
+                    ? "Information Support"
+                    : "Technical Support"}
+                </h3>
+                <p className="text-sm text-foreground/50">
+                  Pick a topic, then add any details.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep("category")}
+                className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+              >
+                <ArrowLeft className="w-3 h-3" /> Back
+              </button>
+            </div>
+
+            {category === "information" ? (
+              <div className="grid sm:grid-cols-2 gap-3">
+                {informationTopics.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setTopic(item.id)}
+                    className={`text-left rounded-xl border overflow-hidden transition-all ${
+                      topic === item.id
+                        ? "border-primary ring-1 ring-primary/30"
+                        : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="h-24 w-full object-cover"
+                    />
+                    <div className="p-3">
+                      <div className="text-sm font-semibold">{item.title}</div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {item.description}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {technicalTopics.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setTopic(item.id)}
+                      className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${
+                        topic === item.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted border border-border">
+                        <Icon className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold">{item.title}</div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {item.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-2">
+                Extra details (optional)
+              </label>
+              <textarea
+                rows={4}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="w-full px-5 py-4 bg-background border border-border rounded-2xl text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-primary resize-none transition-all"
+                placeholder={
+                  category === "technical"
+                    ? "What stopped working? Any error message?"
+                    : "What would you like to know?"
+                }
+              />
+            </div>
+
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground/70 leading-relaxed">
+              We respond within <strong className="text-foreground">2 hours</strong>{" "}
+              during <strong className="text-primary">9:00 AM – 7:00 PM</strong>.
+              After 7:00 PM we follow up the next working day.
+            </div>
+
+            <button
+              type="button"
+              disabled={!topic || isSubmitting}
+              onClick={submit}
+              className="w-full py-4 bg-primary text-[#020617] font-bold uppercase text-[10px] tracking-[0.3em] rounded-2xl flex items-center justify-center gap-2 disabled:opacity-40"
+            >
+              <Send className="w-4 h-4" />
+              {isSubmitting ? "Sending..." : "Submit Support Request"}
+            </button>
+          </motion.div>
+        )}
+
+        {step === "done" && (
+          <motion.div
+            key="done"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-8 space-y-4"
+          >
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <CheckCircle2 className="w-7 h-7" />
+            </div>
+            <h3 className="text-xl font-black tracking-tight">Request received</h3>
+            <p className="text-sm text-foreground/60 max-w-sm mx-auto">
+              Thanks, {businessName}. Our support team will contact {phone} soon.
+            </p>
+            <button
+              type="button"
+              onClick={reset}
+              className="text-sm font-semibold text-primary hover:underline"
+            >
+              Submit another request
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -216,7 +491,6 @@ export function SupportContent() {
 
   return (
     <div className="pt-16 bg-background text-foreground transition-colors duration-500">
-      {/* 🚀 HERO SECTION */}
       <section className="relative py-20 overflow-hidden border-b border-border">
         <div className="absolute inset-0 bg-grid-pattern opacity-5" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
@@ -229,7 +503,9 @@ export function SupportContent() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-full mb-6">
               <HeadphonesIcon className="w-3.5 h-3.5 text-primary" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary">Support Hub</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary">
+                Support Hub
+              </span>
             </div>
 
             <h1 className="text-4xl lg:text-6xl font-black text-foreground mb-6 tracking-tighter leading-none dark:neon-text">
@@ -237,72 +513,84 @@ export function SupportContent() {
             </h1>
 
             <p className="text-base text-foreground/60 mb-6 leading-relaxed max-w-xl mx-auto">
-              At <strong className="text-primary">innovates.bt</strong>, we understand that reliable after-sales support is crucial.
-              Our dedicated support teams provide comprehensive assistance for Rancelab ERP, custom software, and all our technology solutions.
+              Start with your business name and mobile. Then choose Information
+              Support (guided with images) or Technical Support (software not
+              working and related issues).
             </p>
-
-            <div className="max-w-2xl mx-auto mb-10 p-5 rounded-2xl bg-primary/5 border border-primary/20 text-left">
-              <p className="text-sm text-foreground/80 leading-relaxed">
-                Please fill out the form — one of our support executives will reach you within{" "}
-                <strong className="text-foreground">2 hours</strong>. After{" "}
-                <strong className="text-foreground">7:00 PM</strong> we will look into your support request the next working day.
-                Support hours: <strong className="text-primary">9:00 AM to 7:00 PM</strong>.
-              </p>
-            </div>
 
             <div className="flex flex-wrap justify-center gap-8 border-t border-border pt-8">
               <div className="flex items-center gap-2.5 text-foreground/50">
                 <Clock className="w-4 h-4 text-primary" />
-                <span className="text-[10px] font-black tracking-widest uppercase">Hours: <span className="text-foreground">9:00 AM – 7:00 PM</span></span>
+                <span className="text-[10px] font-black tracking-widest uppercase">
+                  Hours: <span className="text-foreground">9:00 AM – 7:00 PM</span>
+                </span>
               </div>
               <div className="flex items-center gap-2.5 text-foreground/50">
                 <Clock className="w-4 h-4 text-primary" />
-                <span className="text-[10px] font-black tracking-widest uppercase">Response: <span className="text-foreground">Within 2 Hours</span></span>
+                <span className="text-[10px] font-black tracking-widest uppercase">
+                  Response: <span className="text-foreground">Within 2 Hours</span>
+                </span>
               </div>
               <div className="flex items-center gap-2.5 text-foreground/50">
                 <Shield className="w-4 h-4 text-primary" />
-                <span className="text-[10px] font-black tracking-widest uppercase">Coverage: <span className="text-foreground">All Bhutan</span></span>
+                <span className="text-[10px] font-black tracking-widest uppercase">
+                  Coverage: <span className="text-foreground">All Bhutan</span>
+                </span>
               </div>
             </div>
           </motion.div>
         </div>
       </section>
 
-
-      {/* 🧩 SUPPORT FEATURES */}
-      <section className="py-16 border-y border-border">
-        <div className="max-w-7xl mx-auto px-5">
-          <div className="flex flex-col items-center mb-16">
-            <h2 className="text-[12px] font-black text-foreground/40 uppercase tracking-[0.5em] mb-4">Why Choose Our Support</h2>
-            <div className="h-1 w-12 bg-primary rounded-full" />
+      <section className="py-16 border-b border-border">
+        <div className="max-w-7xl mx-auto px-5 grid lg:grid-cols-2 gap-6">
+          <div className="rounded-3xl overflow-hidden border border-border relative min-h-[220px]">
+            <img
+              src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1200&q=80"
+              alt="Information support"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+            <div className="relative p-8 text-white h-full flex flex-col justify-end">
+              <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-300 mb-2">
+                <BookOpen className="w-4 h-4" /> Information Support
+              </div>
+              <h2 className="text-2xl font-black tracking-tight mb-2">
+                Clear answers with visuals
+              </h2>
+              <p className="text-sm text-white/75 max-w-md">
+                Products, pricing, demos, and how-to guidance — shown with images
+                so you know exactly what you&apos;re getting.
+              </p>
+            </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {serviceTypes.map((type, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, scale: 0.95 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                className="bg-card border border-border rounded-2xl p-6 hover:border-primary/30 transition-all flex items-start gap-5 group"
-              >
-                <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center shrink-0 border border-border group-hover:bg-primary transition-all duration-300">
-                  <type.icon className="w-5 h-5 text-primary group-hover:text-black transition-all" />
-                </div>
-                <div>
-                  <h3 className="text-[11px] font-black text-foreground uppercase tracking-wider mb-2">{type.name}</h3>
-                  <p className="text-[11px] text-foreground/40 leading-relaxed">{type.description}</p>
-                </div>
-              </motion.div>
-            ))}
+          <div className="rounded-3xl overflow-hidden border border-border relative min-h-[220px]">
+            <img
+              src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80"
+              alt="Technical support"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+            <div className="relative p-8 text-white h-full flex flex-col justify-end">
+              <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-amber-300 mb-2">
+                <Wrench className="w-4 h-4" /> Technical Support
+              </div>
+              <h2 className="text-2xl font-black tracking-tight mb-2">
+                When systems stop working
+              </h2>
+              <p className="text-sm text-white/75 max-w-md">
+                Software not working, login problems, POS billing issues, CCTV /
+                hardware faults — we troubleshoot fast.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 💻 SUPPORT HIGHLIGHTS */}
       <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-5">
-          <div className="grid lg:grid-cols-[1fr_450px] gap-16 items-center">
+          <div className="grid lg:grid-cols-[1fr_460px] gap-16 items-start">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -312,22 +600,30 @@ export function SupportContent() {
                 Dedicated <span className="text-primary">Support</span> Teams
               </h2>
               <p className="text-lg text-foreground/40 mb-10 leading-relaxed font-medium max-w-xl">
-                Our Rancelab support features dedicated staff teams during support hours (9:00 AM to 7:00 PM).
-                WhatsApp groups include staff, client representatives, and accounts team for comprehensive assistance.
+                Progressive intake keeps requests clear: business + mobile first,
+                then Information or Technical support with the right details for
+                fast follow-up.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   { t: "Support Hours", d: "9:00 AM to 7:00 PM" },
-                  { t: "WhatsApp Groups", d: "Staff + Client + Accounts" },
+                  { t: "WhatsApp Alerts", d: "CallMeBot to ops team" },
                   { t: "Quick Response", d: "Within 2 hours (during hours)" },
-                  { t: "After Hours", d: "Next working day follow-up" }
+                  { t: "After Hours", d: "Next working day follow-up" },
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl">
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl"
+                  >
                     <Zap className="w-4 h-4 text-primary" />
                     <div>
-                      <div className="text-[10px] font-black text-foreground uppercase tracking-widest">{item.t}</div>
-                      <div className="text-[9px] text-primary/50 uppercase tracking-widest font-bold">{item.d}</div>
+                      <div className="text-[10px] font-black text-foreground uppercase tracking-widest">
+                        {item.t}
+                      </div>
+                      <div className="text-[9px] text-primary/50 uppercase tracking-widest font-bold">
+                        {item.d}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -344,9 +640,15 @@ export function SupportContent() {
                     <MapPin className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-foreground mb-1">Visit Our Support Center</h3>
+                    <h3 className="text-lg font-black text-foreground mb-1">
+                      Visit Our Support Center
+                    </h3>
                     <p className="text-foreground/50 text-sm">
-                      Located at <strong className="text-primary">Express Highway, next to Green Kitchen</strong>, Thimphu
+                      Located at{" "}
+                      <strong className="text-primary">
+                        Express Highway, next to Green Kitchen
+                      </strong>
+                      , Thimphu
                     </p>
                   </div>
                 </div>
@@ -357,19 +659,20 @@ export function SupportContent() {
               initial={{ opacity: 0, scale: 0.98 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
-              className="bg-card rounded-[32px] p-8 border border-border relative overflow-hidden shadow-2xl"
+              className="bg-card rounded-[32px] p-8 border border-border relative overflow-hidden shadow-2xl lg:sticky lg:top-20"
             >
-              <ServiceRequestForm />
+              <ProgressiveSupportForm />
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* 📚 FAQ SECTION */}
       <section className="py-20 border-t border-border bg-muted/20">
         <div className="max-w-3xl mx-auto px-5">
           <div className="text-center mb-16">
-            <h2 className="text-[12px] font-black text-foreground/40 uppercase tracking-[0.5em] mb-4">Frequently Asked Questions</h2>
+            <h2 className="text-[12px] font-black text-foreground/40 uppercase tracking-[0.5em] mb-4">
+              Frequently Asked Questions
+            </h2>
             <div className="h-1 w-12 bg-primary mx-auto rounded-full" />
           </div>
 
@@ -386,7 +689,9 @@ export function SupportContent() {
                   onClick={() => setOpenFaq(openFaq === index ? null : index)}
                   className="w-full flex items-center justify-between p-6 text-left"
                 >
-                  <span className="text-[13px] font-black text-foreground uppercase tracking-tight pr-6">{faq.question}</span>
+                  <span className="text-[13px] font-black text-foreground uppercase tracking-tight pr-6">
+                    {faq.question}
+                  </span>
                   <div className="shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center border border-border">
                     {openFaq === index ? (
                       <ChevronUp className="w-4 h-4 text-primary" />
