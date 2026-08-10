@@ -215,13 +215,34 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">
-              <ApiField label="Phone (with country code)" field="callmebotPhone" placeholder="975XXXXXXXX" />
-              <ApiField label="API Key" field="callmebotApiKey" placeholder="your CallMeBot apikey" icon={Key} />
-              <div className="col-span-2 p-3 bg-[#F3F3F1] rounded-lg">
+              <ApiField
+                label="Your WhatsApp (receives alerts)"
+                field="callmebotPhone"
+                placeholder="975XXXXXXXX"
+              />
+              <ApiField
+                label="API Key"
+                field="callmebotApiKey"
+                placeholder="apikey from CallMeBot reply"
+                icon={Key}
+              />
+              <div className="col-span-2 p-3 bg-[#F3F3F1] rounded-lg space-y-2">
+                <p className="text-xs font-medium text-[#1A1A1A]">
+                  Activate (new bot — old bot is full)
+                </p>
+                <ol className="text-xs text-[#717171] list-decimal pl-4 space-y-1">
+                  <li>
+                    Add bot number <span className="font-mono text-[#1A1A1A]">+34 623 76 13 63</span> to
+                    contacts (required)
+                  </li>
+                  <li>
+                    WhatsApp that number:{" "}
+                    <span className="font-mono text-[#1A1A1A]">I allow callmebot to call me</span>
+                  </li>
+                  <li>Save the API key they reply with here (or CALLMEBOT_* env vars)</li>
+                </ol>
                 <p className="text-xs text-[#717171]">
                   Alerts fire for support requests, contact forms, and lead capture.
-                  Get your key from callmebot.com (WhatsApp activate message). Env vars
-                  CALLMEBOT_PHONE / CALLMEBOT_API_KEY also work.
                 </p>
               </div>
             </CardContent>

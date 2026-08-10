@@ -2,8 +2,13 @@
  * CallMeBot WhatsApp alert integration
  * Docs: https://www.callmebot.com/blog/free-api-whatsapp-messages/
  *
+ * Activation (new bot — previous bot at capacity):
+ * 1. Save +34 623 76 13 63 as a WhatsApp contact (mandatory)
+ * 2. Message that number: I allow callmebot to call me
+ * 3. Use the API key from their reply + your WhatsApp number below
+ *
  * Env (preferred) or Settings table:
- * - CALLMEBOT_PHONE / callmebot_phone
+ * - CALLMEBOT_PHONE / callmebot_phone  (YOUR number that receives alerts)
  * - CALLMEBOT_API_KEY / callmebot_api_key
  */
 
