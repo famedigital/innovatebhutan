@@ -100,6 +100,7 @@ const emptyForm = {
   advancePercent: "50",
   productId: "",
   quantity: "1",
+  unitPrice: "",
 };
 
 export default function QuotationsPage() {
@@ -132,7 +133,17 @@ export default function QuotationsPage() {
       const qData = await qRes.json();
       const pData = await pRes.json();
       if (qRes.ok && qData.success) setList(qData.data || []);
-      if (pRes.ok && pData.success) setCatalog(pData.data || []);
+      else toast.error(qData.error || "Failed to load quotations");
+
+      if (pRes.ok && pData.success) {
+        setCatalog(pData.data || []);
+        if ((pData.data || []).length === 0) {
+          toast.message("No active products in Product Master yet");
+        }
+      } else {
+        setCatalog([]);
+        toast.error(pData.error || "Failed to load product master");
+      }
     } catch {
       toast.error("Failed to load quotations");
     } finally {
@@ -144,9 +155,21 @@ export default function QuotationsPage() {
     load();
   }, [load]);
 
-  const filteredCatalog = useMemo(
-    () => catalog.filter((p) => p.category === form.category),
-    [catalog, form.category]
+  const filteredCatalog = useMemo(() => {
+    const wanted = form.category.trim().toLowerCase();
+    return catalog.filter(
+      (p) => (p.category || "").trim().toLowerCase() === wanted
+    );
+  }, [catalog, form.category]);
+
+  const otherCategoryCount = useMemo(
+    () => catalog.length - filteredCatalog.length,
+    [catalog.length, filteredCatalog.length]
+  );
+
+  const lineTotal = useMemo(
+    () => lineItems.reduce((sum, li) => sum + li.quantity * li.unitPrice, 0),
+    [lineItems]
   );
 
   const canEdit = (status: string) =>
@@ -182,6 +205,7 @@ export default function QuotationsPage() {
       advancePercent: String(q.advancePercent ?? 50),
       productId: "",
       quantity: "1",
+      unitPrice: "",
     });
     setLineItems(
       (q.items || []).map((item) => ({
@@ -195,6 +219,18 @@ export default function QuotationsPage() {
     setOpen(true);
   };
 
+  const selectProduct = (productId: string) => {
+    const product = catalog.find((p) => String(p.id) === productId);
+    setForm({
+      ...form,
+      productId,
+      unitPrice:
+        product && Number(product.unitPrice) > 0
+          ? String(Number(product.unitPrice))
+          : "",
+    });
+  };
+
   const addLine = () => {
     const product = catalog.find((p) => String(p.id) === form.productId);
     if (!product) {
@@ -202,6 +238,15 @@ export default function QuotationsPage() {
       return;
     }
     const qty = Math.max(1, Number(form.quantity) || 1);
+    const unitPrice = Number(form.unitPrice);
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+      toast.error("Enter a valid unit price (Nu.)");
+      return;
+    }
+    if (unitPrice === 0) {
+      toast.error("Enter the quotation price for this product (catalog is Nu. 0)");
+      return;
+    }
     setLineItems((prev) => [
       ...prev,
       {
@@ -209,9 +254,32 @@ export default function QuotationsPage() {
         name: product.name,
         brand: product.brand || undefined,
         quantity: qty,
-        unitPrice: Number(product.unitPrice || 0),
+        unitPrice,
       },
     ]);
+    setForm((f) => ({ ...f, productId: "", quantity: "1", unitPrice: "" }));
+  };
+
+  const updateLine = (
+    index: number,
+    patch: Partial<{ quantity: number; unitPrice: number }>
+  ) => {
+    setLineItems((prev) =>
+      prev.map((li, i) => {
+        if (i !== index) return li;
+        return {
+          ...li,
+          quantity:
+            patch.quantity !== undefined
+              ? Math.max(1, patch.quantity || 1)
+              : li.quantity,
+          unitPrice:
+            patch.unitPrice !== undefined
+              ? Math.max(0, patch.unitPrice || 0)
+              : li.unitPrice,
+        };
+      })
+    );
   };
 
   const removeLine = (index: number) => {
@@ -221,6 +289,10 @@ export default function QuotationsPage() {
   const save = async () => {
     if (!form.businessName.trim() || lineItems.length === 0) {
       toast.error("Business name and at least one product required");
+      return;
+    }
+    if (lineItems.some((li) => li.unitPrice <= 0)) {
+      toast.error("Every line needs a price greater than Nu. 0");
       return;
     }
 
@@ -635,7 +707,7 @@ export default function QuotationsPage() {
               <Select
                 value={form.category}
                 onValueChange={(v) => {
-                  setForm({ ...form, category: v, productId: "" });
+                  setForm({ ...form, category: v, productId: "", unitPrice: "" });
                   if (!editingId) setLineItems([]);
                 }}
               >
@@ -689,20 +761,32 @@ export default function QuotationsPage() {
             </div>
             <div>
               <Label>Select product</Label>
-              <div className="flex gap-2">
-                <Select
-                  value={form.productId}
-                  onValueChange={(v) => setForm({ ...form, productId: v })}
-                >
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Select value={form.productId} onValueChange={selectProduct}>
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Pick from product master" />
+                    <SelectValue
+                      placeholder={
+                        filteredCatalog.length
+                          ? "Pick from product master"
+                          : catalog.length
+                            ? `No ${form.category} products — switch category`
+                            : "No active products in master"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {filteredCatalog.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>
-                        {p.name} — Nu. {Number(p.unitPrice || 0).toLocaleString()}
-                      </SelectItem>
-                    ))}
+                    {filteredCatalog.map((p) => {
+                      const price = Number(p.unitPrice || 0);
+                      return (
+                        <SelectItem key={p.id} value={String(p.id)}>
+                          {p.name}
+                          {p.brand ? ` (${p.brand})` : ""} —{" "}
+                          {price > 0
+                            ? `Nu. ${price.toLocaleString()}`
+                            : "set price"}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
                 <Input
@@ -713,22 +797,71 @@ export default function QuotationsPage() {
                   onChange={(e) =>
                     setForm({ ...form, quantity: e.target.value })
                   }
+                  aria-label="Quantity"
+                />
+                <Input
+                  className="w-28"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="Unit price"
+                  value={form.unitPrice}
+                  onChange={(e) =>
+                    setForm({ ...form, unitPrice: e.target.value })
+                  }
+                  aria-label="Unit price Nu."
                 />
                 <Button type="button" variant="outline" onClick={addLine}>
                   Add
                 </Button>
               </div>
+              {filteredCatalog.length === 0 && (
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {catalog.length === 0
+                    ? "Add products in Product Master first."
+                    : `${otherCategoryCount} active product(s) exist in other categories — change the category above to see them.`}{" "}
+                  <a
+                    href="/admin/products/master"
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
+                    Open Product Master
+                  </a>
+                </p>
+              )}
             </div>
             {lineItems.length > 0 && (
-              <ul className="text-sm space-y-1 rounded-lg border p-2">
+              <ul className="text-sm space-y-2 rounded-lg border p-2">
                 {lineItems.map((li, i) => (
-                  <li key={i} className="flex justify-between items-center gap-2">
-                    <span>
-                      {li.quantity}× {li.name}
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className="tabular-nums">
-                        Nu. {(li.quantity * li.unitPrice).toLocaleString()}
+                  <li
+                    key={`${li.productMasterId ?? li.name}-${i}`}
+                    className="flex flex-wrap items-center justify-between gap-2"
+                  >
+                    <span className="min-w-[8rem] font-medium">{li.name}</span>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <Input
+                        className="h-8 w-16"
+                        type="number"
+                        min={1}
+                        value={li.quantity}
+                        onChange={(e) =>
+                          updateLine(i, { quantity: Number(e.target.value) })
+                        }
+                        aria-label={`${li.name} quantity`}
+                      />
+                      <span className="text-muted-foreground">× Nu.</span>
+                      <Input
+                        className="h-8 w-24"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={li.unitPrice}
+                        onChange={(e) =>
+                          updateLine(i, { unitPrice: Number(e.target.value) })
+                        }
+                        aria-label={`${li.name} unit price`}
+                      />
+                      <span className="w-24 text-right tabular-nums">
+                        = Nu. {(li.quantity * li.unitPrice).toLocaleString()}
                       </span>
                       <button
                         type="button"
@@ -741,6 +874,9 @@ export default function QuotationsPage() {
                     </span>
                   </li>
                 ))}
+                <li className="flex justify-end border-t pt-2 font-medium tabular-nums">
+                  Subtotal: Nu. {lineTotal.toLocaleString()}
+                </li>
               </ul>
             )}
             <div>
