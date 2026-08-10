@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import { Home, Layers, Grid3X3, Headphones } from "lucide-react";
 import { NavigationMenuFullMegaMenu } from "@/components/examples/navigation-menu/complex/navigation-menu-full-mega-menu";
 
@@ -14,7 +15,7 @@ export function NavigationDynamic() {
     if (typeof window === "undefined") return;
 
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 8);
+      setIsScrolled(window.scrollY > 24);
     };
 
     handleScroll();
@@ -23,7 +24,6 @@ export function NavigationDynamic() {
   }, []);
 
   useEffect(() => {
-    // Keep a short loading gate so the sticky header doesn't flash empty
     const timer = setTimeout(() => setLoading(false), 50);
     return () => clearTimeout(timer);
   }, []);
@@ -34,28 +34,51 @@ export function NavigationDynamic() {
 
   return (
     <>
-      {/* Desktop sticky full-width header */}
-      <header
-        className={`hidden md:block fixed top-0 left-0 right-0 z-50 w-full border-b transition-colors duration-300 ${
+      {/* Desktop: floating pill on hero → sticky full bar while scrolling */}
+      <motion.header
+        initial={false}
+        animate={{
+          y: 0,
+          opacity: 1,
+        }}
+        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+        className={`hidden md:flex fixed z-50 left-0 right-0 justify-center transition-[padding,background-color,border-radius,box-shadow,backdrop-filter] duration-300 ${
           isScrolled
-            ? "border-border/80 bg-background/95 shadow-sm backdrop-blur-xl"
-            : "border-transparent bg-background/90 backdrop-blur-md"
+            ? "top-0 px-0 pt-0"
+            : "top-0 px-4 sm:px-6 pt-3 sm:pt-4"
         }`}
       >
-        <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8">
-          {loading ? (
-            <div className="flex h-14 items-center justify-between">
-              <div className="h-6 w-36 animate-pulse rounded bg-muted" />
-              <div className="h-6 w-64 animate-pulse rounded bg-muted" />
-            </div>
-          ) : (
-            <NavigationMenuFullMegaMenu />
-          )}
+        <div
+          className={`relative z-50 w-full transition-all duration-300 ${
+            isScrolled
+              ? "max-w-none rounded-none border-b border-border/80 bg-background/95 shadow-sm backdrop-blur-xl"
+              : "max-w-5xl rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-black/80 shadow-lg backdrop-blur-xl"
+          }`}
+        >
+          <div
+            className={`mx-auto w-full ${
+              isScrolled ? "max-w-[1600px] px-4 sm:px-6 lg:px-8" : "px-3 sm:px-4"
+            }`}
+          >
+            {loading ? (
+              <div className="flex h-14 items-center justify-between">
+                <div className="h-6 w-36 animate-pulse rounded bg-muted" />
+                <div className="h-6 w-64 animate-pulse rounded bg-muted" />
+              </div>
+            ) : (
+              <NavigationMenuFullMegaMenu />
+            )}
+          </div>
         </div>
-      </header>
+      </motion.header>
 
-      {/* Spacer so page content clears the fixed desktop header */}
-      <div className="hidden md:block h-14" aria-hidden="true" />
+      {/* Spacer only once sticky so floating nav can overlay the hero */}
+      <div
+        className={`hidden md:block transition-[height] duration-300 ${
+          isScrolled ? "h-14" : "h-0"
+        }`}
+        aria-hidden="true"
+      />
 
       {/* Mobile Bottom Navigation - App Style */}
       <div className="fixed bottom-0 left-0 right-0 z-[100] flex md:hidden bg-white/95 dark:bg-black/95 backdrop-blur-xl border-t border-slate-200 dark:border-white/10 safe-area-inset-bottom shadow-2xl">
