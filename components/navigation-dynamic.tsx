@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Moon, Sun, LogIn, Home, Layers, Building2, Grid3X3, Headphones, ChevronRight } from "lucide-react";
 import { useTheme } from "@/components/PureThemeProvider";
+import { NavbarMegaMenuGrid } from "@/components/blocks/navbar/navbar-mega-menu-grid";
 
 // Icon mapping for navigation
 const iconMap: Record<string, any> = {
@@ -221,7 +222,7 @@ export function NavigationDynamic() {
 
   return (
     <>
-      {/* Desktop Top Navigation - Hidden on Mobile */}
+      {/* Desktop Top Navigation - shadcn.io Navbar Mega Menu Grid */}
       <motion.header
         initial={false}
         animate={{
@@ -229,99 +230,11 @@ export function NavigationDynamic() {
           opacity: showFullNav ? 1 : 0
         }}
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        className="hidden md:flex fixed top-0 left-0 right-0 z-50 justify-center pt-2 sm:pt-4"
+        className="hidden md:flex fixed top-0 left-0 right-0 z-50 justify-center pt-2 sm:pt-4 px-4"
       >
-        {/* Main Nav - Floating Centered */}
-        <nav className={`relative z-50 max-w-4xl mx-auto w-full backdrop-blur-xl border border-slate-100 dark:border-white/10 rounded-2xl transition-all duration-300 ${isScrolled ? 'bg-white/95 dark:bg-black/95 shadow-xl' : 'bg-white/90 dark:bg-black/80 shadow-lg'}`}>
-        <div className="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-8 sm:h-10 lg:h-12">
-            {/* Modern Logo Animation - positioned left */}
-            <a href="/" className="flex items-center gap-2 group relative z-10 transition-transform hover:scale-105 -ml-1">
-              <ModernLogo />
-            </a>
-
-            {/* Desktop Nav */}
-            <div className="hidden md:flex items-center gap-0.5">
-              {displayLinks.map((link) => {
-                const children = getChildren(link.id);
-                const hasChildren = children.length > 0;
-                const Icon = link.icon_name ? iconMap[link.icon_name] : null;
-
-                return hasChildren ? (
-                  <div
-                    key={link.id}
-                    className="relative"
-                    onMouseEnter={() => handleSubmenuEnter(link.label)}
-                    onMouseLeave={handleSubmenuLeave}
-                  >
-                    <button className="px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-white/50 hover:text-primary dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-full transition-all duration-300 flex items-center gap-1">
-                      {link.label}
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {openSubmenu === link.label && (
-                      <div
-                        className="absolute top-full left-0 mt-1 bg-white dark:bg-black border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl min-w-[200px] overflow-hidden z-50"
-                        onMouseEnter={() => handleSubmenuEnter(link.label)}
-                        onMouseLeave={handleSubmenuLeave}
-                      >
-                        {children.map((subLink) => (
-                          subLink.open_in_new_tab ? (
-                            <a
-                              key={subLink.id}
-                              href={subLink.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block px-4 py-3 text-sm text-slate-600 dark:text-white/70 hover:text-primary dark:hover:text-primary hover:bg-primary/10 dark:hover:bg-primary/20 transition-all border-b border-slate-100 dark:border-white/5 last:border-0"
-                            >
-                              {subLink.label}
-                            </a>
-                          ) : (
-                            <a
-                              key={subLink.id}
-                              href={subLink.url}
-                              className="block px-4 py-3 text-sm text-slate-600 dark:text-white/70 hover:text-primary dark:hover:text-primary hover:bg-primary/10 dark:hover:bg-primary/20 transition-all border-b border-slate-100 dark:border-white/5 last:border-0"
-                            >
-                              {subLink.label}
-                            </a>
-                          )
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <a
-                    key={link.id}
-                    href={link.url}
-                    target={link.open_in_new_tab ? "_blank" : undefined}
-                    rel={link.open_in_new_tab ? "noopener noreferrer" : undefined}
-                    className="px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-white/50 hover:text-primary dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-full transition-all duration-300 flex items-center gap-1"
-                  >
-                    {link.label}
-                    {link.badge && (
-                      <span className="text-[8px] px-1.5 py-0.5 bg-primary text-white rounded-full">
-                        {link.badge}
-                      </span>
-                    )}
-                  </a>
-                );
-              })}
-            </div>
-
-            {/* Action Area */}
-            <div className="flex items-center gap-2">
-              {/* Apple-Style Theme Toggle */}
-              <button
-                onClick={toggleTheme}
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-primary hover:scale-110 active:scale-95 transition-all outline-none dark:shadow-[0_0_15px_rgba(57,255,20,0.2)]"
-              >
-                {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-          </div>
+        <div className="relative z-50 max-w-4xl mx-auto w-full">
+          <NavbarMegaMenuGrid />
         </div>
-      </nav>
       </motion.header>
 
       {/* Minimized Desktop Navigation - Shown when scrolling down */}
@@ -514,6 +427,15 @@ export function NavigationDynamic() {
           >
             <Home className="w-6 h-6 text-slate-600 dark:text-white/70" />
             <span className="text-[10px] font-semibold text-slate-600 dark:text-white/60 whitespace-nowrap">Home</span>
+          </a>
+
+          {/* Products */}
+          <a
+            href="/products"
+            className="flex flex-col items-center justify-center gap-1.5 min-w-0 flex-1 transition-all active:scale-95"
+          >
+            <Grid3X3 className="w-6 h-6 text-slate-600 dark:text-white/70" />
+            <span className="text-[10px] font-semibold text-slate-600 dark:text-white/60 whitespace-nowrap">Products</span>
           </a>
 
           {/* Services */}
