@@ -7,7 +7,6 @@ import { AntigravityHero } from "@/components/antigravity-hero";
 import { ContactSectionDynamic } from "@/components/contact-section-dynamic";
 import { FooterSectionDynamic } from "@/components/footer-section-dynamic";
 import { WhatsAppButton } from "@/components/whatsapp-button";
-import { ProblemSolutionHero } from "@/components/capabilities-showcase/problem-solution-hero";
 import { SuccessStoriesGrid } from "@/components/capabilities-showcase/success-stories-grid";
 import { TechStackShowcase } from "@/components/capabilities-showcase/tech-stack-showcase";
 import { SolutionCategories } from "@/components/capabilities-showcase/solution-categories";
@@ -84,11 +83,6 @@ export default function HomePage() {
               ))}
             </motion.div>
           </motion.div>
-
-          {/* Problem → Solution Hero */}
-          <div className="mb-24">
-            <ProblemSolutionHero />
-          </div>
 
           {/* Success Stories Grid */}
           <div className="mb-24">
