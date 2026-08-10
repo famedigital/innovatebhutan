@@ -17,6 +17,8 @@ export async function GET(req: NextRequest) {
       category: query.category,
       search: query.search,
       active: query.active,
+      limit: query.limit,
+      offset: query.offset,
     });
 
     return NextResponse.json({

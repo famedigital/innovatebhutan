@@ -42,6 +42,8 @@ export const productMasterQuerySchema = z.object({
     .enum(["true", "false"])
     .optional()
     .transform((v) => (v === undefined ? undefined : v === "true")),
+  limit: z.coerce.number().int().min(1).max(1000).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 
 export type CreateProductMasterInput = z.infer<typeof createProductMasterSchema>;

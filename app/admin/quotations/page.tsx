@@ -128,7 +128,7 @@ export default function QuotationsPage() {
     try {
       const [qRes, pRes] = await Promise.all([
         fetch("/api/quotations"),
-        fetch("/api/product-master?active=true"),
+        fetch("/api/product-master?active=true&limit=500"),
       ]);
       const qData = await qRes.json();
       const pData = await pRes.json();
