@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FileText, Plus, RefreshCw, QrCode, CheckCircle2, ArrowRight } from "lucide-react";
+import { FileText, Plus, RefreshCw, QrCode, CheckCircle2, ArrowRight, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,8 +66,17 @@ export default function QuotationsPage() {
     advancePercent: "50",
     productId: "",
     quantity: "1",
+    unitPrice: "",
   });
-  const [lineItems, setLineItems] = useState<Array<{ productMasterId?: number; name: string; brand?: string; quantity: number; unitPrice: number }>>([]);
+  const [lineItems, setLineItems] = useState<
+    Array<{
+      productMasterId?: number;
+      name: string;
+      brand?: string;
+      quantity: number;
+      unitPrice: number;
+    }>
+  >([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -96,6 +105,23 @@ export default function QuotationsPage() {
     [catalog, form.category]
   );
 
+  const lineTotal = useMemo(
+    () => lineItems.reduce((sum, li) => sum + li.quantity * li.unitPrice, 0),
+    [lineItems]
+  );
+
+  const selectProduct = (productId: string) => {
+    const product = catalog.find((p) => String(p.id) === productId);
+    setForm({
+      ...form,
+      productId,
+      unitPrice:
+        product && Number(product.unitPrice) > 0
+          ? String(Number(product.unitPrice))
+          : "",
+    });
+  };
+
   const addLine = () => {
     const product = catalog.find((p) => String(p.id) === form.productId);
     if (!product) {
@@ -103,6 +129,15 @@ export default function QuotationsPage() {
       return;
     }
     const qty = Math.max(1, Number(form.quantity) || 1);
+    const unitPrice = Number(form.unitPrice);
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+      toast.error("Enter a valid unit price (Nu.)");
+      return;
+    }
+    if (unitPrice === 0) {
+      toast.error("Enter the quotation price for this product (catalog is Nu. 0)");
+      return;
+    }
     setLineItems((prev) => [
       ...prev,
       {
@@ -110,14 +145,45 @@ export default function QuotationsPage() {
         name: product.name,
         brand: product.brand || undefined,
         quantity: qty,
-        unitPrice: Number(product.unitPrice || 0),
+        unitPrice,
       },
     ]);
+    setForm((f) => ({ ...f, productId: "", quantity: "1", unitPrice: "" }));
+  };
+
+  const updateLine = (
+    index: number,
+    patch: Partial<{ quantity: number; unitPrice: number }>
+  ) => {
+    setLineItems((prev) =>
+      prev.map((li, i) => {
+        if (i !== index) return li;
+        return {
+          ...li,
+          quantity:
+            patch.quantity !== undefined
+              ? Math.max(1, patch.quantity || 1)
+              : li.quantity,
+          unitPrice:
+            patch.unitPrice !== undefined
+              ? Math.max(0, patch.unitPrice || 0)
+              : li.unitPrice,
+        };
+      })
+    );
+  };
+
+  const removeLine = (index: number) => {
+    setLineItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   const create = async () => {
     if (!form.businessName.trim() || lineItems.length === 0) {
       toast.error("Business name and at least one product required");
+      return;
+    }
+    if (lineItems.some((li) => li.unitPrice <= 0)) {
+      toast.error("Every line needs a price greater than Nu. 0");
       return;
     }
     try {
@@ -143,7 +209,17 @@ export default function QuotationsPage() {
       toast.success(`Quotation ${data.data.quotationNumber} created`);
       setOpen(false);
       setLineItems([]);
-      setForm((f) => ({ ...f, businessName: "", customerName: "", phone: "", email: "", quotationFor: "", productId: "" }));
+      setForm((f) => ({
+        ...f,
+        businessName: "",
+        customerName: "",
+        phone: "",
+        email: "",
+        quotationFor: "",
+        productId: "",
+        quantity: "1",
+        unitPrice: "",
+      }));
       load();
       setSelected(data.data);
     } catch (e) {
@@ -329,30 +405,121 @@ export default function QuotationsPage() {
             </div>
             <div>
               <Label>Select product</Label>
-              <div className="flex gap-2">
-                <Select value={form.productId} onValueChange={(v) => setForm({ ...form, productId: v })}>
-                  <SelectTrigger className="flex-1"><SelectValue placeholder="Pick from product master" /></SelectTrigger>
-                  <SelectContent>
-                    {filteredCatalog.map((p) => (
+              <Select
+                value={form.productId}
+                onValueChange={selectProduct}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pick from product master" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredCatalog.map((p) => {
+                    const price = Number(p.unitPrice || 0);
+                    return (
                       <SelectItem key={p.id} value={String(p.id)}>
-                        {p.name} — Nu. {Number(p.unitPrice || 0).toLocaleString()}
+                        {p.name}
+                        {price > 0
+                          ? ` — Nu. ${price.toLocaleString()}`
+                          : " — set price on quote"}
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input className="w-20" type="number" min={1} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
-                <Button type="button" variant="outline" onClick={addLine}>Add</Button>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              <div className="grid grid-cols-[1fr_1.4fr_auto] gap-2 mt-2">
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Qty</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.quantity}
+                    onChange={(e) =>
+                      setForm({ ...form, quantity: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">
+                    Unit price (Nu.) *
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="Enter amount"
+                    value={form.unitPrice}
+                    onChange={(e) =>
+                      setForm({ ...form, unitPrice: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button type="button" variant="outline" onClick={addLine}>
+                    Add
+                  </Button>
+                </div>
               </div>
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                Catalog price may be Nu. 0 — set the real amount here for this quotation.
+              </p>
             </div>
             {lineItems.length > 0 && (
-              <ul className="text-sm space-y-1 rounded-lg border p-2">
-                {lineItems.map((li, i) => (
-                  <li key={i} className="flex justify-between gap-2">
-                    <span>{li.quantity}× {li.name}</span>
-                    <span className="tabular-nums">Nu. {(li.quantity * li.unitPrice).toLocaleString()}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="rounded-lg border overflow-hidden">
+                <div className="grid grid-cols-[1fr_64px_96px_28px] gap-1 px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground bg-muted/40 border-b">
+                  <span>Item</span>
+                  <span>Qty</span>
+                  <span>Price</span>
+                  <span />
+                </div>
+                <ul className="text-sm divide-y">
+                  {lineItems.map((li, i) => (
+                    <li
+                      key={i}
+                      className="grid grid-cols-[1fr_64px_96px_28px] gap-1 px-2 py-2 items-center"
+                    >
+                      <span className="truncate min-w-0">
+                        {li.name}
+                        <span className="block text-[11px] text-muted-foreground tabular-nums">
+                          = Nu. {(li.quantity * li.unitPrice).toLocaleString()}
+                        </span>
+                      </span>
+                      <Input
+                        className="h-8"
+                        type="number"
+                        min={1}
+                        value={li.quantity}
+                        onChange={(e) =>
+                          updateLine(i, { quantity: Number(e.target.value) })
+                        }
+                      />
+                      <Input
+                        className="h-8"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={li.unitPrice}
+                        onChange={(e) =>
+                          updateLine(i, { unitPrice: Number(e.target.value) })
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-destructive justify-self-center"
+                        onClick={() => removeLine(i)}
+                        aria-label="Remove line"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="px-2 py-2 text-sm font-medium flex justify-between border-t bg-muted/20">
+                  <span>Lines total</span>
+                  <span className="tabular-nums">
+                    Nu. {lineTotal.toLocaleString()}
+                  </span>
+                </div>
+              </div>
             )}
             <div>
               <Label>Advance %</Label>
