@@ -155,6 +155,41 @@ export class QuotationRepository {
     return row || null;
   }
 
+  async updateWithItems(
+    id: number,
+    data: Partial<NewSalesQuotation>,
+    items: Array<Omit<NewSalesQuotationItem, "quotationId">>
+  ): Promise<QuotationWithItems | null> {
+    return await this.db.transaction(async (tx) => {
+      const [quotation] = await tx
+        .update(salesQuotations)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(salesQuotations.id, id))
+        .returning();
+      if (!quotation) return null;
+
+      await tx
+        .delete(salesQuotationItems)
+        .where(eq(salesQuotationItems.quotationId, id));
+
+      const createdItems =
+        items.length > 0
+          ? await tx
+              .insert(salesQuotationItems)
+              .values(
+                items.map((item, index) => ({
+                  ...item,
+                  quotationId: id,
+                  sortOrder: item.sortOrder ?? index,
+                }))
+              )
+              .returning()
+          : [];
+
+      return { ...quotation, items: createdItems };
+    });
+  }
+
   async countByYearPrefix(prefix: string): Promise<number> {
     const result = await this.db
       .select({ count: count() })

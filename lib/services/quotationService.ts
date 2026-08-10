@@ -9,10 +9,12 @@ import { eq } from "drizzle-orm";
 import { buildInitialMoneyMeta } from "@/lib/projects/moneyMeta";
 import type {
   CreateQuotationInput,
+  UpdateQuotationInput,
   QuotationStatus,
 } from "@/lib/validations/quotation";
 import type { QuotationFilters } from "@/lib/repositories/quotationRepository";
 import { buildQuotationMbobQr } from "@/lib/payments/mbobSettings";
+import { BadRequestError } from "@/lib/errors";
 
 export const DEFAULT_TRAINING_PLAN = [
   { day: 1, title: "Training on Product Master", status: "pending" },
@@ -122,6 +124,74 @@ export class QuotationService {
         depositQrPayload,
         notes: data.notes ?? null,
         createdBy: createdBy ?? null,
+      },
+      lineItems
+    );
+  }
+
+  async update(id: number, data: UpdateQuotationInput) {
+    const existing = await this.repository.getById(id);
+    if (!existing) return null;
+
+    if (existing.status === "converted" || existing.status === "cancelled") {
+      throw new BadRequestError(
+        `Cannot edit a quotation with status "${existing.status}"`
+      );
+    }
+
+    const lineItems = data.items.map((item, index) => {
+      const amount = round2(item.quantity * item.unitPrice);
+      return {
+        productMasterId: item.productMasterId ?? null,
+        name: item.name,
+        brand: item.brand ?? null,
+        description: item.description ?? null,
+        quantity: item.quantity,
+        unitPrice: String(item.unitPrice),
+        amount: String(amount),
+        sortOrder: index,
+      };
+    });
+
+    const subtotal = round2(
+      lineItems.reduce((sum, item) => sum + Number(item.amount), 0)
+    );
+    const taxAmount = 0;
+    const totalAmount = round2(subtotal + taxAmount);
+    const advancePercent = data.advancePercent ?? 50;
+    const advanceAmount = round2(totalAmount * (advancePercent / 100));
+    const businessName = data.businessName || data.customerName || "Customer";
+
+    const mbob = await buildQuotationMbobQr({
+      amount: advanceAmount,
+      billNumber: existing.quotationNumber,
+    });
+    const depositQrPayload =
+      mbob.payload ||
+      `Innovates deposit ${existing.quotationNumber} Nu.${advanceAmount} for ${businessName}`;
+
+    return this.repository.updateWithItems(
+      id,
+      {
+        category: data.category,
+        clientId: data.clientId ?? null,
+        customerName: data.customerName ?? null,
+        businessName: data.businessName ?? null,
+        phone: data.phone ?? null,
+        email: data.email || null,
+        address: data.address ?? null,
+        address2: data.address2 ?? null,
+        state: data.state ?? null,
+        country: data.country ?? existing.country ?? "Bhutan",
+        quotationFor: data.quotationFor ?? null,
+        validityDays: data.validityDays ?? existing.validityDays ?? 15,
+        subtotal: String(subtotal),
+        taxAmount: String(taxAmount),
+        totalAmount: String(totalAmount),
+        advancePercent: String(advancePercent),
+        advanceAmount: String(advanceAmount),
+        depositQrPayload,
+        notes: data.notes ?? null,
       },
       lineItems
     );

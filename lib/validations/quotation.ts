@@ -39,6 +39,9 @@ export const createQuotationSchema = z.object({
   items: z.array(quotationItemSchema).min(1, "At least one item is required"),
 });
 
+/** Full quotation edit — same shape as create */
+export const updateQuotationSchema = createQuotationSchema;
+
 export const updateQuotationStatusSchema = z.object({
   status: quotationStatusSchema,
 });
@@ -55,6 +58,7 @@ export const quotationQuerySchema = z.object({
 });
 
 export type CreateQuotationInput = z.infer<typeof createQuotationSchema>;
+export type UpdateQuotationInput = z.infer<typeof updateQuotationSchema>;
 export type UpdateQuotationStatusInput = z.infer<typeof updateQuotationStatusSchema>;
 export type MarkAdvancePaidInput = z.infer<typeof markAdvancePaidSchema>;
 export type QuotationQueryInput = z.infer<typeof quotationQuerySchema>;
