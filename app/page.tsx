@@ -71,9 +71,9 @@ export default function HomePage() {
               className="flex flex-wrap items-center justify-center gap-8 mt-10"
             >
               {[
-                { label: 'Clients Served', value: '350+' },
+                { label: 'Clients Served', value: '304+' },
                 { label: 'Projects Delivered', value: '500+' },
-                { label: 'Years Experience', value: '11+' },
+                { label: 'Years Experience', value: '10+' },
                 { label: 'Success Rate', value: '98%' }
               ].map((stat, i) => (
                 <div key={i} className="text-center">
