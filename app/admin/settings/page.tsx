@@ -49,6 +49,12 @@ export default function SettingsPage() {
     // Payment
     stripeKey: "",
     stripeSecret: "",
+    mbobStaticQr: "",
+    mbobAccountNumber: "",
+    mbobMerchantName: "INNOVATES",
+    mbobMerchantCity: "THIMPHU",
+    mbobMcc: "5732",
+    mbobGui: "com.bob.bt",
     
     // Email
     sendgridKey: "",
@@ -93,6 +99,12 @@ export default function SettingsPage() {
         customWebhookUrl: map.custom_webhook_url || "",
         stripeKey: map.stripe_key || "",
         stripeSecret: map.stripe_secret || "",
+        mbobStaticQr: map.mbob_static_qr || "",
+        mbobAccountNumber: map.mbob_account_number || "",
+        mbobMerchantName: map.mbob_merchant_name || "INNOVATES",
+        mbobMerchantCity: map.mbob_merchant_city || "THIMPHU",
+        mbobMcc: map.mbob_mcc || "5732",
+        mbobGui: map.mbob_gui || "com.bob.bt",
         sendgridKey: map.sendgrid_key || "",
         mailgunDomain: map.mailgun_domain || "",
         mailgunKey: map.mailgun_key || "",
@@ -254,6 +266,50 @@ export default function SettingsPage() {
 
         {/* Payments */}
         <TabsContent value="payments" className="mt-4 space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-[#00B5E2]" /> mBoB Scan &amp; Pay (Quotations)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[#717171]">
+                  Static Scan &amp; Pay QR payload (recommended)
+                </label>
+                <textarea
+                  className="w-full min-h-[88px] rounded-md border border-[#E5E5E1] bg-[#F3F3F1] px-3 py-2 text-xs font-mono"
+                  placeholder="Paste EMV string starting with 000201… (decode your Innovates mBoB sticker with any QR reader)"
+                  value={settings.mbobStaticQr}
+                  onChange={(e) =>
+                    setSettings({ ...settings, mbobStaticQr: e.target.value })
+                  }
+                />
+                <p className="text-xs text-[#717171]">
+                  Quotations inject the advance amount (Tag 54) into this payload so mBoB
+                  prefills Nu. amount when the client scans.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <ApiField
+                  label="BoB Account Number"
+                  field="mbobAccountNumber"
+                  placeholder="203XXXXXXX"
+                />
+                <ApiField
+                  label="Merchant Name"
+                  field="mbobMerchantName"
+                  placeholder="INNOVATES"
+                />
+                <ApiField
+                  label="Merchant City"
+                  field="mbobMerchantCity"
+                  placeholder="THIMPHU"
+                />
+                <ApiField label="MCC" field="mbobMcc" placeholder="5732" />
+              </div>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader><CardTitle className="text-base font-medium flex items-center gap-2"><CreditCard className="w-5 h-5 text-[#635BFF]" /> Stripe</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">

@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FileText, Plus, RefreshCw, QrCode, CheckCircle2, ArrowRight } from "lucide-react";
+import { FileText, Plus, RefreshCw, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { MbobDepositQrCard } from "@/components/admin/mbob-deposit-qr";
 import {
   Dialog,
   DialogContent,
@@ -180,6 +181,19 @@ export default function QuotationsPage() {
     }
   };
 
+  const selectQuotation = async (q: Quotation) => {
+    setSelected(q);
+    try {
+      const res = await fetch(`/api/quotations/${q.id}`);
+      const data = await res.json();
+      if (res.ok && data.success && data.data) {
+        setSelected(data.data);
+      }
+    } catch {
+      // keep list row selection
+    }
+  };
+
   const statusColor = (s: string) => {
     if (s === "advance_paid") return "default";
     if (s === "converted") return "secondary";
@@ -216,7 +230,7 @@ export default function QuotationsPage() {
               <button
                 key={q.id}
                 type="button"
-                onClick={() => setSelected(q)}
+                onClick={() => selectQuotation(q)}
                 className={`w-full text-left px-4 py-3 border-b last:border-0 hover:bg-muted/40 flex items-center justify-between gap-3 ${selected?.id === q.id ? "bg-muted/50" : ""}`}
               >
                 <div className="min-w-0">
@@ -250,20 +264,12 @@ export default function QuotationsPage() {
                 <p>Advance: <strong>Nu. {Number(selected.advanceAmount || 0).toLocaleString()}</strong></p>
                 <p className="capitalize">Status: {selected.status}</p>
               </div>
-              {selected.depositQrPayload && (
-                <div className="rounded-lg border p-3 bg-muted/30 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    <QrCode className="w-4 h-4" /> Deposit QR payload
-                  </div>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    alt="Deposit QR"
-                    className="w-40 h-40 mx-auto bg-white p-2 rounded"
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(selected.depositQrPayload)}`}
-                  />
-                  <p className="text-[11px] text-muted-foreground break-all">{selected.depositQrPayload}</p>
-                </div>
-              )}
+              <MbobDepositQrCard
+                payload={selected.depositQrPayload}
+                amount={Number(selected.advanceAmount || 0)}
+                merchantName="INNOVATES"
+                quotationNumber={selected.quotationNumber}
+              />
               <div className="flex flex-col gap-2 pt-2">
                 {selected.status !== "advance_paid" && selected.status !== "converted" && (
                   <Button onClick={() => markAdvance(selected.id)}>

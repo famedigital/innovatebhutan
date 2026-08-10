@@ -15,7 +15,7 @@ export async function GET(
 
     const { id } = await params;
     const quotationId = validateId(id, "Quotation ID");
-    const quotation = await quotationService.getById(quotationId);
+    const quotation = await quotationService.getByIdWithLiveDepositQr(quotationId);
     if (!quotation) throw new NotFoundError("Quotation");
 
     return NextResponse.json({ success: true, data: quotation });

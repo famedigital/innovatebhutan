@@ -12,6 +12,7 @@ import type {
   QuotationStatus,
 } from "@/lib/validations/quotation";
 import type { QuotationFilters } from "@/lib/repositories/quotationRepository";
+import { buildQuotationMbobQr } from "@/lib/payments/mbobSettings";
 
 export const DEFAULT_TRAINING_PLAN = [
   { day: 1, title: "Training on Product Master", status: "pending" },
@@ -44,6 +45,23 @@ export class QuotationService {
     return this.repository.getById(id);
   }
 
+  async getByIdWithLiveDepositQr(id: number) {
+    const quotation = await this.repository.getById(id);
+    if (!quotation) return null;
+
+    const amount = Number(quotation.advanceAmount || 0);
+    if (amount > 0) {
+      const mbob = await buildQuotationMbobQr({
+        amount,
+        billNumber: quotation.quotationNumber,
+      });
+      if (mbob.payload) {
+        return { ...quotation, depositQrPayload: mbob.payload };
+      }
+    }
+    return quotation;
+  }
+
   async create(data: CreateQuotationInput, createdBy?: string) {
     const lineItems = data.items.map((item, index) => {
       const amount = round2(item.quantity * item.unitPrice);
@@ -70,7 +88,14 @@ export class QuotationService {
     const quotationNumber = await this.generateQuotationNumber();
     const publicId = `qt-${randomUUID().slice(0, 8)}`;
     const businessName = data.businessName || data.customerName || "Customer";
-    const depositQrPayload = `Innovates deposit ${quotationNumber} Nu.${advanceAmount} for ${businessName}`;
+
+    const mbob = await buildQuotationMbobQr({
+      amount: advanceAmount,
+      billNumber: quotationNumber,
+    });
+    const depositQrPayload =
+      mbob.payload ||
+      `Innovates deposit ${quotationNumber} Nu.${advanceAmount} for ${businessName}`;
 
     return this.repository.createWithItems(
       {
