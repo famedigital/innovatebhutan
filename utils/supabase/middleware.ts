@@ -77,6 +77,7 @@ export async function updateSession(request: NextRequest) {
 function isPublicPage(pathname: string) {
   const publicPages = [
     '/',
+    '/products',
     '/services',
     '/services-preview',
     '/company',
