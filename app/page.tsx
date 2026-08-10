@@ -1,17 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, TrendingUp } from "lucide-react";
 import { TopMarquee } from "@/components/top-marquee";
 import { AntigravityHero } from "@/components/antigravity-hero";
 import { ContactSectionDynamic } from "@/components/contact-section-dynamic";
 import { FooterSectionDynamic } from "@/components/footer-section-dynamic";
 import { WhatsAppButton } from "@/components/whatsapp-button";
-import { ProblemSolutionHero } from "@/components/capabilities-showcase/problem-solution-hero";
 import { SuccessStoriesGrid } from "@/components/capabilities-showcase/success-stories-grid";
 import { TechStackShowcase } from "@/components/capabilities-showcase/tech-stack-showcase";
 import { SolutionCategories } from "@/components/capabilities-showcase/solution-categories";
-import { InnovationTimeline } from "@/components/capabilities-showcase/innovation-timeline";
 
 export default function HomePage() {
   return (
@@ -72,9 +69,9 @@ export default function HomePage() {
               className="flex flex-wrap items-center justify-center gap-8 mt-10"
             >
               {[
-                { label: 'Clients Served', value: '350+' },
+                { label: 'Clients Served', value: '304+' },
                 { label: 'Projects Delivered', value: '500+' },
-                { label: 'Years Experience', value: '11+' },
+                { label: 'Years Experience', value: '10+' },
                 { label: 'Success Rate', value: '98%' }
               ].map((stat, i) => (
                 <div key={i} className="text-center">
@@ -85,62 +82,20 @@ export default function HomePage() {
             </motion.div>
           </motion.div>
 
-          {/* Problem → Solution Hero */}
-          <div className="mb-24">
-            <ProblemSolutionHero />
-          </div>
-
           {/* Success Stories Grid */}
           <div className="mb-24">
             <SuccessStoriesGrid />
           </div>
 
-          {/* Technology Stack Showcase */}
+          {/* Technology Experts */}
           <div className="mb-24">
             <TechStackShowcase />
           </div>
 
           {/* Solutions by Category */}
-          <div className="mb-24">
+          <div className="mb-8">
             <SolutionCategories />
           </div>
-
-          {/* Innovation Timeline */}
-          <div className="mb-16">
-            <InnovationTimeline />
-          </div>
-
-          {/* CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-center"
-          >
-            <div className="max-w-2xl mx-auto p-8 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-3xl border border-emerald-200 dark:border-emerald-800/30">
-              <h3 className="text-2xl sm:text-3xl font-bold mb-4">Ready to Transform Your Business?</h3>
-              <p className="text-slate-600 dark:text-slate-400 mb-6">
-                Let's discuss how our solutions can solve your business challenges
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a
-                  href="/#contact"
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white dark:text-black rounded-full font-semibold text-lg transition-all hover:shadow-xl hover:shadow-emerald-500/25 hover:-translate-y-1 active:translate-y-0"
-                >
-                  <span>Start Your Project</span>
-                  <ArrowRight className="w-5 h-5" />
-                </a>
-                <a
-                  href="/products"
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 hover:border-emerald-600 dark:hover:border-emerald-400 rounded-full font-semibold text-lg transition-all"
-                >
-                  <span>Browse Products</span>
-                  <TrendingUp className="w-5 h-5" />
-                </a>
-              </div>
-            </div>
-          </motion.div>
         </div>
       </section>
 

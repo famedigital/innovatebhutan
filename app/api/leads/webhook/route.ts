@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { checkRateLimitMiddleware, rateLimitPresets } from "@/lib/rate-limit/rate-limiter";
+import { alertInquiry } from "@/lib/integrations/callmebot";
 
 export async function POST(req: NextRequest) {
   // Apply strict rate limiting for public webhook (20 req/min)
@@ -19,13 +20,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "lead_name and phone required" }, { status: 400 });
     }
 
+    const leadSource = source || source_platform || "webhook";
+
     const { data, error } = await supabase
       .from('leads')
       .insert([{
         name: lead_name,
         phone: phone,
         email: email || null,
-        source: source || source_platform || 'webhook',
+        source: leadSource,
         notes: message || null,
         priority: priority || 'warm',
         value: value || 0,
@@ -35,6 +38,15 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    void alertInquiry({
+      source: `Webhook Lead (${leadSource})`,
+      name: lead_name,
+      phone,
+      email,
+      message,
+      leadId: data.id,
+    });
 
     return NextResponse.json({ 
       success: true, 

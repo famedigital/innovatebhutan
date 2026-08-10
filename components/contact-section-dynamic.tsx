@@ -221,21 +221,34 @@ export function ContactSectionDynamic() {
               </motion.div>
             </div>
 
-            {/* WhatsApp CTA */}
-            <motion.a
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.4 }}
-              href={`https://wa.me/${primaryPhone.replace(/\D/g, '')}?text=Hi, I'd like to inquire about your services`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-3 px-6 py-4 bg-[#14532D] text-white font-medium rounded-xl hover:bg-[#166534] transition-colors"
-            >
-              <MessageCircle className="w-5 h-5" />
-              Chat on WhatsApp
-              <span className="text-sm text-[#86EFAC]">Fastest Response</span>
-            </motion.a>
+            {/* Email + WhatsApp CTAs */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <motion.a
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.4 }}
+                href={`mailto:${primaryEmail}?subject=Inquiry%20from%20innovates.bt`}
+                className="inline-flex items-center justify-center gap-3 px-6 py-4 bg-white text-[#030712] font-medium rounded-xl border border-[#E5E7EB] hover:border-[#16A34A] hover:text-[#16A34A] transition-colors"
+              >
+                <Mail className="w-5 h-5" />
+                Email us
+              </motion.a>
+              <motion.a
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.45 }}
+                href={`https://wa.me/${primaryPhone.replace(/\D/g, '')}?text=Hi, I'd like to inquire about your services`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-3 px-6 py-4 bg-[#14532D] text-white font-medium rounded-xl hover:bg-[#166534] transition-colors"
+              >
+                <MessageCircle className="w-5 h-5" />
+                Chat on WhatsApp
+                <span className="text-sm text-[#86EFAC]">Fastest Response</span>
+              </motion.a>
+            </div>
           </div>
 
           {/* Right - Quick Inquiry Form */}

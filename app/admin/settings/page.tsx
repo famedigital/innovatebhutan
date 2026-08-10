@@ -30,6 +30,8 @@ export default function SettingsPage() {
     twilioSid: "",
     twilioToken: "",
     twilioPhone: "",
+    callmebotPhone: "",
+    callmebotApiKey: "",
     
     // Database
     supabaseUrl: "",
@@ -88,6 +90,8 @@ export default function SettingsPage() {
         twilioSid: map.twilio_sid || "",
         twilioToken: map.twilio_token || "",
         twilioPhone: map.twilio_phone || "",
+        callmebotPhone: map.callmebot_phone || "",
+        callmebotApiKey: map.callmebot_api_key || "",
         supabaseUrl: map.supabase_url || "",
         supabaseAnonKey: map.supabase_anon_key || "",
         cloudinaryName: map.cloudinary_name || "",
@@ -214,6 +218,45 @@ export default function SettingsPage() {
               <ApiField label="Account SID" field="twilioSid" placeholder="ACxxxxx" icon={Key} />
               <ApiField label="Auth Token" field="twilioToken" placeholder="xxxxx" icon={Key} />
               <ApiField label="Phone Number" field="twilioPhone" placeholder="+975xxxxx" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-[#25D366]" /> CallMeBot (WhatsApp Alerts)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <ApiField
+                label="Your WhatsApp (receives alerts)"
+                field="callmebotPhone"
+                placeholder="975XXXXXXXX"
+              />
+              <ApiField
+                label="API Key"
+                field="callmebotApiKey"
+                placeholder="apikey from CallMeBot reply"
+                icon={Key}
+              />
+              <div className="col-span-2 p-3 bg-[#F3F3F1] rounded-lg space-y-2">
+                <p className="text-xs font-medium text-[#1A1A1A]">
+                  Activate (new bot — old bot is full)
+                </p>
+                <ol className="text-xs text-[#717171] list-decimal pl-4 space-y-1">
+                  <li>
+                    Add bot number <span className="font-mono text-[#1A1A1A]">+34 623 76 13 63</span> to
+                    contacts (required)
+                  </li>
+                  <li>
+                    WhatsApp that number:{" "}
+                    <span className="font-mono text-[#1A1A1A]">I allow callmebot to call me</span>
+                  </li>
+                  <li>Save the API key they reply with here (or CALLMEBOT_* env vars)</li>
+                </ol>
+                <p className="text-xs text-[#717171]">
+                  Alerts fire for support requests, contact forms, and lead capture.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
