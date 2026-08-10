@@ -9,6 +9,11 @@ import {
   ArrowRight,
   Pencil,
   Trash2,
+  Download,
+  MessageCircle,
+  Mail,
+  Link2,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +21,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { MbobDepositQrCard } from "@/components/admin/mbob-deposit-qr";
+import {
+  downloadBlob,
+  renderQuotationPdf,
+} from "@/lib/quotations/renderQuotationPdf";
+import { quotationPublicPath } from "@/lib/quotations/shareQuotation";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +63,7 @@ type QuotationItem = {
 
 type Quotation = {
   id: number;
+  publicId?: string;
   quotationNumber: string;
   category: string;
   businessName?: string | null;
@@ -63,8 +74,10 @@ type Quotation = {
   address2?: string | null;
   state?: string | null;
   totalAmount?: string | number | null;
+  subtotal?: string | number | null;
   advancePercent?: string | number | null;
   advanceAmount?: string | number | null;
+  validityDays?: number | null;
   status: string;
   depositQrPayload?: string | null;
   mbobAccountNumber?: string | null;
@@ -96,6 +109,7 @@ export default function QuotationsPage() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [sharing, setSharing] = useState<string | null>(null);
   const [selected, setSelected] = useState<Quotation | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [lineItems, setLineItems] = useState<
@@ -253,6 +267,104 @@ export default function QuotationsPage() {
       toast.error(e instanceof Error ? e.message : "Save failed");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const downloadPdf = async (q: Quotation) => {
+    setSharing("download");
+    try {
+      const blob = await renderQuotationPdf({
+        quotationNumber: q.quotationNumber,
+        category: q.category,
+        businessName: q.businessName || q.customerName || "Client",
+        customerName: q.customerName,
+        phone: q.phone,
+        email: q.email,
+        address: q.address,
+        quotationFor: q.quotationFor,
+        validityDays: q.validityDays,
+        items: (q.items || []).map((item) => ({
+          name: item.name,
+          brand: item.brand,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          amount: Number(
+            item.amount ?? Number(item.quantity) * Number(item.unitPrice)
+          ),
+        })),
+        subtotal: Number(q.subtotal || q.totalAmount || 0),
+        totalAmount: Number(q.totalAmount || 0),
+        advancePercent: Number(q.advancePercent || 0),
+        advanceAmount: Number(q.advanceAmount || 0),
+        notes: q.notes,
+        publicUrl: q.publicId
+          ? `${window.location.origin}${quotationPublicPath(q.publicId)}`
+          : undefined,
+        depositQrPayload: q.depositQrPayload,
+        mbobAccountNumber: q.mbobAccountNumber,
+      });
+      downloadBlob(blob, `${q.quotationNumber.replace(/\//g, "-")}.pdf`);
+      toast.success("PDF downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    } finally {
+      setSharing(null);
+    }
+  };
+
+  const shareQuotation = async (
+    q: Quotation,
+    channel: "whatsapp" | "email" | "link"
+  ) => {
+    setSharing(channel);
+    try {
+      const res = await fetch(`/api/quotations/${q.id}/share`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channel,
+          phone: q.phone,
+          email: q.email,
+          sendViaApi: true,
+          markSent: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Share failed");
+      }
+
+      if (data.data?.quotation) {
+        setSelected({ ...q, ...data.data.quotation });
+      }
+      await load();
+
+      if (channel === "link") {
+        await navigator.clipboard.writeText(data.data.publicUrl);
+        toast.success("Client link copied");
+      } else if (data.data.shareUrl) {
+        window.open(data.data.shareUrl, "_blank", "noopener,noreferrer");
+        if (data.data.api?.success && !data.data.api?.skipped) {
+          toast.success(
+            channel === "whatsapp"
+              ? "Opened WhatsApp · Cloud API message sent"
+              : "Opened email · API email sent"
+          );
+        } else {
+          toast.success(
+            channel === "whatsapp"
+              ? "WhatsApp opened with quotation message"
+              : "Email draft opened"
+          );
+          if (data.data.api?.error && !data.data.api?.skipped) {
+            toast.message(String(data.data.api.error));
+          }
+        }
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Share failed");
+    } finally {
+      setSharing(null);
     }
   };
 
@@ -430,6 +542,55 @@ export default function QuotationsPage() {
                 quotationNumber={selected.quotationNumber}
                 setupError={selected.mbobSetupError}
               />
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={sharing === "download"}
+                  onClick={() => downloadPdf(selected)}
+                >
+                  {sharing === "download" ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5 mr-1" />
+                  )}
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={sharing === "link" || !selected.publicId}
+                  onClick={() => shareQuotation(selected, "link")}
+                >
+                  <Link2 className="w-3.5 h-3.5 mr-1" /> Link
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={sharing === "whatsapp"}
+                  onClick={() => shareQuotation(selected, "whatsapp")}
+                >
+                  {sharing === "whatsapp" ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <MessageCircle className="w-3.5 h-3.5 mr-1" />
+                  )}
+                  WhatsApp
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={sharing === "email"}
+                  onClick={() => shareQuotation(selected, "email")}
+                >
+                  {sharing === "email" ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <Mail className="w-3.5 h-3.5 mr-1" />
+                  )}
+                  Email
+                </Button>
+              </div>
               <div className="flex flex-col gap-2 pt-2">
                 {selected.status !== "advance_paid" &&
                   selected.status !== "converted" && (

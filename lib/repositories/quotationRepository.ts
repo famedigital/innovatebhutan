@@ -97,6 +97,23 @@ export class QuotationRepository {
     return { ...row, items };
   }
 
+  async getByPublicId(publicId: string): Promise<QuotationWithItems | null> {
+    const [row] = await this.db
+      .select()
+      .from(salesQuotations)
+      .where(eq(salesQuotations.publicId, publicId))
+      .limit(1);
+    if (!row) return null;
+
+    const items = await this.db
+      .select()
+      .from(salesQuotationItems)
+      .where(eq(salesQuotationItems.quotationId, row.id))
+      .orderBy(salesQuotationItems.sortOrder);
+
+    return { ...row, items };
+  }
+
   async createWithItems(
     data: NewSalesQuotation,
     items: Array<Omit<NewSalesQuotationItem, "quotationId">>

@@ -88,6 +88,8 @@ function isPublicPage(pathname: string) {
     '/client',
     '/directory',
     '/api/directory',
+    '/quote',
+    '/api/quotations/public',
     '/offline',
   ];
   if (publicPages.some(page => pathname === page || pathname.startsWith(page + '/'))) {

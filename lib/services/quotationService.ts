@@ -47,6 +47,10 @@ export class QuotationService {
     return this.repository.getById(id);
   }
 
+  getByPublicId(publicId: string) {
+    return this.repository.getByPublicId(publicId);
+  }
+
   async getByIdWithLiveDepositQr(id: number) {
     const quotation = await this.repository.getById(id);
     if (!quotation) return null;
