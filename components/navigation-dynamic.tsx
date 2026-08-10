@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
 import { Home, Layers, Grid3X3, Headphones } from "lucide-react";
-import { NavigationMenuFullMegaMenu } from "@/components/examples/navigation-menu/complex/navigation-menu-full-mega-menu";
+import { NavbarMegaMenuGrid } from "@/components/blocks/navbar/navbar-mega-menu-grid";
 
 export function NavigationDynamic() {
   const pathname = usePathname();
@@ -34,43 +33,40 @@ export function NavigationDynamic() {
 
   return (
     <>
-      {/* Desktop: floating pill on hero → sticky full bar while scrolling */}
-      <motion.header
-        initial={false}
-        animate={{
-          y: 0,
-          opacity: 1,
-        }}
-        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        className={`hidden md:flex fixed z-50 left-0 right-0 justify-center transition-[padding,background-color,border-radius,box-shadow,backdrop-filter] duration-300 ${
-          isScrolled
-            ? "top-0 px-0 pt-0"
-            : "top-0 px-4 sm:px-6 pt-3 sm:pt-4"
+      {/* Desktop: floating pill on hero → sticky full bar while scrolling.
+          Plain header (no framer transform) so mega-menu dropdowns are not clipped. */}
+      <header
+        className={`hidden md:flex fixed z-50 left-0 right-0 justify-center overflow-visible transition-[padding] duration-300 ${
+          isScrolled ? "top-0 px-0 pt-0" : "top-0 px-4 sm:px-6 pt-3 sm:pt-4"
         }`}
       >
         <div
-          className={`relative z-50 w-full transition-all duration-300 ${
+          className={`relative z-50 w-full overflow-visible transition-all duration-300 ${
             isScrolled
               ? "max-w-none rounded-none border-b border-border/80 bg-background/95 shadow-sm backdrop-blur-xl"
-              : "max-w-5xl rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-black/80 shadow-lg backdrop-blur-xl"
+              : "max-w-5xl"
           }`}
         >
-          <div
-            className={`mx-auto w-full ${
-              isScrolled ? "max-w-[1600px] px-4 sm:px-6 lg:px-8" : "px-3 sm:px-4"
-            }`}
-          >
-            {loading ? (
-              <div className="flex h-14 items-center justify-between">
-                <div className="h-6 w-36 animate-pulse rounded bg-muted" />
-                <div className="h-6 w-64 animate-pulse rounded bg-muted" />
-              </div>
-            ) : (
-              <NavigationMenuFullMegaMenu />
-            )}
-          </div>
+          {loading ? (
+            <div
+              className={`flex h-14 items-center justify-between px-4 ${
+                isScrolled
+                  ? ""
+                  : "rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-black/80"
+              }`}
+            >
+              <div className="h-6 w-36 animate-pulse rounded bg-muted" />
+              <div className="h-6 w-64 animate-pulse rounded bg-muted" />
+            </div>
+          ) : isScrolled ? (
+            <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8 [&_.rounded-lg]:rounded-none [&_.border]:border-0 [&_.shadow-lg]:shadow-none [&_.bg-card]:bg-transparent">
+              <NavbarMegaMenuGrid />
+            </div>
+          ) : (
+            <NavbarMegaMenuGrid />
+          )}
         </div>
-      </motion.header>
+      </header>
 
       {/* Spacer only once sticky so floating nav can overlay the hero */}
       <div

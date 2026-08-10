@@ -175,8 +175,8 @@ export function NavbarMegaMenuGrid() {
   }, [])
 
   return (
-    <div className="relative w-full overflow-visible rounded-lg border bg-card shadow-lg backdrop-blur-xl">
-      <div className="relative">
+    <div className="relative w-full overflow-visible rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-black/80 md:rounded-lg md:border-border md:bg-card">
+      <div className="relative overflow-visible">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center gap-2">
@@ -194,11 +194,13 @@ export function NavbarMegaMenuGrid() {
               {["Products", "Solutions"].map((label) => (
                 <div
                   key={label}
+                  className="relative"
                   onMouseEnter={() => open(label)}
                   onMouseLeave={close}
                 >
                   <button
                     type="button"
+                    aria-expanded={active === label}
                     className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
                       active === label
                         ? "bg-muted/50 text-foreground"
@@ -260,7 +262,7 @@ export function NavbarMegaMenuGrid() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.15 }}
-              className="absolute top-full right-0 left-0 z-10 border-t bg-card shadow-lg"
+              className="absolute top-full right-0 left-0 z-[60] overflow-visible rounded-b-2xl border border-t border-slate-200/80 bg-white shadow-xl dark:border-white/10 dark:bg-black"
               onMouseEnter={() => open("Products")}
               onMouseLeave={close}
             >
@@ -302,7 +304,7 @@ export function NavbarMegaMenuGrid() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.15 }}
-              className="absolute top-full right-0 left-0 z-10 border-t bg-card shadow-lg"
+              className="absolute top-full right-0 left-0 z-[60] overflow-visible rounded-b-2xl border border-t border-slate-200/80 bg-white shadow-xl dark:border-white/10 dark:bg-black"
               onMouseEnter={() => open("Solutions")}
               onMouseLeave={close}
             >
