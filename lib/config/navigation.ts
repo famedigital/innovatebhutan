@@ -55,13 +55,14 @@ export const navigationConfig: NavGroup[] = [
     title: "Overview",
     items: [
       { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
+      { title: "Quotations", href: "/admin/quotations", icon: FileText },
       { title: "ERP Manual", href: "/admin/manual", icon: BookOpen },
     ],
   },
   {
     title: "Work",
     items: [
-      { title: "My Queue", href: "/admin/tickets?scope=mine", icon: ListTodo },
+      { title: "My Queue", href: "/admin/my-queue", icon: ListTodo },
       { title: "My Tasks", href: "/admin/my-work", icon: CheckSquare },
       { title: "Clients", href: "/admin/clients", icon: Building2 },
       { title: "Tickets", href: "/admin/tickets", icon: Ticket },
@@ -71,6 +72,7 @@ export const navigationConfig: NavGroup[] = [
   {
     title: "Products",
     items: [
+      { title: "Product Master", href: "/admin/products/master", icon: Package },
       { title: "All Products", href: "/admin/products", icon: Boxes },
       { title: "RanceLab", href: "/admin/products/rancelab", icon: Shield },
       { title: "Pelbu POS", href: "/admin/products/pelbu-pos", icon: Package },
@@ -113,6 +115,7 @@ export const navigationConfig: NavGroup[] = [
     roles: ["ADMIN", "STAFF"],
     items: [
       { title: "Inventory", href: "/admin/inventory", icon: Package },
+      { title: "Purchase Master", href: "/admin/purchases", icon: ShoppingCart },
       { title: "Procurement", href: "/admin/procurement", icon: ShoppingCart },
       { title: "Fixed Assets", href: "/admin/assets", icon: Building },
     ],

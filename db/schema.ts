@@ -35,8 +35,12 @@ export const clients = pgTable("clients", {
   whatsappGroupLink: text("whatsapp_group_link"),
   logoUrl: text("logo_url"),
   address: text("address"),
+  address2: text("address_2"),
   city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
   country: varchar("country", { length: 100 }).default("Bhutan"),
+  businessName: varchar("business_name", { length: 255 }),
+  businessType: varchar("business_type", { length: 100 }),
 
   // Enhanced fields for next-gen support system
   industry: varchar("industry", { length: 100 }),
@@ -362,6 +366,18 @@ export const projects = pgTable("projects", {
   productKey: varchar("product_key", { length: 50 }), // rancelab|pelbu_pos|website|cctv|networking
   moneyMeta: jsonb("money_meta").$type<Record<string, unknown>>().default({}),
   progress: integer("progress").default(0), // Cached progress 0-100
+  /** software | hardware | services | supply */
+  categoryType: varchar("category_type", { length: 50 }),
+  referredBy: varchar("referred_by", { length: 255 }),
+  totalCommission: decimal("total_commission", { precision: 15, scale: 2 }),
+  preferredInstallDate: timestamp("preferred_install_date"),
+  /** implementor | accountant | trainee */
+  assigneeRole: varchar("assignee_role", { length: 50 }),
+  /** pending | completed — product master setup for this project */
+  productMasterStatus: varchar("product_master_status", { length: 50 }).default("pending"),
+  /** Day 1–5 training plan: [{day, title, status, scheduledAt}] */
+  trainingPlan: jsonb("training_plan").$type<Array<Record<string, unknown>>>().default([]),
+  quotationId: integer("quotation_id"),
   deletedAt: timestamp("deleted_at"), // Soft delete timestamp
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -372,6 +388,7 @@ export const projects = pgTable("projects", {
   leadIdIdx: index("idx_projects_lead_id").on(table.leadId),
   deletedAtIdx: index("idx_projects_deleted_at").on(table.deletedAt),
   productKeyIdx: index("idx_projects_product_key").on(table.productKey),
+  assigneeRoleIdx: index("idx_projects_assignee_role").on(table.assigneeRole),
 }));
 
 /**
@@ -2174,5 +2191,144 @@ export const products = pgTable("products", {
 }, (table) => ({
   keyIdx: index("idx_products_key").on(table.key),
   activeIdx: index("idx_products_active").on(table.isActive),
+}));
+
+/**
+ * 🗂️ PRODUCT MASTER
+ * Sellable SKUs for quotations (Software / Hardware / Supply / Services).
+ */
+export const productMaster = pgTable("product_master", {
+  id: serial("id").primaryKey(),
+  publicId: varchar("public_id", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  /** software | hardware | supply | services */
+  category: varchar("category", { length: 50 }).notNull(),
+  brand: varchar("brand", { length: 100 }),
+  sku: varchar("sku", { length: 100 }),
+  description: text("description"),
+  unitPrice: decimal("unit_price", { precision: 15, scale: 2 }).default("0"),
+  unit: varchar("unit", { length: 50 }).default("pcs"),
+  /** pending | completed — used on implementor queue */
+  masterStatus: varchar("master_status", { length: 50 }).default("pending"),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  categoryIdx: index("idx_product_master_category").on(table.category),
+  activeIdx: index("idx_product_master_active").on(table.isActive),
+  statusIdx: index("idx_product_master_status").on(table.masterStatus),
+  nameIdx: index("idx_product_master_name").on(table.name),
+}));
+
+/**
+ * 📄 SALES QUOTATIONS
+ * Client-facing quotations with deposit QR payload.
+ */
+export const salesQuotations = pgTable("sales_quotations", {
+  id: serial("id").primaryKey(),
+  publicId: varchar("public_id", { length: 50 }).notNull().unique(),
+  quotationNumber: varchar("quotation_number", { length: 50 }).notNull().unique(),
+  /** software | hardware | supply | services */
+  category: varchar("category", { length: 50 }).notNull(),
+  clientId: integer("client_id").references(() => clients.id),
+  customerName: varchar("customer_name", { length: 255 }),
+  businessName: varchar("business_name", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  address: text("address"),
+  address2: text("address_2"),
+  state: varchar("state", { length: 100 }),
+  country: varchar("country", { length: 100 }).default("Bhutan"),
+  quotationFor: text("quotation_for"),
+  validityDays: integer("validity_days").default(15),
+  subtotal: decimal("subtotal", { precision: 15, scale: 2 }).default("0"),
+  taxAmount: decimal("tax_amount", { precision: 15, scale: 2 }).default("0"),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).default("0"),
+  advancePercent: decimal("advance_percent", { precision: 5, scale: 2 }).default("50"),
+  advanceAmount: decimal("advance_amount", { precision: 15, scale: 2 }).default("0"),
+  /** draft | sent | advance_paid | converted | cancelled */
+  status: varchar("status", { length: 50 }).default("draft"),
+  depositQrPayload: text("deposit_qr_payload"),
+  depositProofUrl: text("deposit_proof_url"),
+  advancePaidAt: timestamp("advance_paid_at"),
+  projectId: integer("project_id").references(() => projects.id),
+  notes: text("notes"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  numberIdx: index("idx_sales_quotations_number").on(table.quotationNumber),
+  statusIdx: index("idx_sales_quotations_status").on(table.status),
+  categoryIdx: index("idx_sales_quotations_category").on(table.category),
+  clientIdx: index("idx_sales_quotations_client").on(table.clientId),
+}));
+
+export const salesQuotationItems = pgTable("sales_quotation_items", {
+  id: serial("id").primaryKey(),
+  quotationId: integer("quotation_id").references(() => salesQuotations.id).notNull(),
+  productMasterId: integer("product_master_id").references(() => productMaster.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  brand: varchar("brand", { length: 100 }),
+  description: text("description"),
+  quantity: integer("quantity").notNull().default(1),
+  unitPrice: decimal("unit_price", { precision: 15, scale: 2 }).notNull().default("0"),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull().default("0"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  quotationIdx: index("idx_sales_quotation_items_quotation").on(table.quotationId),
+}));
+
+/**
+ * 🧾 PURCHASE MASTER
+ * Inbound purchases with landed cost (Nu.).
+ */
+export const purchaseMasters = pgTable("purchase_masters", {
+  id: serial("id").primaryKey(),
+  publicId: varchar("public_id", { length: 50 }).notNull().unique(),
+  supplierName: varchar("supplier_name", { length: 255 }).notNull(),
+  supplierId: integer("supplier_id").references(() => suppliers.id),
+  billReferenceNo: varchar("bill_reference_no", { length: 100 }),
+  purchaseDate: timestamp("purchase_date").defaultNow(),
+  /** cash | credit | days */
+  paymentTimeline: varchar("payment_timeline", { length: 50 }).default("cash"),
+  creditDays: integer("credit_days").default(0),
+  advancePayment: decimal("advance_payment", { precision: 15, scale: 2 }).default("0"),
+  totalPurchaseAmount: decimal("total_purchase_amount", { precision: 15, scale: 2 }).default("0"),
+  gstPaid: decimal("gst_paid", { precision: 15, scale: 2 }).default("0"),
+  declarationFees: decimal("declaration_fees", { precision: 15, scale: 2 }).default("0"),
+  freightCharges: decimal("freight_charges", { precision: 15, scale: 2 }).default("0"),
+  totalFreightCharges: decimal("total_freight_charges", { precision: 15, scale: 2 }).default("0"),
+  totalLandedCost: decimal("total_landed_cost", { precision: 15, scale: 2 }).default("0"),
+  salesRate: decimal("sales_rate", { precision: 15, scale: 2 }),
+  /** draft | saved | cancelled */
+  status: varchar("status", { length: 50 }).default("draft"),
+  invoiceUploadUrl: text("invoice_upload_url"),
+  notes: text("notes"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  supplierNameIdx: index("idx_purchase_masters_supplier_name").on(table.supplierName),
+  statusIdx: index("idx_purchase_masters_status").on(table.status),
+  dateIdx: index("idx_purchase_masters_date").on(table.purchaseDate),
+}));
+
+export const purchaseMasterItems = pgTable("purchase_master_items", {
+  id: serial("id").primaryKey(),
+  purchaseId: integer("purchase_id").references(() => purchaseMasters.id).notNull(),
+  productName: varchar("product_name", { length: 255 }).notNull(),
+  productMasterId: integer("product_master_id").references(() => productMaster.id),
+  quantity: integer("quantity").notNull().default(1),
+  costPrice: decimal("cost_price", { precision: 15, scale: 2 }).notNull().default("0"),
+  taxAmount: decimal("tax_amount", { precision: 15, scale: 2 }).default("0"),
+  finalCost: decimal("final_cost", { precision: 15, scale: 2 }).default("0"),
+  mrp: decimal("mrp", { precision: 15, scale: 2 }),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  purchaseIdx: index("idx_purchase_master_items_purchase").on(table.purchaseId),
 }));
 

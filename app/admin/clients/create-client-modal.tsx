@@ -60,6 +60,7 @@ interface FormData {
   email: string;
   phone: string;
   whatsapp: string;
+  whatsappGroupLink: string;
   address: string;
   city: string;
   country: string;
@@ -74,6 +75,7 @@ export function CreateClientModal({ open, onOpenChange, onClientCreated }: Creat
     email: "",
     phone: "",
     whatsapp: "",
+    whatsappGroupLink: "",
     address: "",
     city: "",
     country: "Bhutan",
@@ -167,7 +169,9 @@ export function CreateClientModal({ open, onOpenChange, onClientCreated }: Creat
       if (formData.email.trim()) payload.email = formData.email.trim();
       if (formData.phone.trim()) payload.phone = formData.phone.trim();
       if (formData.whatsapp.trim()) payload.whatsapp = formData.whatsapp.trim();
+      if (formData.whatsappGroupLink.trim()) payload.whatsappGroupLink = formData.whatsappGroupLink.trim();
       if (formData.address.trim()) payload.address = formData.address.trim();
+      payload.businessName = formData.name.trim();
       if (formData.city.trim()) payload.city = formData.city.trim();
       if (formData.country.trim()) payload.country = formData.country.trim();
       if (formData.logoUrl.trim()) payload.logoUrl = formData.logoUrl.trim();
@@ -202,6 +206,7 @@ export function CreateClientModal({ open, onOpenChange, onClientCreated }: Creat
       email: "",
       phone: "",
       whatsapp: "",
+      whatsappGroupLink: "",
       address: "",
       city: "",
       country: "Bhutan",
@@ -336,6 +341,23 @@ export function CreateClientModal({ open, onOpenChange, onClientCreated }: Creat
                     disabled={loading}
                   />
                 </div>
+              </div>
+
+              {/* WhatsApp Group Link */}
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="whatsappGroupLink" className="text-sm font-medium text-[#1A1A1A]">
+                  WhatsApp Group Link
+                </Label>
+                <Input
+                  id="whatsappGroupLink"
+                  type="url"
+                  placeholder="https://chat.whatsapp.com/..."
+                  className="bg-[#F3F3F1] border-[#E5E5E1] focus:border-[#3ECF8E] focus:ring-[#3ECF8E]/20"
+                  value={formData.whatsappGroupLink}
+                  onChange={(e) => handleInputChange("whatsappGroupLink", e.target.value)}
+                  disabled={loading}
+                />
+                <p className="text-[11px] text-[#717171]">Client will be added to database. After advance payment, a new WhatsApp group can be linked here.</p>
               </div>
 
               {/* Logo URL */}

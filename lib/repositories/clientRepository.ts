@@ -20,8 +20,12 @@ export class ClientRepository {
         whatsappGroupLink: clients.whatsappGroupLink,
         logoUrl: clients.logoUrl,
         address: clients.address,
+        address2: clients.address2,
         city: clients.city,
+        state: clients.state,
         country: clients.country,
+        businessName: clients.businessName,
+        businessType: clients.businessType,
         createdAt: clients.createdAt,
       })
       .from(clients)
