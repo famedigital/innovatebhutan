@@ -371,7 +371,13 @@ export default function QuotationsPage() {
               <Select
                 value={form.category}
                 onValueChange={(v) => {
-                  setForm({ ...form, category: v, productId: "" });
+                  setForm({
+                    ...form,
+                    category: v,
+                    productId: "",
+                    unitPrice: "",
+                    quantity: "1",
+                  });
                   setLineItems([]);
                 }}
               >
