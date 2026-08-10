@@ -14,12 +14,16 @@ import {
   Mail,
   Link2,
   Loader2,
+  Building2,
+  Package,
+  Percent,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { MbobDepositQrCard } from "@/components/admin/mbob-deposit-qr";
 import {
   downloadBlob,
@@ -29,6 +33,7 @@ import { quotationPublicPath } from "@/lib/quotations/shareQuotation";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -43,6 +48,12 @@ import {
 import { toast } from "sonner";
 
 const CATEGORIES = ["software", "hardware", "supply", "services"] as const;
+
+const formatNu = (n: number) =>
+  `Nu. ${Number(n || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
 
 type CatalogProduct = {
   id: number;
@@ -171,6 +182,14 @@ export default function QuotationsPage() {
     () => lineItems.reduce((sum, li) => sum + li.quantity * li.unitPrice, 0),
     [lineItems]
   );
+
+  const advancePreview = useMemo(() => {
+    const pct = Math.min(100, Math.max(0, Number(form.advancePercent) || 0));
+    return {
+      percent: pct,
+      amount: (lineTotal * pct) / 100,
+    };
+  }, [form.advancePercent, lineTotal]);
 
   const canEdit = (status: string) =>
     status === "draft" || status === "sent" || status === "advance_paid";
@@ -695,227 +714,446 @@ export default function QuotationsPage() {
           if (!next) resetDialog();
         }}
       >
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="flex max-h-[92vh] w-full max-w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
+          <DialogHeader className="shrink-0 space-y-1 border-b bg-muted/30 px-6 py-5 pr-12 text-left">
+            <DialogTitle className="text-xl tracking-tight">
               {editingId ? "Edit Quotation" : "New Quotation"}
             </DialogTitle>
+            <DialogDescription>
+              {editingId
+                ? "Update client details, line items, and advance terms."
+                : "Prepare a professional quote with products from Product Master and an mBoB deposit amount."}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Quotation for (category)</Label>
-              <Select
-                value={form.category}
-                onValueChange={(v) => {
-                  setForm({ ...form, category: v, productId: "", unitPrice: "" });
-                  if (!editingId) setLineItems([]);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c} className="capitalize">
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label>Business Name *</Label>
-                <Input
-                  value={form.businessName}
-                  onChange={(e) =>
-                    setForm({ ...form, businessName: e.target.value })
-                  }
-                />
+
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
+            {/* Client */}
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <Building2 className="size-3.5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold">Client details</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Who this quotation is issued to
+                  </p>
+                </div>
               </div>
-              <div>
-                <Label>Customer Name</Label>
-                <Input
-                  value={form.customerName}
-                  onChange={(e) =>
-                    setForm({ ...form, customerName: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label>Phone</Label>
-                <Input
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Email</Label>
-                <Input
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
-              </div>
-            </div>
-            <div>
-              <Label>Select product</Label>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Select value={form.productId} onValueChange={selectProduct}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue
-                      placeholder={
-                        filteredCatalog.length
-                          ? "Pick from product master"
-                          : catalog.length
-                            ? `No ${form.category} products — switch category`
-                            : "No active products in master"
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5 sm:col-span-1">
+                  <Label htmlFor="q-business">Business name *</Label>
+                  <Input
+                    id="q-business"
+                    placeholder="Company or shop name"
+                    value={form.businessName}
+                    onChange={(e) =>
+                      setForm({ ...form, businessName: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="q-customer">Contact person</Label>
+                  <Input
+                    id="q-customer"
+                    placeholder="Customer name"
+                    value={form.customerName}
+                    onChange={(e) =>
+                      setForm({ ...form, customerName: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="q-phone">Phone</Label>
+                  <Input
+                    id="q-phone"
+                    placeholder="+975 …"
+                    value={form.phone}
+                    onChange={(e) =>
+                      setForm({ ...form, phone: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="q-email">Email</Label>
+                  <Input
+                    id="q-email"
+                    type="email"
+                    placeholder="client@example.com"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm({ ...form, email: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="q-address">Address</Label>
+                  <Input
+                    id="q-address"
+                    placeholder="Street / building"
+                    value={form.address}
+                    onChange={(e) =>
+                      setForm({ ...form, address: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="q-address2">Address line 2</Label>
+                    <Input
+                      id="q-address2"
+                      placeholder="Optional"
+                      value={form.address2}
+                      onChange={(e) =>
+                        setForm({ ...form, address2: e.target.value })
                       }
                     />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredCatalog.map((p) => {
-                      const price = Number(p.unitPrice || 0);
-                      return (
-                        <SelectItem key={p.id} value={String(p.id)}>
-                          {p.name}
-                          {p.brand ? ` (${p.brand})` : ""} —{" "}
-                          {price > 0
-                            ? `Nu. ${price.toLocaleString()}`
-                            : "set price"}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-                <Input
-                  className="w-20"
-                  type="number"
-                  min={1}
-                  value={form.quantity}
-                  onChange={(e) =>
-                    setForm({ ...form, quantity: e.target.value })
-                  }
-                  aria-label="Quantity"
-                />
-                <Input
-                  className="w-28"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  placeholder="Unit price"
-                  value={form.unitPrice}
-                  onChange={(e) =>
-                    setForm({ ...form, unitPrice: e.target.value })
-                  }
-                  aria-label="Unit price Nu."
-                />
-                <Button type="button" variant="outline" onClick={addLine}>
-                  Add
-                </Button>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="q-state">Dzongkhag</Label>
+                    <Input
+                      id="q-state"
+                      value={form.state}
+                      onChange={(e) =>
+                        setForm({ ...form, state: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
               </div>
-              {filteredCatalog.length === 0 && (
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  {catalog.length === 0
-                    ? "Add products in Product Master first."
-                    : `${otherCategoryCount} active product(s) exist in other categories — change the category above to see them.`}{" "}
-                  <a
-                    href="/admin/products/master"
-                    className="underline underline-offset-2 hover:text-foreground"
+            </section>
+
+            <Separator />
+
+            {/* Line items */}
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <Package className="size-3.5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold">Line items</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Products from the selected category
+                    </p>
+                  </div>
+                </div>
+                <div className="w-full sm:w-52 space-y-1.5">
+                  <Label>Category</Label>
+                  <Select
+                    value={form.category}
+                    onValueChange={(v) => {
+                      setForm({
+                        ...form,
+                        category: v,
+                        productId: "",
+                        unitPrice: "",
+                      });
+                      if (!editingId) setLineItems([]);
+                    }}
                   >
-                    Open Product Master
-                  </a>
-                </p>
-              )}
-            </div>
-            {lineItems.length > 0 && (
-              <ul className="text-sm space-y-2 rounded-lg border p-2">
-                {lineItems.map((li, i) => (
-                  <li
-                    key={`${li.productMasterId ?? li.name}-${i}`}
-                    className="flex flex-wrap items-center justify-between gap-2"
-                  >
-                    <span className="min-w-[8rem] font-medium">{li.name}</span>
-                    <span className="flex flex-wrap items-center gap-2">
-                      <Input
-                        className="h-8 w-16"
-                        type="number"
-                        min={1}
-                        value={li.quantity}
-                        onChange={(e) =>
-                          updateLine(i, { quantity: Number(e.target.value) })
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map((c) => (
+                        <SelectItem key={c} value={c} className="capitalize">
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+                <div className="grid gap-2 border-b bg-muted/40 p-3 sm:grid-cols-[1fr_88px_120px_auto]">
+                  <Select value={form.productId} onValueChange={selectProduct}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue
+                        placeholder={
+                          filteredCatalog.length
+                            ? "Select product from master"
+                            : catalog.length
+                              ? `No ${form.category} products`
+                              : "No active products"
                         }
-                        aria-label={`${li.name} quantity`}
                       />
-                      <span className="text-muted-foreground">× Nu.</span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredCatalog.map((p) => {
+                        const price = Number(p.unitPrice || 0);
+                        return (
+                          <SelectItem key={p.id} value={String(p.id)}>
+                            {p.name}
+                            {p.brand ? ` · ${p.brand}` : ""} —{" "}
+                            {price > 0 ? formatNu(price) : "set price"}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="bg-background"
+                    value={form.quantity}
+                    onChange={(e) =>
+                      setForm({ ...form, quantity: e.target.value })
+                    }
+                    aria-label="Quantity"
+                    placeholder="Qty"
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="bg-background"
+                    placeholder="Unit price"
+                    value={form.unitPrice}
+                    onChange={(e) =>
+                      setForm({ ...form, unitPrice: e.target.value })
+                    }
+                    aria-label="Unit price Nu."
+                  />
+                  <Button type="button" onClick={addLine} className="sm:px-4">
+                    <Plus className="mr-1 size-4" />
+                    Add
+                  </Button>
+                </div>
+
+                {filteredCatalog.length === 0 && (
+                  <p className="border-b px-3 py-2 text-xs text-muted-foreground">
+                    {catalog.length === 0
+                      ? "Add products in Product Master first."
+                      : `${otherCategoryCount} active product(s) in other categories — switch category to see them.`}{" "}
+                    <a
+                      href="/admin/products/master"
+                      className="font-medium text-foreground underline underline-offset-2"
+                    >
+                      Open Product Master
+                    </a>
+                  </p>
+                )}
+
+                {lineItems.length === 0 ? (
+                  <div className="px-4 py-10 text-center">
+                    <Package className="mx-auto mb-2 size-8 text-muted-foreground/40" />
+                    <p className="text-sm font-medium">No line items yet</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Select a product, set quantity and unit price, then add.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[560px] text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/20 text-xs uppercase tracking-wide text-muted-foreground">
+                          <th className="px-3 py-2.5 text-left font-medium">
+                            Item
+                          </th>
+                          <th className="w-24 px-2 py-2.5 text-center font-medium">
+                            Qty
+                          </th>
+                          <th className="w-32 px-2 py-2.5 text-right font-medium">
+                            Unit (Nu.)
+                          </th>
+                          <th className="w-32 px-2 py-2.5 text-right font-medium">
+                            Amount
+                          </th>
+                          <th className="w-10 px-2 py-2.5" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lineItems.map((li, i) => (
+                          <tr
+                            key={`${li.productMasterId ?? li.name}-${i}`}
+                            className="border-b last:border-0"
+                          >
+                            <td className="px-3 py-2.5">
+                              <div className="font-medium leading-snug">
+                                {li.name}
+                              </div>
+                              {li.brand ? (
+                                <div className="text-xs text-muted-foreground">
+                                  {li.brand}
+                                </div>
+                              ) : null}
+                            </td>
+                            <td className="px-2 py-2">
+                              <Input
+                                className="h-8 text-center"
+                                type="number"
+                                min={1}
+                                value={li.quantity}
+                                onChange={(e) =>
+                                  updateLine(i, {
+                                    quantity: Number(e.target.value),
+                                  })
+                                }
+                                aria-label={`${li.name} quantity`}
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <Input
+                                className="h-8 text-right"
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                value={li.unitPrice}
+                                onChange={(e) =>
+                                  updateLine(i, {
+                                    unitPrice: Number(e.target.value),
+                                  })
+                                }
+                                aria-label={`${li.name} unit price`}
+                              />
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-medium tabular-nums">
+                              {formatNu(li.quantity * li.unitPrice)}
+                            </td>
+                            <td className="px-1 py-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-8 text-muted-foreground hover:text-destructive"
+                                onClick={() => removeLine(i)}
+                                aria-label="Remove line"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <Separator />
+
+            {/* Commercial terms */}
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <Percent className="size-3.5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold">Commercial terms</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Advance deposit used for the mBoB QR amount
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+                <div className="space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-[140px_1fr]">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="q-advance">Advance %</Label>
                       <Input
-                        className="h-8 w-24"
+                        id="q-advance"
                         type="number"
                         min={0}
-                        step="0.01"
-                        value={li.unitPrice}
+                        max={100}
+                        value={form.advancePercent}
                         onChange={(e) =>
-                          updateLine(i, { unitPrice: Number(e.target.value) })
+                          setForm({ ...form, advancePercent: e.target.value })
                         }
-                        aria-label={`${li.name} unit price`}
                       />
-                      <span className="w-24 text-right tabular-nums">
-                        = Nu. {(li.quantity * li.unitPrice).toLocaleString()}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="q-notes">Quotation for / notes</Label>
+                      <Textarea
+                        id="q-notes"
+                        placeholder="Scope summary shown on the quote"
+                        value={form.quotationFor}
+                        onChange={(e) =>
+                          setForm({ ...form, quotationFor: e.target.value })
+                        }
+                        rows={3}
+                        className="min-h-[88px] resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border bg-muted/30 p-4">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="font-medium tabular-nums">
+                        {formatNu(lineTotal)}
                       </span>
-                      <button
-                        type="button"
-                        className="text-muted-foreground hover:text-destructive"
-                        onClick={() => removeLine(i)}
-                        aria-label="Remove line"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </span>
-                  </li>
-                ))}
-                <li className="flex justify-end border-t pt-2 font-medium tabular-nums">
-                  Subtotal: Nu. {lineTotal.toLocaleString()}
-                </li>
-              </ul>
-            )}
-            <div>
-              <Label>Advance %</Label>
-              <Input
-                value={form.advancePercent}
-                onChange={(e) =>
-                  setForm({ ...form, advancePercent: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <Label>Notes / Quotation for</Label>
-              <Textarea
-                value={form.quotationFor}
-                onChange={(e) =>
-                  setForm({ ...form, quotationFor: e.target.value })
-                }
-                rows={2}
-              />
-            </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">
+                        Advance ({advancePreview.percent}%)
+                      </span>
+                      <span className="font-medium tabular-nums">
+                        {formatNu(advancePreview.amount)}
+                      </span>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between gap-3 pt-1">
+                      <span className="font-semibold">Quote total</span>
+                      <span className="text-lg font-semibold tabular-nums text-primary">
+                        {formatNu(lineTotal)}
+                      </span>
+                    </div>
+                    <p className="pt-1 text-[11px] leading-relaxed text-muted-foreground">
+                      Deposit QR will request{" "}
+                      <strong className="text-foreground">
+                        {formatNu(advancePreview.amount)}
+                      </strong>{" "}
+                      when this quotation is saved.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setOpen(false);
-                resetDialog();
-              }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={save} disabled={saving}>
-              {saving
-                ? "Saving..."
-                : editingId
-                  ? "Save Changes"
-                  : "Create Quotation"}
-            </Button>
+
+          <DialogFooter className="shrink-0 gap-2 border-t bg-muted/20 px-6 py-4 sm:justify-between">
+            <p className="hidden text-xs text-muted-foreground sm:block">
+              {lineItems.length} item{lineItems.length === 1 ? "" : "s"} ·{" "}
+              {formatNu(lineTotal)}
+            </p>
+            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setOpen(false);
+                  resetDialog();
+                }}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+              <Button onClick={save} disabled={saving} className="min-w-[160px]">
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : editingId ? (
+                  <>
+                    <CheckCircle2 className="mr-2 size-4" />
+                    Save changes
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 size-4" />
+                    Create quotation
+                  </>
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
