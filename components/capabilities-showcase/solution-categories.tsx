@@ -160,28 +160,6 @@ export function SolutionCategories() {
           </motion.div>
         ))}
       </div>
-
-      {/* Browse All Products CTA */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="text-center"
-      >
-        <div className="inline-flex flex-col sm:flex-row items-center gap-4 p-6 bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-900 dark:to-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <div className="flex-1 text-left">
-            <h4 className="font-semibold text-lg mb-1">Need a specific product?</h4>
-            <p className="text-sm text-muted-foreground">Browse our complete catalog of 500+ IT products</p>
-          </div>
-          <button
-            onClick={() => window.location.href = '/products'}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 hover:border-emerald-600 dark:hover:border-emerald-400 rounded-full font-semibold transition-all whitespace-nowrap"
-          >
-            <span>Browse All Products</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      </motion.div>
     </div>
   );
 }

@@ -127,7 +127,7 @@ export function NavigationMenuFullMegaMenu() {
   }
 
   return (
-    <div className="flex w-full items-center justify-between gap-4 rounded-lg border bg-card px-3 py-2 shadow-lg backdrop-blur-xl">
+    <div className="flex h-14 w-full items-center justify-between gap-4">
       <div className="flex items-center gap-4">
         <Link href="/" className="flex items-center gap-2 px-1">
           <img
