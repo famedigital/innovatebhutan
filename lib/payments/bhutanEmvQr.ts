@@ -1,16 +1,16 @@
 /**
- * Bhutan National QR (EMVCo Merchant-Presented Mode)
- * Used by mBoB Scan & Pay — Tag 54 prefills the transfer amount.
+ * Bhutan National QR (EMVCo Merchant-Presented Mode) for mBoB Scan & Pay.
  *
- * Preferred setup: paste your official static Scan & Pay payload into
- * Admin → Settings (mbob_static_qr). We clone it, inject amount + bill ref,
- * and recalculate CRC so mBoB opens with amount prefilled.
+ * CRITICAL: Do NOT invent merchant-account templates. mBoB rejects unknown GUIDs
+ * with "Invalid QR Code". Always clone the official static sticker payload from
+ * Bank of Bhutan, then inject Tag 54 (amount) + optional reference.
  */
 
 export const BTN_CURRENCY = "064"; // ISO 4217 Ngultrum
 export const BT_COUNTRY = "BT";
 
 export type EmvMap = Record<string, string>;
+export type EmvEntry = { id: string; value: string };
 
 function padLen(value: string): string {
   const len = value.length;
@@ -37,10 +37,11 @@ export function crc16CcittFalse(input: string): string {
   return crc.toString(16).toUpperCase().padStart(4, "0");
 }
 
-export function parseEmvPayload(payload: string): EmvMap {
+/** Parse EMV payload preserving original field order (excluding CRC). */
+export function parseEmvEntries(payload: string): EmvEntry[] {
   const clean = (payload || "").trim();
-  const map: EmvMap = {};
-  if (!clean) return map;
+  const entries: EmvEntry[] = [];
+  if (!clean) return entries;
   let i = 0;
   while (i + 4 <= clean.length) {
     const id = clean.slice(i, i + 2);
@@ -48,120 +49,142 @@ export function parseEmvPayload(payload: string): EmvMap {
     if (!Number.isFinite(len) || len < 0 || i + 4 + len > clean.length) {
       throw new Error(`Invalid EMV TLV near offset ${i}`);
     }
-    map[id] = clean.slice(i + 4, i + 4 + len);
+    const value = clean.slice(i + 4, i + 4 + len);
     i += 4 + len;
+    if (id !== "63") entries.push({ id, value });
   }
   if (i !== clean.length) {
     throw new Error("Trailing bytes in EMV payload");
   }
+  return entries;
+}
+
+export function parseEmvPayload(payload: string): EmvMap {
+  const map: EmvMap = {};
+  for (const entry of parseEmvEntries(payload)) {
+    map[entry.id] = entry.value;
+  }
   return map;
+}
+
+/** Serialize entries in given order and append CRC. */
+export function serializeEmvEntries(entries: EmvEntry[]): string {
+  let body = "";
+  for (const { id, value } of entries) {
+    if (id === "63") continue;
+    body += tlv(id, value);
+  }
+  body += "6304";
+  return body + crc16CcittFalse(body);
 }
 
 export function serializeEmvMap(map: EmvMap): string {
   const orderedIds = Object.keys(map)
     .filter((id) => id !== "63")
     .sort((a, b) => Number(a) - Number(b));
-
-  let body = "";
-  for (const id of orderedIds) {
-    body += tlv(id, map[id]);
-  }
-  body += "6304";
-  return body + crc16CcittFalse(body);
+  return serializeEmvEntries(
+    orderedIds.map((id) => ({ id, value: map[id] }))
+  );
 }
 
 export function isEmvPayload(payload: string | null | undefined): boolean {
   if (!payload) return false;
   const p = payload.trim();
-  return p.startsWith("000201") && p.includes("6304");
+  if (!p.startsWith("000201") || !p.includes("6304")) return false;
+  try {
+    const entries = parseEmvEntries(p);
+    const rebuilt = serializeEmvEntries(entries);
+    // Accept if structure parses; CRC may differ if source omitted/wrong
+    return rebuilt.startsWith("000201") && entries.some((e) => e.id === "59" || Number(e.id) >= 26);
+  } catch {
+    return false;
+  }
+}
+
+export function validateEmvCrc(payload: string): boolean {
+  const p = payload.trim();
+  if (p.length < 8 || !p.includes("6304")) return false;
+  const withoutCrc = p.slice(0, -4);
+  const crc = p.slice(-4).toUpperCase();
+  return crc16CcittFalse(withoutCrc) === crc;
 }
 
 export function formatAmount(amount: number): string {
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error("Amount must be a positive number");
   }
-  // EMV allows optional decimals; keep up to 2 places without trailing zeros noise
   const rounded = Math.round(amount * 100) / 100;
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+  // Keep two decimals — many banking apps expect consistent amount format
+  return rounded.toFixed(2);
+}
+
+function upsertEntry(entries: EmvEntry[], id: string, value: string) {
+  const idx = entries.findIndex((e) => e.id === id);
+  if (idx >= 0) entries[idx] = { id, value };
+  else {
+    // Insert before additional-data (62) if present, else append
+    const at = entries.findIndex((e) => Number(e.id) > Number(id));
+    if (at >= 0) entries.splice(at, 0, { id, value });
+    else entries.push({ id, value });
+  }
 }
 
 export type MbobQrInput = {
-  /** Official static Scan & Pay EMV string (best — preserves BOB merchant template) */
+  /** Official static Scan & Pay EMV string from BOB sticker (required for valid mBoB scan) */
   staticPayload?: string | null;
-  /** Fallback if no static payload */
-  accountNumber?: string | null;
-  merchantName?: string | null;
-  merchantCity?: string | null;
-  mcc?: string | null;
-  /** Globally Unique Identifier inside merchant account template (tag 26/00) */
-  gui?: string | null;
   amount: number;
-  /** Quotation / bill reference shown in remarks where supported */
   billNumber?: string | null;
 };
 
 /**
- * Build a dynamic mBoB / Bhutan National QR with amount prefilled (Tag 54).
+ * Clone official Bhutan/mBoB static QR and inject amount (Tag 54).
+ * Throws if static payload is missing — never invents merchant templates.
  */
 export function buildMbobPaymentQr(input: MbobQrInput): string {
-  const amount = formatAmount(input.amount);
-  const bill = (input.billNumber || "").replace(/[^\w\-\/]/g, "").slice(0, 25);
-
-  if (input.staticPayload && isEmvPayload(input.staticPayload)) {
-    const map = parseEmvPayload(input.staticPayload.trim());
-    map["01"] = "12"; // dynamic QR (amount present)
-    map["54"] = amount;
-    if (bill) {
-      let additional: EmvMap = {};
-      try {
-        additional = parseEmvPayload(map["62"] || "");
-      } catch {
-        additional = {};
-      }
-      // Sub-ID 05 = Reference Label
-      additional["05"] = bill;
-      map["62"] = Object.keys(additional)
-        .sort()
-        .map((id) => tlv(id, additional[id]))
-        .join("");
-    }
-    // Ensure currency / country if missing on odd payloads
-    if (!map["53"]) map["53"] = BTN_CURRENCY;
-    if (!map["58"]) map["58"] = BT_COUNTRY;
-    return serializeEmvMap(map);
-  }
-
-  const account = (input.accountNumber || "").replace(/\s+/g, "");
-  if (!account) {
+  const staticPayload = (input.staticPayload || "").trim();
+  if (!staticPayload) {
     throw new Error(
-      "mBoB QR needs mbob_static_qr (paste Scan & Pay payload) or mbob_account_number in Settings"
+      "Paste your official mBoB Scan & Pay QR payload in Admin → Settings → Payments (decode the Innovates sticker)."
+    );
+  }
+  if (!staticPayload.startsWith("000201")) {
+    throw new Error(
+      "mBoB static QR must be an EMV payload starting with 000201. Decode the sticker with a QR reader app and paste the full text."
     );
   }
 
-  const merchantName = (input.merchantName || "INNOVATES").slice(0, 25);
-  const merchantCity = (input.merchantCity || "THIMPHU").slice(0, 15);
-  const mcc = (input.mcc || "5732").slice(0, 4); // electronics / computer
-  const gui = (input.gui || "com.bob.bt").slice(0, 32);
+  const amount = formatAmount(input.amount);
+  const bill = (input.billNumber || "").replace(/[^\w\-\/]/g, "").slice(0, 25);
+  const entries = parseEmvEntries(staticPayload);
 
-  // Merchant Account Information template (ID 26)
-  const mai = tlv("00", gui) + tlv("01", account);
+  // Dynamic QR when amount is present
+  upsertEntry(entries, "01", "12");
+  upsertEntry(entries, "54", amount);
 
-  const additional = bill ? tlv("05", bill) : "";
+  if (!entries.some((e) => e.id === "53")) {
+    upsertEntry(entries, "53", BTN_CURRENCY);
+  }
+  if (!entries.some((e) => e.id === "58")) {
+    upsertEntry(entries, "58", BT_COUNTRY);
+  }
 
-  const map: EmvMap = {
-    "00": "01",
-    "01": "12",
-    "26": mai,
-    "52": mcc,
-    "53": BTN_CURRENCY,
-    "54": amount,
-    "58": BT_COUNTRY,
-    "59": merchantName,
-    "60": merchantCity,
-  };
-  if (additional) map["62"] = additional;
+  if (bill) {
+    const existing62 = entries.find((e) => e.id === "62")?.value || "";
+    let additional: EmvEntry[] = [];
+    try {
+      additional = parseEmvEntries(existing62);
+    } catch {
+      additional = [];
+    }
+    upsertEntry(additional, "05", bill);
+    upsertEntry(
+      entries,
+      "62",
+      additional.map((e) => tlv(e.id, e.value)).join("")
+    );
+  }
 
-  return serializeEmvMap(map);
+  return serializeEmvEntries(entries);
 }
 
 export type MbobSettings = {
@@ -180,12 +203,21 @@ export function buildMbobPaymentQrFromSettings(
 ): string {
   return buildMbobPaymentQr({
     staticPayload: settings.staticPayload,
-    accountNumber: settings.accountNumber,
-    merchantName: settings.merchantName,
-    merchantCity: settings.merchantCity,
-    mcc: settings.mcc,
-    gui: settings.gui,
     amount,
     billNumber,
   });
+}
+
+/** Extract merchant display hints from a static payload (for UI). */
+export function readMerchantFromPayload(payload: string | null | undefined): {
+  name?: string;
+  city?: string;
+} {
+  if (!payload || !isEmvPayload(payload)) return {};
+  try {
+    const map = parseEmvPayload(payload);
+    return { name: map["59"], city: map["60"] };
+  } catch {
+    return {};
+  }
 }

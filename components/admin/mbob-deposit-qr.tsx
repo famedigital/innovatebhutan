@@ -12,10 +12,12 @@ type Props = {
   accountLabel?: string;
   merchantName?: string;
   quotationNumber?: string;
+  setupError?: string | null;
 };
 
 /**
  * mBoB-style Scan & Pay card for quotation deposit.
+ * Only renders a scannable QR when payload is valid EMV — otherwise mBoB shows "Invalid QR Code".
  */
 export function MbobDepositQrCard({
   payload,
@@ -23,19 +25,19 @@ export function MbobDepositQrCard({
   accountLabel,
   merchantName = "INNOVATES",
   quotationNumber,
+  setupError,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const ready = Boolean(payload && isEmvPayload(payload));
-  const qrSrc = payload
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=8&data=${encodeURIComponent(payload)}`
+  const qrSrc = ready
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=8&ecc=M&data=${encodeURIComponent(payload!)}`
     : null;
 
-  const copyPayload = async () => {
-    if (!payload) return;
+  const copyText = async (text: string, ok: string) => {
     try {
-      await navigator.clipboard.writeText(payload);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
-      toast.success("QR payload copied");
+      toast.success(ok);
       setTimeout(() => setCopied(false), 1500);
     } catch {
       toast.error("Could not copy");
@@ -66,8 +68,20 @@ export function MbobDepositQrCard({
             className="w-52 h-52 bg-white border border-[#E5E5E5] p-2 rounded-lg"
           />
         ) : (
-          <div className="w-52 h-52 border border-dashed border-[#00B5E2]/50 rounded-lg flex items-center justify-center text-center text-xs text-[#717171] p-4">
-            Configure mBoB QR in Admin → Settings → Payments
+          <div className="w-full border border-dashed border-amber-400/60 bg-amber-50 rounded-lg p-4 text-left space-y-2">
+            <p className="text-xs font-semibold text-amber-900">
+              Official sticker payload required
+            </p>
+            <p className="text-[11px] text-amber-800 leading-relaxed">
+              {setupError ||
+                "mBoB rejects home-made QR codes. Decode your Innovates Scan & Pay sticker (text starts with 000201) and paste it in Admin → Settings → Payments."}
+            </p>
+            <ol className="text-[11px] text-amber-800 list-decimal pl-4 space-y-1">
+              <li>Open any QR reader (not mBoB) on the sticker</li>
+              <li>Copy the full text starting with <code>000201</code></li>
+              <li>Paste + Save in Settings → Payments</li>
+              <li>Re-open this quotation</li>
+            </ol>
           </div>
         )}
 
@@ -84,24 +98,52 @@ export function MbobDepositQrCard({
           ) : null}
         </div>
 
-        {!ready && payload ? (
-          <p className="text-[11px] text-amber-700 bg-amber-50 rounded-md px-2 py-1.5 text-center">
-            This QR is not yet an mBoB EMV payload. Paste your Scan &amp; Pay sticker
-            payload in Settings so amount prefills in mBoB.
+        {ready ? (
+          <p className="text-[11px] text-[#717171] text-center leading-relaxed">
+            Open <strong>mBoB</strong> → scan this QR. Advance amount is prefilled.
           </p>
         ) : (
-          <p className="text-[11px] text-[#717171] text-center leading-relaxed">
-            Open <strong>mBoB</strong> → Scan this QR. Advance amount is prefilled.
-          </p>
+          <div className="w-full space-y-2">
+            <p className="text-[11px] text-[#717171] text-center">
+              Meanwhile, client can pay manually in mBoB → FT to BoB Account:
+            </p>
+            {accountLabel ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => copyText(accountLabel, "Account copied")}
+              >
+                {copied ? (
+                  <Check className="w-3.5 h-3.5 mr-1" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 mr-1" />
+                )}
+                Copy account {accountLabel}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() =>
+                copyText(String(amount), "Advance amount copied")
+              }
+            >
+              Copy amount Nu. {amount.toLocaleString()}
+            </Button>
+          </div>
         )}
 
-        {payload ? (
+        {ready && payload ? (
           <Button
             type="button"
             variant="outline"
             size="sm"
             className="w-full"
-            onClick={copyPayload}
+            onClick={() => copyText(payload, "QR payload copied")}
           >
             {copied ? (
               <Check className="w-3.5 h-3.5 mr-1" />

@@ -67,6 +67,8 @@ type Quotation = {
   advanceAmount?: string | number | null;
   status: string;
   depositQrPayload?: string | null;
+  mbobAccountNumber?: string | null;
+  mbobSetupError?: string | null;
   quotationFor?: string | null;
   notes?: string | null;
   items?: QuotationItem[];
@@ -423,8 +425,10 @@ export default function QuotationsPage() {
               <MbobDepositQrCard
                 payload={selected.depositQrPayload}
                 amount={Number(selected.advanceAmount || 0)}
+                accountLabel={selected.mbobAccountNumber || undefined}
                 merchantName="INNOVATES"
                 quotationNumber={selected.quotationNumber}
+                setupError={selected.mbobSetupError}
               />
               <div className="flex flex-col gap-2 pt-2">
                 {selected.status !== "advance_paid" &&

@@ -52,16 +52,20 @@ export class QuotationService {
     if (!quotation) return null;
 
     const amount = Number(quotation.advanceAmount || 0);
-    if (amount > 0) {
-      const mbob = await buildQuotationMbobQr({
-        amount,
-        billNumber: quotation.quotationNumber,
-      });
-      if (mbob.payload) {
-        return { ...quotation, depositQrPayload: mbob.payload };
-      }
-    }
-    return quotation;
+    const mbob =
+      amount > 0
+        ? await buildQuotationMbobQr({
+            amount,
+            billNumber: quotation.quotationNumber,
+          })
+        : { payload: null as string | null, error: "No advance amount", accountNumber: undefined as string | undefined };
+
+    return {
+      ...quotation,
+      depositQrPayload: mbob.payload,
+      mbobAccountNumber: mbob.accountNumber || null,
+      mbobSetupError: mbob.payload ? null : mbob.error || null,
+    };
   }
 
   async create(data: CreateQuotationInput, createdBy?: string) {
@@ -95,9 +99,7 @@ export class QuotationService {
       amount: advanceAmount,
       billNumber: quotationNumber,
     });
-    const depositQrPayload =
-      mbob.payload ||
-      `Innovates deposit ${quotationNumber} Nu.${advanceAmount} for ${businessName}`;
+    const depositQrPayload = mbob.payload; // null until official sticker payload is configured
 
     return this.repository.createWithItems(
       {
@@ -166,9 +168,7 @@ export class QuotationService {
       amount: advanceAmount,
       billNumber: existing.quotationNumber,
     });
-    const depositQrPayload =
-      mbob.payload ||
-      `Innovates deposit ${existing.quotationNumber} Nu.${advanceAmount} for ${businessName}`;
+    const depositQrPayload = mbob.payload;
 
     return this.repository.updateWithItems(
       id,

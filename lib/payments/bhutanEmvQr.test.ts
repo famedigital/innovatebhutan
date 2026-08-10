@@ -3,51 +3,65 @@ import {
   buildMbobPaymentQr,
   crc16CcittFalse,
   isEmvPayload,
+  parseEmvEntries,
   parseEmvPayload,
-  serializeEmvMap,
+  serializeEmvEntries,
+  validateEmvCrc,
 } from "@/lib/payments/bhutanEmvQr";
 
+/** Minimal plausible static sticker (order matters). */
+function sampleStaticSticker() {
+  const entries = [
+    { id: "00", value: "01" },
+    { id: "01", value: "11" },
+    {
+      id: "26",
+      value: "0012com.example.bt011520312345678903",
+    },
+    { id: "52", value: "5732" },
+    { id: "53", value: "064" },
+    { id: "58", value: "BT" },
+    { id: "59", value: "INNOVATES" },
+    { id: "60", value: "THIMPHU" },
+  ];
+  return serializeEmvEntries(entries);
+}
+
 describe("bhutanEmvQr", () => {
-  it("computes EMV CRC for known sample", () => {
-    // Payload without CRC hex; CRC of body ending with 6304
-    const body =
-      "00020101021126370012com.example.bt01151234567890123455204573253030645802BT5909INNOVATES6007THIMPHU6304";
-    const crc = crc16CcittFalse(body);
-    expect(crc).toMatch(/^[0-9A-F]{4}$/);
+  it("validates CRC of generated payloads", () => {
+    const sticker = sampleStaticSticker();
+    expect(validateEmvCrc(sticker)).toBe(true);
+    expect(isEmvPayload(sticker)).toBe(true);
   });
 
-  it("round-trips serialize/parse and injects amount", () => {
-    const staticPayload = buildMbobPaymentQr({
-      accountNumber: "2031234503",
-      merchantName: "INNOVATES",
-      merchantCity: "THIMPHU",
-      amount: 1,
-      billNumber: "QT-SEED",
-    });
+  it("injects amount while preserving merchant template", () => {
+    const sticker = sampleStaticSticker();
+    const original26 = parseEmvPayload(sticker)["26"];
 
-    expect(isEmvPayload(staticPayload)).toBe(true);
-    const map = parseEmvPayload(staticPayload);
-    expect(map["53"]).toBe("064");
-    expect(map["58"]).toBe("BT");
-    expect(map["54"]).toBe("1");
-
-    // Simulate sticker without amount (static)
-    delete map["54"];
-    map["01"] = "11";
-    const sticker = serializeEmvMap(map);
-    expect(parseEmvPayload(sticker)["54"]).toBeUndefined();
-
-    const withAdvance = buildMbobPaymentQr({
+    const dynamic = buildMbobPaymentQr({
       staticPayload: sticker,
       amount: 12500.5,
       billNumber: "QT-26/001",
     });
-    const dynamic = parseEmvPayload(withAdvance);
-    expect(dynamic["01"]).toBe("12");
-    expect(dynamic["54"]).toBe("12500.50");
-    expect(dynamic["62"]).toContain("QT-26/001");
-    expect(withAdvance.endsWith(crc16CcittFalse(withAdvance.slice(0, -4)))).toBe(
-      true
-    );
+
+    expect(validateEmvCrc(dynamic)).toBe(true);
+    const map = parseEmvPayload(dynamic);
+    expect(map["01"]).toBe("12");
+    expect(map["54"]).toBe("12500.50");
+    expect(map["26"]).toBe(original26);
+    expect(map["62"]).toContain("QT-26/001");
+    expect(dynamic.endsWith(crc16CcittFalse(dynamic.slice(0, -4)))).toBe(true);
+
+    // Original field order for 00/01/26 preserved at start
+    const entries = parseEmvEntries(dynamic);
+    expect(entries[0]?.id).toBe("00");
+    expect(entries[1]?.id).toBe("01");
+    expect(entries[2]?.id).toBe("26");
+  });
+
+  it("refuses to invent QR without official sticker payload", () => {
+    expect(() =>
+      buildMbobPaymentQr({ amount: 100, staticPayload: "" })
+    ).toThrow(/official mBoB Scan & Pay/);
   });
 });

@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import {
   buildMbobPaymentQrFromSettings,
+  isEmvPayload,
   type MbobSettings,
 } from "@/lib/payments/bhutanEmvQr";
 
@@ -9,8 +10,6 @@ const SETTING_KEYS = [
   "mbob_account_number",
   "mbob_merchant_name",
   "mbob_merchant_city",
-  "mbob_mcc",
-  "mbob_gui",
 ] as const;
 
 export async function loadMbobSettings(): Promise<Partial<MbobSettings>> {
@@ -19,8 +18,6 @@ export async function loadMbobSettings(): Promise<Partial<MbobSettings>> {
     accountNumber: process.env.MBOB_ACCOUNT_NUMBER || "",
     merchantName: process.env.MBOB_MERCHANT_NAME || "INNOVATES",
     merchantCity: process.env.MBOB_MERCHANT_CITY || "THIMPHU",
-    mcc: process.env.MBOB_MCC || "5732",
-    gui: process.env.MBOB_GUI || "com.bob.bt",
   };
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -44,8 +41,6 @@ export async function loadMbobSettings(): Promise<Partial<MbobSettings>> {
       accountNumber: map.mbob_account_number || fromEnv.accountNumber,
       merchantName: map.mbob_merchant_name || fromEnv.merchantName,
       merchantCity: map.mbob_merchant_city || fromEnv.merchantCity,
-      mcc: map.mbob_mcc || fromEnv.mcc,
-      gui: map.mbob_gui || fromEnv.gui,
     };
   } catch {
     return fromEnv;
@@ -55,22 +50,26 @@ export async function loadMbobSettings(): Promise<Partial<MbobSettings>> {
 export async function buildQuotationMbobQr(opts: {
   amount: number;
   billNumber: string;
-}): Promise<{ payload: string | null; error?: string }> {
+}): Promise<{ payload: string | null; error?: string; accountNumber?: string }> {
   try {
     const settings = await loadMbobSettings();
-    if (!settings.staticPayload && !settings.accountNumber) {
+    const staticPayload = (settings.staticPayload || "").trim();
+
+    if (!staticPayload || !isEmvPayload(staticPayload)) {
       return {
         payload: null,
+        accountNumber: settings.accountNumber,
         error:
-          "Configure mBoB Scan & Pay in Admin → Settings (paste static QR payload or account number)",
+          "mBoB needs your official Scan & Pay sticker payload. Decode the Innovates QR (text starts with 000201) and paste it in Admin → Settings → Payments.",
       };
     }
+
     const payload = buildMbobPaymentQrFromSettings(
       settings,
       opts.amount,
       opts.billNumber
     );
-    return { payload };
+    return { payload, accountNumber: settings.accountNumber };
   } catch (error) {
     return {
       payload: null,

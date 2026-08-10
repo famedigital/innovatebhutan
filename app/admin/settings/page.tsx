@@ -273,26 +273,72 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 space-y-1">
+                <p className="font-medium">Required — official sticker only</p>
+                <p>
+                  mBoB shows <strong>Invalid QR Code</strong> for home-made QRs. Upload or paste
+                  the exact payload from your Innovates Scan &amp; Pay sticker (starts with{" "}
+                  <code>000201</code>). We only inject the quotation advance amount into that
+                  payload.
+                </p>
+              </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-[#717171]">
-                  Static Scan &amp; Pay QR payload (recommended)
+                  Upload sticker photo (auto-decode)
+                </label>
+                <Input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const body = new FormData();
+                      body.append("file", file);
+                      const res = await fetch("/api/payments/mbob-decode-qr", {
+                        method: "POST",
+                        body,
+                      });
+                      const data = await res.json();
+                      if (!res.ok || !data.success) {
+                        throw new Error(data.error || "Decode failed");
+                      }
+                      setSettings({
+                        ...settings,
+                        mbobStaticQr: data.data.payload,
+                      });
+                      if (data.data.isEmv) {
+                        toast.success("Sticker decoded — click Save All");
+                      } else {
+                        toast.error(data.data.hint || "Not a valid EMV QR");
+                      }
+                    } catch (err) {
+                      toast.error(
+                        err instanceof Error ? err.message : "Could not decode QR image"
+                      );
+                    } finally {
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[#717171]">
+                  Static Scan &amp; Pay QR payload
                 </label>
                 <textarea
                   className="w-full min-h-[88px] rounded-md border border-[#E5E5E1] bg-[#F3F3F1] px-3 py-2 text-xs font-mono"
-                  placeholder="Paste EMV string starting with 000201… (decode your Innovates mBoB sticker with any QR reader)"
+                  placeholder="00020101021126…6304XXXX"
                   value={settings.mbobStaticQr}
                   onChange={(e) =>
                     setSettings({ ...settings, mbobStaticQr: e.target.value })
                   }
                 />
-                <p className="text-xs text-[#717171]">
-                  Quotations inject the advance amount (Tag 54) into this payload so mBoB
-                  prefills Nu. amount when the client scans.
-                </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <ApiField
-                  label="BoB Account Number"
+                  label="BoB Account Number (display / manual pay)"
                   field="mbobAccountNumber"
                   placeholder="203XXXXXXX"
                 />
@@ -306,7 +352,6 @@ export default function SettingsPage() {
                   field="mbobMerchantCity"
                   placeholder="THIMPHU"
                 />
-                <ApiField label="MCC" field="mbobMcc" placeholder="5732" />
               </div>
             </CardContent>
           </Card>
