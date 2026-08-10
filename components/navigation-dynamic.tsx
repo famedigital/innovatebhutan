@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Moon, Sun, LogIn, Home, Layers, Building2, Grid3X3, Headphones, ChevronRight } from "lucide-react";
 import { useTheme } from "@/components/PureThemeProvider";
-import { NavbarMegaMenuGrid } from "@/components/blocks/navbar/navbar-mega-menu-grid";
+import { NavigationMenuFullMegaMenu } from "@/components/examples/navigation-menu/complex/navigation-menu-full-mega-menu";
 
 // Icon mapping for navigation
 const iconMap: Record<string, any> = {
@@ -232,8 +232,8 @@ export function NavigationDynamic() {
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         className="hidden md:flex fixed top-0 left-0 right-0 z-50 justify-center pt-2 sm:pt-4 px-4"
       >
-        <div className="relative z-50 max-w-4xl mx-auto w-full">
-          <NavbarMegaMenuGrid />
+        <div className="relative z-50 max-w-5xl mx-auto w-full">
+          <NavigationMenuFullMegaMenu />
         </div>
       </motion.header>
 
