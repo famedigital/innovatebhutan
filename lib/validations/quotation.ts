@@ -35,6 +35,8 @@ export const createQuotationSchema = z.object({
   quotationFor: z.string().optional().nullable(),
   validityDays: z.coerce.number().int().positive().optional().default(15),
   advancePercent: z.coerce.number().min(0).max(100).optional().default(50),
+  /** Optional override; when omitted, ERP GST setting is used */
+  taxRate: z.coerce.number().min(0).max(100).optional(),
   notes: z.string().max(5000).optional().nullable(),
   items: z.array(quotationItemSchema).min(1, "At least one item is required"),
 });

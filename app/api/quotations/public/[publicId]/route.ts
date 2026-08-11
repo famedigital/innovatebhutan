@@ -41,6 +41,8 @@ export async function GET(
         quotationFor: quotation.quotationFor,
         validityDays: quotation.validityDays,
         subtotal: quotation.subtotal,
+        taxRate: quotation.taxRate,
+        taxAmount: quotation.taxAmount,
         totalAmount: quotation.totalAmount,
         advancePercent: quotation.advancePercent,
         advanceAmount: quotation.advanceAmount,

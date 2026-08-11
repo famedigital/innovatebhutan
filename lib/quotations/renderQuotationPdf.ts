@@ -22,6 +22,9 @@ export type QuotationPdfInput = {
   validityDays?: number | null;
   items: QuotationPdfItem[];
   subtotal: number;
+  /** GST percent */
+  taxRate?: number | null;
+  taxAmount?: number | null;
   totalAmount: number;
   advancePercent: number;
   advanceAmount: number;
@@ -177,9 +180,17 @@ export async function renderQuotationPdf(input: QuotationPdfInput): Promise<Blob
   doc.line(margin, y, pageWidth - margin, y);
   y += 16;
   doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
   doc.text("Subtotal", 360, y);
   doc.text(money(input.subtotal), pageWidth - margin, y, { align: "right" });
   y += 14;
+  const taxRate = Number(input.taxRate || 0);
+  const taxAmount = Number(input.taxAmount || 0);
+  if (taxAmount > 0 || taxRate > 0) {
+    doc.text(`GST (${taxRate}%)`, 360, y);
+    doc.text(money(taxAmount), pageWidth - margin, y, { align: "right" });
+    y += 14;
+  }
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   doc.text("Total", 360, y);

@@ -2244,6 +2244,8 @@ export const salesQuotations = pgTable("sales_quotations", {
   quotationFor: text("quotation_for"),
   validityDays: integer("validity_days").default(15),
   subtotal: decimal("subtotal", { precision: 15, scale: 2 }).default("0"),
+  /** GST percent snapshotted from ERP settings at create/update time */
+  taxRate: decimal("tax_rate", { precision: 5, scale: 2 }).default("5"),
   taxAmount: decimal("tax_amount", { precision: 15, scale: 2 }).default("0"),
   totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).default("0"),
   advancePercent: decimal("advance_percent", { precision: 5, scale: 2 }).default("50"),

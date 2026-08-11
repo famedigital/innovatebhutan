@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   FileText,
   Plus,
@@ -17,6 +18,8 @@ import {
   Building2,
   Package,
   Percent,
+  Search,
+  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,12 +27,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { MbobDepositQrCard } from "@/components/admin/mbob-deposit-qr";
 import {
   downloadBlob,
   renderQuotationPdf,
 } from "@/lib/quotations/renderQuotationPdf";
 import { quotationPublicPath } from "@/lib/quotations/shareQuotation";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -54,6 +59,8 @@ const formatNu = (n: number) =>
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })}`;
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 type CatalogProduct = {
   id: number;
@@ -86,6 +93,8 @@ type Quotation = {
   state?: string | null;
   totalAmount?: string | number | null;
   subtotal?: string | number | null;
+  taxRate?: string | number | null;
+  taxAmount?: string | number | null;
   advancePercent?: string | number | null;
   advanceAmount?: string | number | null;
   validityDays?: number | null;
@@ -124,6 +133,11 @@ export default function QuotationsPage() {
   const [sharing, setSharing] = useState<string | null>(null);
   const [selected, setSelected] = useState<Quotation | null>(null);
   const [form, setForm] = useState(emptyForm);
+  /** ERP GST % for new quotes; edit mode uses the quote's snapshotted rate */
+  const [erpGstRate, setErpGstRate] = useState(5);
+  const [editGstRate, setEditGstRate] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [lineItems, setLineItems] = useState<
     Array<{
       productMasterId?: number;
@@ -137,12 +151,14 @@ export default function QuotationsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [qRes, pRes] = await Promise.all([
+      const [qRes, pRes, gRes] = await Promise.all([
         fetch("/api/quotations"),
         fetch("/api/product-master?active=true&limit=500"),
+        fetch("/api/settings/gst"),
       ]);
       const qData = await qRes.json();
       const pData = await pRes.json();
+      const gData = await gRes.json();
       if (qRes.ok && qData.success) setList(qData.data || []);
       else toast.error(qData.error || "Failed to load quotations");
 
@@ -154,6 +170,10 @@ export default function QuotationsPage() {
       } else {
         setCatalog([]);
         toast.error(pData.error || "Failed to load product master");
+      }
+
+      if (gRes.ok && gData.success && gData.data?.ratePercent != null) {
+        setErpGstRate(Number(gData.data.ratePercent) || 0);
       }
     } catch {
       toast.error("Failed to load quotations");
@@ -178,24 +198,57 @@ export default function QuotationsPage() {
     [catalog.length, filteredCatalog.length]
   );
 
+  const activeGstRate =
+    editingId != null && editGstRate != null ? editGstRate : erpGstRate;
+
   const lineTotal = useMemo(
-    () => lineItems.reduce((sum, li) => sum + li.quantity * li.unitPrice, 0),
+    () =>
+      round2(
+        lineItems.reduce((sum, li) => sum + li.quantity * li.unitPrice, 0)
+      ),
     [lineItems]
   );
+
+  const gstPreview = useMemo(() => {
+    const amount = round2(lineTotal * (activeGstRate / 100));
+    const total = round2(lineTotal + amount);
+    return { rate: activeGstRate, amount, total };
+  }, [lineTotal, activeGstRate]);
 
   const advancePreview = useMemo(() => {
     const pct = Math.min(100, Math.max(0, Number(form.advancePercent) || 0));
     return {
       percent: pct,
-      amount: (lineTotal * pct) / 100,
+      amount: round2((gstPreview.total * pct) / 100),
     };
-  }, [form.advancePercent, lineTotal]);
+  }, [form.advancePercent, gstPreview.total]);
+
+  const filteredList = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return list.filter((item) => {
+      if (statusFilter !== "all" && item.status !== statusFilter) return false;
+      if (!q) return true;
+      const hay = [
+        item.quotationNumber,
+        item.businessName,
+        item.customerName,
+        item.category,
+        item.phone,
+        item.quotationFor,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [list, search, statusFilter]);
 
   const canEdit = (status: string) =>
     status === "draft" || status === "sent" || status === "advance_paid";
 
   const resetDialog = () => {
     setEditingId(null);
+    setEditGstRate(null);
     setForm(emptyForm);
     setLineItems([]);
   };
@@ -211,6 +264,11 @@ export default function QuotationsPage() {
       return;
     }
     setEditingId(q.id);
+    setEditGstRate(
+      q.taxRate != null && q.taxRate !== ""
+        ? Number(q.taxRate)
+        : erpGstRate
+    );
     setForm({
       category: q.category || "software",
       businessName: q.businessName || "",
@@ -364,6 +422,15 @@ export default function QuotationsPage() {
   const downloadPdf = async (q: Quotation) => {
     setSharing("download");
     try {
+      const subtotal = Number(q.subtotal ?? 0);
+      const taxRate = Number(q.taxRate ?? 0);
+      const taxAmount =
+        q.taxAmount != null && q.taxAmount !== ""
+          ? Number(q.taxAmount)
+          : round2(subtotal * (taxRate / 100));
+      const totalAmount = Number(
+        q.totalAmount ?? round2(subtotal + taxAmount)
+      );
       const blob = await renderQuotationPdf({
         quotationNumber: q.quotationNumber,
         category: q.category,
@@ -383,8 +450,10 @@ export default function QuotationsPage() {
             item.amount ?? Number(item.quantity) * Number(item.unitPrice)
           ),
         })),
-        subtotal: Number(q.subtotal || q.totalAmount || 0),
-        totalAmount: Number(q.totalAmount || 0),
+        subtotal: subtotal || Number(q.totalAmount || 0),
+        taxRate,
+        taxAmount,
+        totalAmount,
         advancePercent: Number(q.advancePercent || 0),
         advanceAmount: Number(q.advanceAmount || 0),
         notes: q.notes,
@@ -513,74 +582,215 @@ export default function QuotationsPage() {
     if (s === "advance_paid") return "default";
     if (s === "converted") return "secondary";
     if (s === "sent") return "outline";
+    if (s === "cancelled") return "destructive";
     return "secondary";
   };
 
+  const statusLabel = (s: string) =>
+    s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
   return (
-    <div className="space-y-5 max-w-6xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Quotations</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Software / hardware / supply / services quotes with deposit QR
+    <div className="mx-auto max-w-7xl space-y-6">
+      <AdminPageHeader
+        title="Quotations"
+        description="Professional client quotes with GST, advance deposit, and mBoB QR"
+        actions={
+          <>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/admin/settings">
+                <Settings2 className="mr-1.5 size-4" />
+                GST settings
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+              <RefreshCw
+                className={cn("mr-1.5 size-4", loading && "animate-spin")}
+              />
+              Refresh
+            </Button>
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="mr-1.5 size-4" />
+              New quotation
+            </Button>
+          </>
+        }
+      />
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border bg-card px-4 py-3 shadow-sm">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Open quotes
+          </p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
+            {
+              list.filter(
+                (q) =>
+                  q.status === "draft" ||
+                  q.status === "sent" ||
+                  q.status === "advance_paid"
+              ).length
+            }
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="w-4 h-4 mr-1" /> Refresh
-          </Button>
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="w-4 h-4 mr-1" /> New Quotation
-          </Button>
+        <div className="rounded-2xl border bg-card px-4 py-3 shadow-sm">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Pipeline value
+          </p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
+            {formatNu(
+              list
+                .filter((q) => q.status !== "cancelled" && q.status !== "converted")
+                .reduce((sum, q) => sum + Number(q.totalAmount || 0), 0)
+            )}
+          </p>
+        </div>
+        <div className="rounded-2xl border bg-card px-4 py-3 shadow-sm">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            ERP GST rate
+          </p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
+            {erpGstRate}%
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            Applied on new quotations · change in Settings
+          </p>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_360px] gap-4">
-        <div className="rounded-xl border bg-card overflow-hidden">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            placeholder="Search number, client, phone…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-44">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="advance_paid">Advance paid</SelectItem>
+            <SelectItem value="converted">Converted</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {filteredList.length} quotation
+              {filteredList.length === 1 ? "" : "s"}
+            </p>
+          </div>
           {loading ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">Loading...</div>
-          ) : list.length === 0 ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
-              No quotations yet
+            <div className="flex items-center justify-center gap-2 p-12 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Loading quotations…
+            </div>
+          ) : filteredList.length === 0 ? (
+            <div className="px-6 py-14 text-center">
+              <FileText className="mx-auto mb-3 size-10 text-muted-foreground/35" />
+              <p className="text-sm font-medium">No quotations found</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {list.length === 0
+                  ? "Create your first client quotation to get started."
+                  : "Try a different search or status filter."}
+              </p>
+              {list.length === 0 && (
+                <Button className="mt-4" size="sm" onClick={openCreate}>
+                  <Plus className="mr-1.5 size-4" />
+                  New quotation
+                </Button>
+              )}
             </div>
           ) : (
-            list.map((q) => (
-              <button
-                key={q.id}
-                type="button"
-                onClick={() => selectQuotation(q)}
-                className={`w-full text-left px-4 py-3 border-b last:border-0 hover:bg-muted/40 flex items-center justify-between gap-3 ${selected?.id === q.id ? "bg-muted/50" : ""}`}
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{q.quotationNumber}</span>
-                    <Badge variant={statusColor(q.status)} className="text-[10px]">
-                      {q.status}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">
-                    {q.businessName || q.customerName || "—"} · {q.category}
-                  </p>
-                </div>
-                <div className="text-sm font-medium tabular-nums shrink-0">
-                  Nu. {Number(q.totalAmount || 0).toLocaleString()}
-                </div>
-              </button>
-            ))
+            <div className="divide-y">
+              {filteredList.map((q) => {
+                const taxRate = Number(q.taxRate ?? 0);
+                const taxAmount = Number(q.taxAmount ?? 0);
+                return (
+                  <button
+                    key={q.id}
+                    type="button"
+                    onClick={() => selectQuotation(q)}
+                    className={cn(
+                      "flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/40",
+                      selected?.id === q.id && "bg-muted/50"
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold tracking-tight">
+                          {q.quotationNumber}
+                        </span>
+                        <Badge
+                          variant={statusColor(q.status)}
+                          className="text-[10px] font-medium capitalize"
+                        >
+                          {statusLabel(q.status)}
+                        </Badge>
+                        <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                          {q.category}
+                        </span>
+                      </div>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {q.businessName || q.customerName || "—"}
+                        {taxRate > 0
+                          ? ` · GST ${taxRate}% (${formatNu(taxAmount)})`
+                          : null}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="text-sm font-semibold tabular-nums">
+                        {formatNu(Number(q.totalAmount || 0))}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        incl. GST
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
 
-        <div className="rounded-xl border bg-card p-4 space-y-3 min-h-[280px]">
+        <div className="min-h-[320px] space-y-4 rounded-2xl border bg-card p-5 shadow-sm">
           {!selected ? (
-            <p className="text-sm text-muted-foreground pt-8 text-center">Select a quotation</p>
+            <div className="flex h-full min-h-[280px] flex-col items-center justify-center text-center">
+              <FileText className="mb-3 size-9 text-muted-foreground/35" />
+              <p className="text-sm font-medium">Select a quotation</p>
+              <p className="mt-1 max-w-[220px] text-xs text-muted-foreground">
+                Review totals, GST, deposit QR, and share options here.
+              </p>
+            </div>
           ) : (
             <>
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h2 className="font-semibold">{selected.quotationNumber}</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {selected.quotationFor || selected.businessName}
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-lg font-semibold tracking-tight">
+                      {selected.quotationNumber}
+                    </h2>
+                    <Badge
+                      variant={statusColor(selected.status)}
+                      className="capitalize"
+                    >
+                      {statusLabel(selected.status)}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {selected.quotationFor ||
+                      selected.businessName ||
+                      selected.customerName}
                   </p>
                 </div>
                 {canEdit(selected.status) && (
@@ -589,42 +799,89 @@ export default function QuotationsPage() {
                     size="sm"
                     onClick={() => openEdit(selected)}
                   >
-                    <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
+                    <Pencil className="mr-1 size-3.5" /> Edit
                   </Button>
                 )}
               </div>
-              <div className="text-sm space-y-1">
-                <p>
-                  Total:{" "}
-                  <strong>
-                    Nu. {Number(selected.totalAmount || 0).toLocaleString()}
-                  </strong>
-                </p>
-                <p>
-                  Advance:{" "}
-                  <strong>
-                    Nu. {Number(selected.advanceAmount || 0).toLocaleString()}
-                  </strong>
-                </p>
-                <p className="capitalize">Status: {selected.status}</p>
+
+              <div className="space-y-2 rounded-xl border bg-muted/25 p-3 text-sm">
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="tabular-nums font-medium">
+                    {formatNu(Number(selected.subtotal || 0))}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">
+                    GST ({Number(selected.taxRate || 0)}%)
+                  </span>
+                  <span className="tabular-nums font-medium">
+                    {formatNu(Number(selected.taxAmount || 0))}
+                  </span>
+                </div>
+                <Separator />
+                <div className="flex justify-between gap-3 pt-0.5">
+                  <span className="font-semibold">Total</span>
+                  <span className="text-base font-semibold tabular-nums">
+                    {formatNu(Number(selected.totalAmount || 0))}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3 text-[#0A5F4E]">
+                  <span>
+                    Advance ({Number(selected.advancePercent || 0)}%)
+                  </span>
+                  <span className="font-semibold tabular-nums">
+                    {formatNu(Number(selected.advanceAmount || 0))}
+                  </span>
+                </div>
               </div>
+
               {selected.items && selected.items.length > 0 && (
-                <ul className="text-xs space-y-1 rounded-lg border p-2 bg-muted/20">
-                  {selected.items.map((item, i) => (
-                    <li key={i} className="flex justify-between gap-2">
-                      <span>
-                        {item.quantity}× {item.name}
-                      </span>
-                      <span className="tabular-nums shrink-0">
-                        Nu.{" "}
-                        {Number(
-                          item.amount ?? Number(item.quantity) * Number(item.unitPrice)
-                        ).toLocaleString()}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="overflow-hidden rounded-xl border">
+                  <div className="grid grid-cols-[1fr_56px_72px_72px] gap-1 border-b bg-muted/30 px-3 py-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <span>Item</span>
+                    <span className="text-center">Qty</span>
+                    <span className="text-right">Amount</span>
+                    <span className="text-right">GST</span>
+                  </div>
+                  <ul className="max-h-48 divide-y overflow-y-auto text-xs">
+                    {selected.items.map((item, i) => {
+                      const amount = Number(
+                        item.amount ??
+                          Number(item.quantity) * Number(item.unitPrice)
+                      );
+                      const lineGst = round2(
+                        amount * (Number(selected.taxRate || 0) / 100)
+                      );
+                      return (
+                        <li
+                          key={i}
+                          className="grid grid-cols-[1fr_56px_72px_72px] items-start gap-1 px-3 py-2"
+                        >
+                          <span className="min-w-0 leading-snug">
+                            <span className="font-medium">{item.name}</span>
+                            {item.brand ? (
+                              <span className="block text-muted-foreground">
+                                {item.brand}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="text-center tabular-nums text-muted-foreground">
+                            {item.quantity}
+                          </span>
+                          <span className="text-right tabular-nums font-medium">
+                            {formatNu(amount)}
+                          </span>
+                          <span className="text-right tabular-nums text-muted-foreground">
+                            {formatNu(lineGst)}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               )}
+
               <MbobDepositQrCard
                 payload={selected.depositQrPayload}
                 amount={Number(selected.advanceAmount || 0)}
@@ -641,9 +898,9 @@ export default function QuotationsPage() {
                   onClick={() => downloadPdf(selected)}
                 >
                   {sharing === "download" ? (
-                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                    <Loader2 className="mr-1 size-3.5 animate-spin" />
                   ) : (
-                    <Download className="w-3.5 h-3.5 mr-1" />
+                    <Download className="mr-1 size-3.5" />
                   )}
                   PDF
                 </Button>
@@ -653,7 +910,7 @@ export default function QuotationsPage() {
                   disabled={sharing === "link" || !selected.publicId}
                   onClick={() => shareQuotation(selected, "link")}
                 >
-                  <Link2 className="w-3.5 h-3.5 mr-1" /> Link
+                  <Link2 className="mr-1 size-3.5" /> Link
                 </Button>
                 <Button
                   variant="outline"
@@ -662,9 +919,9 @@ export default function QuotationsPage() {
                   onClick={() => shareQuotation(selected, "whatsapp")}
                 >
                   {sharing === "whatsapp" ? (
-                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                    <Loader2 className="mr-1 size-3.5 animate-spin" />
                   ) : (
-                    <MessageCircle className="w-3.5 h-3.5 mr-1" />
+                    <MessageCircle className="mr-1 size-3.5" />
                   )}
                   WhatsApp
                 </Button>
@@ -675,25 +932,26 @@ export default function QuotationsPage() {
                   onClick={() => shareQuotation(selected, "email")}
                 >
                   {sharing === "email" ? (
-                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                    <Loader2 className="mr-1 size-3.5 animate-spin" />
                   ) : (
-                    <Mail className="w-3.5 h-3.5 mr-1" />
+                    <Mail className="mr-1 size-3.5" />
                   )}
                   Email
                 </Button>
               </div>
-              <div className="flex flex-col gap-2 pt-2">
+              <div className="flex flex-col gap-2 pt-1">
                 {selected.status !== "advance_paid" &&
                   selected.status !== "converted" && (
                     <Button onClick={() => markAdvance(selected.id)}>
-                      <CheckCircle2 className="w-4 h-4 mr-1" /> Mark Advance Deposited
+                      <CheckCircle2 className="mr-1 size-4" /> Mark Advance
+                      Deposited
                     </Button>
                   )}
                 {(selected.status === "advance_paid" ||
                   selected.status === "converted") &&
                   selected.status !== "converted" && (
                     <Button onClick={() => convert(selected.id)}>
-                      Convert to Project <ArrowRight className="w-4 h-4 ml-1" />
+                      Convert to Project <ArrowRight className="ml-1 size-4" />
                     </Button>
                   )}
                 {selected.status === "converted" && (
@@ -948,7 +1206,7 @@ export default function QuotationsPage() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[560px] text-sm">
+                    <table className="w-full min-w-[680px] text-sm">
                       <thead>
                         <tr className="border-b bg-muted/20 text-xs uppercase tracking-wide text-muted-foreground">
                           <th className="px-3 py-2.5 text-left font-medium">
@@ -957,77 +1215,89 @@ export default function QuotationsPage() {
                           <th className="w-24 px-2 py-2.5 text-center font-medium">
                             Qty
                           </th>
-                          <th className="w-32 px-2 py-2.5 text-right font-medium">
+                          <th className="w-28 px-2 py-2.5 text-right font-medium">
                             Unit (Nu.)
                           </th>
-                          <th className="w-32 px-2 py-2.5 text-right font-medium">
+                          <th className="w-28 px-2 py-2.5 text-right font-medium">
                             Amount
+                          </th>
+                          <th className="w-24 px-2 py-2.5 text-right font-medium">
+                            GST
                           </th>
                           <th className="w-10 px-2 py-2.5" />
                         </tr>
                       </thead>
                       <tbody>
-                        {lineItems.map((li, i) => (
-                          <tr
-                            key={`${li.productMasterId ?? li.name}-${i}`}
-                            className="border-b last:border-0"
-                          >
-                            <td className="px-3 py-2.5">
-                              <div className="font-medium leading-snug">
-                                {li.name}
-                              </div>
-                              {li.brand ? (
-                                <div className="text-xs text-muted-foreground">
-                                  {li.brand}
+                        {lineItems.map((li, i) => {
+                          const amount = round2(li.quantity * li.unitPrice);
+                          const lineGst = round2(
+                            amount * (activeGstRate / 100)
+                          );
+                          return (
+                            <tr
+                              key={`${li.productMasterId ?? li.name}-${i}`}
+                              className="border-b last:border-0"
+                            >
+                              <td className="px-3 py-2.5">
+                                <div className="font-medium leading-snug">
+                                  {li.name}
                                 </div>
-                              ) : null}
-                            </td>
-                            <td className="px-2 py-2">
-                              <Input
-                                className="h-8 text-center"
-                                type="number"
-                                min={1}
-                                value={li.quantity}
-                                onChange={(e) =>
-                                  updateLine(i, {
-                                    quantity: Number(e.target.value),
-                                  })
-                                }
-                                aria-label={`${li.name} quantity`}
-                              />
-                            </td>
-                            <td className="px-2 py-2">
-                              <Input
-                                className="h-8 text-right"
-                                type="number"
-                                min={0}
-                                step="0.01"
-                                value={li.unitPrice}
-                                onChange={(e) =>
-                                  updateLine(i, {
-                                    unitPrice: Number(e.target.value),
-                                  })
-                                }
-                                aria-label={`${li.name} unit price`}
-                              />
-                            </td>
-                            <td className="px-3 py-2.5 text-right font-medium tabular-nums">
-                              {formatNu(li.quantity * li.unitPrice)}
-                            </td>
-                            <td className="px-1 py-2">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="size-8 text-muted-foreground hover:text-destructive"
-                                onClick={() => removeLine(i)}
-                                aria-label="Remove line"
-                              >
-                                <Trash2 className="size-3.5" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
+                                {li.brand ? (
+                                  <div className="text-xs text-muted-foreground">
+                                    {li.brand}
+                                  </div>
+                                ) : null}
+                              </td>
+                              <td className="px-2 py-2">
+                                <Input
+                                  className="h-8 text-center"
+                                  type="number"
+                                  min={1}
+                                  value={li.quantity}
+                                  onChange={(e) =>
+                                    updateLine(i, {
+                                      quantity: Number(e.target.value),
+                                    })
+                                  }
+                                  aria-label={`${li.name} quantity`}
+                                />
+                              </td>
+                              <td className="px-2 py-2">
+                                <Input
+                                  className="h-8 text-right"
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  value={li.unitPrice}
+                                  onChange={(e) =>
+                                    updateLine(i, {
+                                      unitPrice: Number(e.target.value),
+                                    })
+                                  }
+                                  aria-label={`${li.name} unit price`}
+                                />
+                              </td>
+                              <td className="px-3 py-2.5 text-right font-medium tabular-nums">
+                                {formatNu(amount)}
+                              </td>
+                              <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">
+                                {formatNu(lineGst)}
+                              </td>
+                              <td className="px-1 py-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-8 text-muted-foreground hover:text-destructive"
+                                  onClick={() => removeLine(i)}
+                                  aria-label="Remove line"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1046,12 +1316,12 @@ export default function QuotationsPage() {
                 <div>
                   <h3 className="text-sm font-semibold">Commercial terms</h3>
                   <p className="text-xs text-muted-foreground">
-                    Advance deposit used for the mBoB QR amount
+                    GST from ERP settings · advance drives the mBoB QR amount
                   </p>
                 </div>
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+              <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
                 <div className="space-y-3">
                   <div className="grid gap-3 sm:grid-cols-[140px_1fr]">
                     <div className="space-y-1.5">
@@ -1081,6 +1351,20 @@ export default function QuotationsPage() {
                       />
                     </div>
                   </div>
+                  <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
+                    GST rate{" "}
+                    <strong className="text-foreground">{activeGstRate}%</strong>{" "}
+                    is set in{" "}
+                    <Link
+                      href="/admin/settings"
+                      className="font-medium text-foreground underline underline-offset-2"
+                    >
+                      Settings → Payments
+                    </Link>
+                    {editingId
+                      ? " and snapshotted on this quotation."
+                      : " and will be snapshotted when you create this quote."}
+                  </div>
                 </div>
 
                 <div className="rounded-xl border bg-muted/30 p-4">
@@ -1093,17 +1377,25 @@ export default function QuotationsPage() {
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-muted-foreground">
-                        Advance ({advancePreview.percent}%)
+                        GST ({gstPreview.rate}%)
                       </span>
                       <span className="font-medium tabular-nums">
-                        {formatNu(advancePreview.amount)}
+                        {formatNu(gstPreview.amount)}
                       </span>
                     </div>
                     <Separator />
                     <div className="flex items-center justify-between gap-3 pt-1">
                       <span className="font-semibold">Quote total</span>
                       <span className="text-lg font-semibold tabular-nums text-primary">
-                        {formatNu(lineTotal)}
+                        {formatNu(gstPreview.total)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">
+                        Advance ({advancePreview.percent}%)
+                      </span>
+                      <span className="font-medium tabular-nums">
+                        {formatNu(advancePreview.amount)}
                       </span>
                     </div>
                     <p className="pt-1 text-[11px] leading-relaxed text-muted-foreground">
@@ -1111,7 +1403,7 @@ export default function QuotationsPage() {
                       <strong className="text-foreground">
                         {formatNu(advancePreview.amount)}
                       </strong>{" "}
-                      when this quotation is saved.
+                      (of total incl. GST) when saved.
                     </p>
                   </div>
                 </div>
@@ -1122,7 +1414,7 @@ export default function QuotationsPage() {
           <DialogFooter className="shrink-0 gap-2 border-t bg-muted/20 px-6 py-4 sm:justify-between">
             <p className="hidden text-xs text-muted-foreground sm:block">
               {lineItems.length} item{lineItems.length === 1 ? "" : "s"} ·{" "}
-              {formatNu(lineTotal)}
+              {formatNu(gstPreview.total)} incl. GST
             </p>
             <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
               <Button

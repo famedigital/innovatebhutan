@@ -57,6 +57,8 @@ export default function SettingsPage() {
     mbobMerchantCity: "THIMPHU",
     mbobMcc: "5732",
     mbobGui: "com.bob.bt",
+    /** Bhutan sales GST % for quotations (ERP-only control) */
+    gstRate: "5",
     
     // Email
     sendgridKey: "",
@@ -109,6 +111,7 @@ export default function SettingsPage() {
         mbobMerchantCity: map.mbob_merchant_city || "THIMPHU",
         mbobMcc: map.mbob_mcc || "5732",
         mbobGui: map.mbob_gui || "com.bob.bt",
+        gstRate: map.gst_rate != null && map.gst_rate !== "" ? String(map.gst_rate) : "5",
         sendgridKey: map.sendgrid_key || "",
         mailgunDomain: map.mailgun_domain || "",
         mailgunKey: map.mailgun_key || "",
@@ -127,7 +130,8 @@ export default function SettingsPage() {
     try {
       const entries = Object.entries(settings);
       for (const [key, value] of entries) {
-        if (value) {
+        // Allow "0" for rates like GST; skip only empty strings
+        if (value !== "" && value != null) {
           const dbKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
           await supabase.from('settings').upsert({ key: dbKey, value });
         }
@@ -394,6 +398,36 @@ export default function SettingsPage() {
                   label="Merchant City"
                   field="mbobMerchantCity"
                   placeholder="THIMPHU"
+                />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-[#0A5F4E]" /> Sales GST (Quotations)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-[#717171]">
+                Default GST % applied on new quotations (subtotal → GST → total).
+                Rate is snapshotted on each quote so history stays correct if you
+                change this later.
+              </p>
+              <div className="space-y-2 max-w-xs">
+                <label className="text-xs font-medium text-[#717171]">
+                  GST rate (%)
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.01"
+                  className="bg-[#F3F3F1] border-[#E5E5E1]"
+                  value={settings.gstRate}
+                  onChange={(e) =>
+                    setSettings({ ...settings, gstRate: e.target.value })
+                  }
                 />
               </div>
             </CardContent>
