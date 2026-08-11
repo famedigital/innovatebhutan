@@ -54,6 +54,18 @@ import { toast } from "sonner";
 
 const CATEGORIES = ["software", "hardware", "supply", "services"] as const;
 
+const CATEGORY_LABELS: Record<(typeof CATEGORIES)[number], string> = {
+  software: "Software",
+  hardware: "Hardware",
+  supply: "Supply",
+  services: "Services",
+};
+
+function categoryLabel(value: string) {
+  const key = value.trim().toLowerCase() as (typeof CATEGORIES)[number];
+  return CATEGORY_LABELS[key] || value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 const formatNu = (n: number) =>
   `Nu. ${Number(n || 0).toLocaleString(undefined, {
     minimumFractionDigits: 0,
@@ -737,8 +749,8 @@ export default function QuotationsPage() {
                         >
                           {statusLabel(q.status)}
                         </Badge>
-                        <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                          {q.category}
+                        <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground">
+                          {categoryLabel(q.category)}
                         </span>
                       </div>
                       <p className="mt-1 truncate text-xs text-muted-foreground">
@@ -1113,12 +1125,14 @@ export default function QuotationsPage() {
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select category">
+                        {categoryLabel(form.category)}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {CATEGORIES.map((c) => (
-                        <SelectItem key={c} value={c} className="capitalize">
-                          {c}
+                        <SelectItem key={c} value={c}>
+                          {CATEGORY_LABELS[c]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1135,7 +1149,7 @@ export default function QuotationsPage() {
                           filteredCatalog.length
                             ? "Select product from master"
                             : catalog.length
-                              ? `No ${form.category} products`
+                              ? `No ${categoryLabel(form.category)} products`
                               : "No active products"
                         }
                       />
