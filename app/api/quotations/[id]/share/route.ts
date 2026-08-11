@@ -16,6 +16,7 @@ import {
   normalizeBhutanPhone,
   quotationPublicPath,
 } from "@/lib/quotations/shareQuotation";
+import { loadClientGreetingSettings } from "@/lib/settings/clientGreetingSettings";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { sendEmail } from "@/lib/email/sendEmail";
 
@@ -63,6 +64,7 @@ export async function POST(
     const publicUrl = absolutePublicUrl(req, quotation.publicId);
     const businessName =
       quotation.businessName || quotation.customerName || "Client";
+    const { greeting } = await loadClientGreetingSettings();
     const message = buildQuotationShareMessage({
       quotationNumber: quotation.quotationNumber,
       businessName,
@@ -71,6 +73,7 @@ export async function POST(
       advancePercent: Number(quotation.advancePercent || 0),
       publicUrl,
       quotationFor: quotation.quotationFor,
+      greeting,
     });
     const subject = buildQuotationEmailSubject(quotation.quotationNumber);
 

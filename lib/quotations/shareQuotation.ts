@@ -19,9 +19,12 @@ export function buildQuotationShareMessage(input: {
   advancePercent: number;
   publicUrl: string;
   quotationFor?: string | null;
+  /** Opening line clients see (ERP setting), e.g. "Kuzu zangpola!" */
+  greeting?: string | null;
 }) {
+  const greeting = (input.greeting || "Kuzu zangpola!").trim() || "Kuzu zangpola!";
   const lines = [
-    `Namaste!`,
+    greeting,
     ``,
     `Please find quotation *${input.quotationNumber}* from Innovates Bhutan.`,
     `Client: ${input.businessName}`,

@@ -59,6 +59,8 @@ export default function SettingsPage() {
     mbobGui: "com.bob.bt",
     /** Bhutan sales GST % for quotations (ERP-only control) */
     gstRate: "5",
+    /** Opening line on WhatsApp / email quotation shares */
+    clientGreeting: "Kuzu zangpola!",
     
     // Email
     sendgridKey: "",
@@ -112,6 +114,10 @@ export default function SettingsPage() {
         mbobMcc: map.mbob_mcc || "5732",
         mbobGui: map.mbob_gui || "com.bob.bt",
         gstRate: map.gst_rate != null && map.gst_rate !== "" ? String(map.gst_rate) : "5",
+        clientGreeting:
+          map.client_greeting != null && String(map.client_greeting).trim() !== ""
+            ? String(map.client_greeting)
+            : "Kuzu zangpola!",
         sendgridKey: map.sendgrid_key || "",
         mailgunDomain: map.mailgun_domain || "",
         mailgunKey: map.mailgun_key || "",
@@ -405,30 +411,55 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-medium flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-[#0A5F4E]" /> Sales GST (Quotations)
+                <CreditCard className="w-5 h-5 text-[#0A5F4E]" /> Quotations
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-[#717171]">
-                Default GST % applied on new quotations (subtotal → GST → total).
-                Rate is snapshotted on each quote so history stays correct if you
-                change this later.
-              </p>
-              <div className="space-y-2 max-w-xs">
-                <label className="text-xs font-medium text-[#717171]">
-                  GST rate (%)
-                </label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step="0.01"
-                  className="bg-[#F3F3F1] border-[#E5E5E1]"
-                  value={settings.gstRate}
-                  onChange={(e) =>
-                    setSettings({ ...settings, gstRate: e.target.value })
-                  }
-                />
+            <CardContent className="space-y-5">
+              <div className="space-y-3">
+                <p className="text-xs text-[#717171]">
+                  Opening line clients see on WhatsApp / email quotation shares
+                  (e.g. Kuzu zangpola!).
+                </p>
+                <div className="space-y-2 max-w-md">
+                  <label className="text-xs font-medium text-[#717171]">
+                    Client greeting
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Kuzu zangpola!"
+                    className="bg-[#F3F3F1] border-[#E5E5E1]"
+                    value={settings.clientGreeting}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        clientGreeting: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="border-t border-[#E5E5E1] pt-4 space-y-3">
+                <p className="text-xs text-[#717171]">
+                  Default GST % applied on new quotations (subtotal → GST → total).
+                  Rate is snapshotted on each quote so history stays correct if you
+                  change this later.
+                </p>
+                <div className="space-y-2 max-w-xs">
+                  <label className="text-xs font-medium text-[#717171]">
+                    GST rate (%)
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    className="bg-[#F3F3F1] border-[#E5E5E1]"
+                    value={settings.gstRate}
+                    onChange={(e) =>
+                      setSettings({ ...settings, gstRate: e.target.value })
+                    }
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
