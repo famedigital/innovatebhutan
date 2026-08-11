@@ -100,3 +100,31 @@ export async function PATCH(
     });
   }
 }
+
+/** Permanently delete quotation + line items */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const authContext = await requireApiAuth(req);
+    requireStaffOrAdmin(authContext.profile);
+
+    const { id } = await params;
+    const quotationId = validateId(id, "Quotation ID");
+    const deleted = await quotationService.delete(quotationId);
+    if (!deleted) throw new NotFoundError("Quotation");
+
+    return NextResponse.json({
+      success: true,
+      message: "Quotation deleted successfully",
+    });
+  } catch (error) {
+    console.error("[API /api/quotations/[id]] DELETE error:", error);
+    return NextResponse.json(formatApiError(error), {
+      status: error instanceof Error && "statusCode" in error
+        ? (error as { statusCode: number }).statusCode
+        : 500,
+    });
+  }
+}

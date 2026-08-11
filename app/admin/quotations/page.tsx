@@ -44,6 +44,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -150,6 +160,8 @@ export default function QuotationsPage() {
   const [editGstRate, setEditGstRate] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [deleteTarget, setDeleteTarget] = useState<Quotation | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [lineItems, setLineItems] = useState<
     Array<{
       productMasterId?: number;
@@ -577,6 +589,28 @@ export default function QuotationsPage() {
     }
   };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/quotations/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Delete failed");
+      }
+      toast.success(`${deleteTarget.quotationNumber} deleted`);
+      if (selected?.id === deleteTarget.id) setSelected(null);
+      setDeleteTarget(null);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const selectQuotation = async (q: Quotation) => {
     setSelected(q);
     try {
@@ -729,16 +763,18 @@ export default function QuotationsPage() {
                 const taxRate = Number(q.taxRate ?? 0);
                 const taxAmount = Number(q.taxAmount ?? 0);
                 return (
-                  <button
+                  <div
                     key={q.id}
-                    type="button"
-                    onClick={() => selectQuotation(q)}
                     className={cn(
-                      "flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/40",
+                      "group relative flex items-center gap-2 px-4 py-3.5 transition-colors hover:bg-muted/40",
                       selected?.id === q.id && "bg-muted/50"
                     )}
                   >
-                    <div className="min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => selectQuotation(q)}
+                      className="min-w-0 flex-1 text-left"
+                    >
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-semibold tracking-tight">
                           {q.quotationNumber}
@@ -759,16 +795,81 @@ export default function QuotationsPage() {
                           ? ` · GST ${taxRate}% (${formatNu(taxAmount)})`
                           : null}
                       </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <div className="text-sm font-semibold tabular-nums">
-                        {formatNu(Number(q.totalAmount || 0))}
+                    </button>
+
+                    <div className="relative flex shrink-0 items-center justify-end">
+                      <div
+                        className={cn(
+                          "pr-1 text-right transition-opacity",
+                          "group-hover:opacity-0 group-focus-within:opacity-0",
+                          selected?.id === q.id && "sm:opacity-0"
+                        )}
+                      >
+                        <div className="text-sm font-semibold tabular-nums">
+                          {formatNu(Number(q.totalAmount || 0))}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          incl. GST
+                        </div>
                       </div>
-                      <div className="text-[10px] text-muted-foreground">
-                        incl. GST
+
+                      <div
+                        className={cn(
+                          "absolute right-0 top-1/2 z-10 flex -translate-y-1/2 items-center gap-0.5 rounded-lg border bg-card p-0.5 shadow-sm transition-opacity",
+                          "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto",
+                          selected?.id === q.id &&
+                            "sm:opacity-100 sm:pointer-events-auto"
+                        )}
+                      >
+                        {canEdit(q.status) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            title="Edit"
+                            aria-label={`Edit ${q.quotationNumber}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelected(q);
+                              openEdit(q);
+                            }}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          title="Download PDF"
+                          aria-label={`Download PDF ${q.quotationNumber}`}
+                          disabled={sharing === "download"}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void downloadPdf(q);
+                          }}
+                        >
+                          <Download className="size-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          title="Delete"
+                          aria-label={`Delete ${q.quotationNumber}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(q);
+                          }}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -805,15 +906,25 @@ export default function QuotationsPage() {
                       selected.customerName}
                   </p>
                 </div>
-                {canEdit(selected.status) && (
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {canEdit(selected.status) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEdit(selected)}
+                    >
+                      <Pencil className="mr-1 size-3.5" /> Edit
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => openEdit(selected)}
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setDeleteTarget(selected)}
                   >
-                    <Pencil className="mr-1 size-3.5" /> Edit
+                    <Trash2 className="mr-1 size-3.5" /> Delete
                   </Button>
-                )}
+                </div>
               </div>
 
               <div className="space-y-2 rounded-xl border bg-muted/25 p-3 text-sm">

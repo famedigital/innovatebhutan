@@ -214,6 +214,19 @@ export class QuotationRepository {
       .where(sql`${salesQuotations.quotationNumber} LIKE ${prefix + "%"}`);
     return Number(result[0]?.count || 0);
   }
+
+  async delete(id: number): Promise<boolean> {
+    return await this.db.transaction(async (tx) => {
+      await tx
+        .delete(salesQuotationItems)
+        .where(eq(salesQuotationItems.quotationId, id));
+      const deleted = await tx
+        .delete(salesQuotations)
+        .where(eq(salesQuotations.id, id))
+        .returning({ id: salesQuotations.id });
+      return deleted.length > 0;
+    });
+  }
 }
 
 export const quotationRepository = new QuotationRepository();

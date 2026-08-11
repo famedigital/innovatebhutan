@@ -342,6 +342,12 @@ export class QuotationService {
 
     return { quotation: updatedQuotation, project };
   }
+
+  async delete(id: number): Promise<boolean> {
+    const existing = await this.repository.getById(id);
+    if (!existing) return false;
+    return this.repository.delete(id);
+  }
 }
 
 export const quotationService = new QuotationService();
