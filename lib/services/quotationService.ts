@@ -14,6 +14,10 @@ import type {
 } from "@/lib/validations/quotation";
 import type { QuotationFilters } from "@/lib/repositories/quotationRepository";
 import { buildQuotationMbobQr } from "@/lib/payments/mbobSettings";
+import {
+  calcGstAmount,
+  loadGstSettings,
+} from "@/lib/settings/gstSettings";
 import { BadRequestError } from "@/lib/errors";
 
 export const DEFAULT_TRAINING_PLAN = [
@@ -90,7 +94,12 @@ export class QuotationService {
     const subtotal = round2(
       lineItems.reduce((sum, item) => sum + Number(item.amount), 0)
     );
-    const taxAmount = 0;
+    const gst = await loadGstSettings();
+    const taxRate =
+      data.taxRate !== undefined && data.taxRate !== null
+        ? Number(data.taxRate)
+        : gst.ratePercent;
+    const taxAmount = calcGstAmount(subtotal, taxRate);
     const totalAmount = round2(subtotal + taxAmount);
     const advancePercent = data.advancePercent ?? 50;
     const advanceAmount = round2(totalAmount * (advancePercent / 100));
@@ -122,6 +131,7 @@ export class QuotationService {
         quotationFor: data.quotationFor ?? null,
         validityDays: data.validityDays ?? 15,
         subtotal: String(subtotal),
+        taxRate: String(taxRate),
         taxAmount: String(taxAmount),
         totalAmount: String(totalAmount),
         advancePercent: String(advancePercent),
@@ -162,7 +172,14 @@ export class QuotationService {
     const subtotal = round2(
       lineItems.reduce((sum, item) => sum + Number(item.amount), 0)
     );
-    const taxAmount = 0;
+    const gst = await loadGstSettings();
+    const taxRate =
+      data.taxRate !== undefined && data.taxRate !== null
+        ? Number(data.taxRate)
+        : existing.taxRate != null
+          ? Number(existing.taxRate)
+          : gst.ratePercent;
+    const taxAmount = calcGstAmount(subtotal, taxRate);
     const totalAmount = round2(subtotal + taxAmount);
     const advancePercent = data.advancePercent ?? 50;
     const advanceAmount = round2(totalAmount * (advancePercent / 100));
@@ -190,6 +207,7 @@ export class QuotationService {
         quotationFor: data.quotationFor ?? null,
         validityDays: data.validityDays ?? existing.validityDays ?? 15,
         subtotal: String(subtotal),
+        taxRate: String(taxRate),
         taxAmount: String(taxAmount),
         totalAmount: String(totalAmount),
         advancePercent: String(advancePercent),
@@ -323,6 +341,12 @@ export class QuotationService {
     });
 
     return { quotation: updatedQuotation, project };
+  }
+
+  async delete(id: number): Promise<boolean> {
+    const existing = await this.repository.getById(id);
+    if (!existing) return false;
+    return this.repository.delete(id);
   }
 }
 

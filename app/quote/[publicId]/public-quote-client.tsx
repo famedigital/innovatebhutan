@@ -19,6 +19,8 @@ type PublicQuote = {
   quotationFor?: string | null;
   validityDays?: number | null;
   subtotal?: string | number | null;
+  taxRate?: string | number | null;
+  taxAmount?: string | number | null;
   totalAmount?: string | number | null;
   advancePercent?: string | number | null;
   advanceAmount?: string | number | null;
@@ -35,6 +37,12 @@ type PublicQuote = {
   mbobAccountNumber?: string | null;
   mbobSetupError?: string | null;
 };
+
+const formatNu = (n: number) =>
+  `Nu. ${Number(n || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
 
 export function PublicQuoteClient({ publicId }: { publicId: string }) {
   const [quote, setQuote] = useState<PublicQuote | null>(null);
@@ -69,6 +77,9 @@ export function PublicQuoteClient({ publicId }: { publicId: string }) {
     if (!quote) return;
     setDownloading(true);
     try {
+      const subtotal = Number(quote.subtotal || 0);
+      const taxRate = Number(quote.taxRate || 0);
+      const taxAmount = Number(quote.taxAmount || 0);
       const blob = await renderQuotationPdf({
         quotationNumber: quote.quotationNumber,
         category: quote.category,
@@ -83,7 +94,9 @@ export function PublicQuoteClient({ publicId }: { publicId: string }) {
           unitPrice: Number(item.unitPrice),
           amount: Number(item.amount),
         })),
-        subtotal: Number(quote.subtotal || quote.totalAmount || 0),
+        subtotal: subtotal || Number(quote.totalAmount || 0),
+        taxRate,
+        taxAmount,
         totalAmount: Number(quote.totalAmount || 0),
         advancePercent: Number(quote.advancePercent || 0),
         advanceAmount: Number(quote.advanceAmount || 0),
@@ -126,6 +139,10 @@ export function PublicQuoteClient({ publicId }: { publicId: string }) {
     );
   }
 
+  const taxRate = Number(quote.taxRate || 0);
+  const taxAmount = Number(quote.taxAmount || 0);
+  const subtotal = Number(quote.subtotal || 0);
+
   return (
     <main className="min-h-screen bg-[#F7FBFD] text-[#111]">
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
@@ -160,36 +177,68 @@ export function PublicQuoteClient({ publicId }: { publicId: string }) {
             ) : null}
           </div>
 
-          <ul className="divide-y border rounded-xl overflow-hidden">
-            {(quote.items || []).map((item, i) => (
-              <li
-                key={i}
-                className="flex justify-between gap-3 px-3 py-2.5 text-sm bg-white"
-              >
-                <span>
-                  {item.quantity}× {item.name}
-                  {item.brand ? (
-                    <span className="text-muted-foreground"> ({item.brand})</span>
-                  ) : null}
-                </span>
-                <span className="tabular-nums shrink-0 font-medium">
-                  Nu. {Number(item.amount).toLocaleString()}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="overflow-hidden rounded-xl border">
+            <div className="grid grid-cols-[1fr_48px_88px_72px] gap-1 border-b bg-[#F7FBFD] px-3 py-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              <span>Item</span>
+              <span className="text-center">Qty</span>
+              <span className="text-right">Amount</span>
+              <span className="text-right">GST</span>
+            </div>
+            <ul className="divide-y">
+              {(quote.items || []).map((item, i) => {
+                const amount = Number(item.amount);
+                const lineGst =
+                  Math.round(amount * (taxRate / 100) * 100) / 100;
+                return (
+                  <li
+                    key={i}
+                    className="grid grid-cols-[1fr_48px_88px_72px] items-start gap-1 px-3 py-2.5 text-sm bg-white"
+                  >
+                    <span className="min-w-0 leading-snug">
+                      {item.name}
+                      {item.brand ? (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          ({item.brand})
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="text-center tabular-nums text-muted-foreground">
+                      {item.quantity}
+                    </span>
+                    <span className="text-right tabular-nums font-medium">
+                      {formatNu(amount)}
+                    </span>
+                    <span className="text-right tabular-nums text-muted-foreground">
+                      {formatNu(lineGst)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
 
-          <div className="text-sm space-y-1 pt-1">
+          <div className="text-sm space-y-1.5 pt-1">
             <p className="flex justify-between">
-              <span>Total</span>
-              <strong>
-                Nu. {Number(quote.totalAmount || 0).toLocaleString()}
+              <span className="text-muted-foreground">Subtotal</span>
+              <span className="tabular-nums">{formatNu(subtotal)}</span>
+            </p>
+            {(taxAmount > 0 || taxRate > 0) && (
+              <p className="flex justify-between">
+                <span className="text-muted-foreground">GST ({taxRate}%)</span>
+                <span className="tabular-nums">{formatNu(taxAmount)}</span>
+              </p>
+            )}
+            <p className="flex justify-between text-base pt-1 border-t">
+              <span className="font-semibold">Total</span>
+              <strong className="tabular-nums">
+                {formatNu(Number(quote.totalAmount || 0))}
               </strong>
             </p>
             <p className="flex justify-between text-[#00B5E2]">
               <span>Advance ({Number(quote.advancePercent || 0)}%)</span>
-              <strong>
-                Nu. {Number(quote.advanceAmount || 0).toLocaleString()}
+              <strong className="tabular-nums">
+                {formatNu(Number(quote.advanceAmount || 0))}
               </strong>
             </p>
             {quote.validityDays ? (
