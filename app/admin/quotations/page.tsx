@@ -20,6 +20,9 @@ import {
   Percent,
   Search,
   Settings2,
+  ChevronsUpDown,
+  UserRound,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +63,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { toast } from "sonner";
 
 const CATEGORIES = ["software", "hardware", "supply", "services"] as const;
@@ -92,6 +108,21 @@ type CatalogProduct = {
   unitPrice?: string | number | null;
 };
 
+type ClientOption = {
+  id: number;
+  name: string;
+  active?: boolean | null;
+  contactPerson?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  whatsapp?: string | null;
+  address?: string | null;
+  address2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  businessName?: string | null;
+};
+
 type QuotationItem = {
   productMasterId?: number | null;
   name: string;
@@ -106,6 +137,7 @@ type Quotation = {
   publicId?: string;
   quotationNumber: string;
   category: string;
+  clientId?: number | null;
   businessName?: string | null;
   customerName?: string | null;
   phone?: string | null;
@@ -131,6 +163,7 @@ type Quotation = {
 
 const emptyForm = {
   category: "software",
+  clientId: "" as string,
   businessName: "",
   customerName: "",
   phone: "",
@@ -148,6 +181,7 @@ const emptyForm = {
 export default function QuotationsPage() {
   const [list, setList] = useState<Quotation[]>([]);
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -162,6 +196,8 @@ export default function QuotationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [deleteTarget, setDeleteTarget] = useState<Quotation | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [clientPickerOpen, setClientPickerOpen] = useState(false);
+  const [clientQuery, setClientQuery] = useState("");
   const [lineItems, setLineItems] = useState<
     Array<{
       productMasterId?: number;
@@ -175,14 +211,16 @@ export default function QuotationsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [qRes, pRes, gRes] = await Promise.all([
+      const [qRes, pRes, gRes, cRes] = await Promise.all([
         fetch("/api/quotations"),
         fetch("/api/product-master?active=true&limit=500"),
         fetch("/api/settings/gst"),
+        fetch("/api/clients"),
       ]);
       const qData = await qRes.json();
       const pData = await pRes.json();
       const gData = await gRes.json();
+      const cData = await cRes.json();
       if (qRes.ok && qData.success) setList(qData.data || []);
       else toast.error(qData.error || "Failed to load quotations");
 
@@ -198,6 +236,12 @@ export default function QuotationsPage() {
 
       if (gRes.ok && gData.success && gData.data?.ratePercent != null) {
         setErpGstRate(Number(gData.data.ratePercent) || 0);
+      }
+
+      if (cRes.ok && cData.success) {
+        setClients(cData.data || []);
+      } else {
+        setClients([]);
       }
     } catch {
       toast.error("Failed to load quotations");
@@ -267,6 +311,38 @@ export default function QuotationsPage() {
     });
   }, [list, search, statusFilter]);
 
+  const activeClients = useMemo(
+    () => clients.filter((c) => c.active !== false),
+    [clients]
+  );
+
+  const filteredClients = useMemo(() => {
+    const q = clientQuery.trim().toLowerCase();
+    const pool = activeClients;
+    if (!q) return pool.slice(0, 80);
+    return pool
+      .filter((c) => {
+        const hay = [
+          c.name,
+          c.businessName,
+          c.contactPerson,
+          c.phone,
+          c.whatsapp,
+          c.email,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(q);
+      })
+      .slice(0, 80);
+  }, [activeClients, clientQuery]);
+
+  const selectedClient = useMemo(() => {
+    if (!form.clientId) return null;
+    return activeClients.find((c) => String(c.id) === form.clientId) || null;
+  }, [activeClients, form.clientId]);
+
   const canEdit = (status: string) =>
     status === "draft" || status === "sent" || status === "advance_paid";
 
@@ -275,11 +351,33 @@ export default function QuotationsPage() {
     setEditGstRate(null);
     setForm(emptyForm);
     setLineItems([]);
+    setClientPickerOpen(false);
+    setClientQuery("");
   };
 
   const openCreate = () => {
     resetDialog();
     setOpen(true);
+  };
+
+  const applyClient = (client: ClientOption) => {
+    setForm((prev) => ({
+      ...prev,
+      clientId: String(client.id),
+      businessName: (client.businessName || client.name || "").trim(),
+      customerName: (client.contactPerson || "").trim(),
+      phone: (client.phone || client.whatsapp || "").trim(),
+      email: (client.email || "").trim(),
+      address: (client.address || "").trim(),
+      address2: (client.address2 || "").trim(),
+      state: (client.state || client.city || prev.state || "Thimphu").trim(),
+    }));
+    setClientPickerOpen(false);
+    setClientQuery("");
+  };
+
+  const clearLinkedClient = () => {
+    setForm((prev) => ({ ...prev, clientId: "" }));
   };
 
   const openEdit = (q: Quotation) => {
@@ -295,6 +393,7 @@ export default function QuotationsPage() {
     );
     setForm({
       category: q.category || "software",
+      clientId: q.clientId ? String(q.clientId) : "",
       businessName: q.businessName || "",
       customerName: q.customerName || "",
       phone: q.phone || "",
@@ -317,6 +416,7 @@ export default function QuotationsPage() {
         unitPrice: Number(item.unitPrice) || 0,
       }))
     );
+    setClientQuery("");
     setOpen(true);
   };
 
@@ -401,6 +501,7 @@ export default function QuotationsPage() {
     try {
       const payload = {
         category: form.category,
+        clientId: form.clientId ? Number(form.clientId) : undefined,
         businessName: form.businessName.trim(),
         customerName: form.customerName.trim() || undefined,
         phone: form.phone || undefined,
@@ -1123,6 +1224,108 @@ export default function QuotationsPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label>Existing client</Label>
+                  <div className="flex gap-2">
+                    <Popover
+                      open={clientPickerOpen}
+                      onOpenChange={setClientPickerOpen}
+                      modal={false}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={clientPickerOpen}
+                          className="h-10 w-full justify-between font-normal"
+                        >
+                          <span className="flex min-w-0 items-center gap-2">
+                            <UserRound className="size-4 shrink-0 text-muted-foreground" />
+                            <span className="truncate">
+                              {selectedClient
+                                ? selectedClient.businessName ||
+                                  selectedClient.name
+                                : form.clientId
+                                  ? form.businessName || "Linked client"
+                                  : "Search existing client…"}
+                            </span>
+                          </span>
+                          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[var(--radix-popover-trigger-width)] p-0"
+                        align="start"
+                        onOpenAutoFocus={(e) => e.preventDefault()}
+                      >
+                        <Command shouldFilter={false}>
+                          <CommandInput
+                            placeholder="Search name, phone, email…"
+                            value={clientQuery}
+                            onValueChange={setClientQuery}
+                          />
+                          <CommandList>
+                            <CommandEmpty>
+                              {activeClients.length === 0
+                                ? "No clients in ERP yet. Fill details manually below."
+                                : "No matching client. Fill details manually below."}
+                            </CommandEmpty>
+                            <CommandGroup heading="Clients">
+                              {filteredClients.map((client) => {
+                                const label =
+                                  client.businessName || client.name;
+                                return (
+                                  <CommandItem
+                                    key={client.id}
+                                    value={`${client.id}-${label}`}
+                                    onSelect={() => applyClient(client)}
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="truncate font-medium">
+                                        {label}
+                                      </div>
+                                      <div className="truncate text-xs text-muted-foreground">
+                                        {[
+                                          client.contactPerson,
+                                          client.phone || client.whatsapp,
+                                          client.email,
+                                        ]
+                                          .filter(Boolean)
+                                          .join(" · ") || "No contact details"}
+                                      </div>
+                                    </div>
+                                    {form.clientId === String(client.id) ? (
+                                      <CheckCircle2 className="size-4 shrink-0 text-primary" />
+                                    ) : null}
+                                  </CommandItem>
+                                );
+                              })}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {form.clientId ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        title="Unlink client"
+                        aria-label="Unlink client"
+                        onClick={clearLinkedClient}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    ) : null}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Search and select a client to autofill details. Or type a new
+                    business name below.
+                  </p>
+                </div>
+
                 <div className="space-y-1.5 sm:col-span-1">
                   <Label htmlFor="q-business">Business name *</Label>
                   <Input
@@ -1130,7 +1333,12 @@ export default function QuotationsPage() {
                     placeholder="Company or shop name"
                     value={form.businessName}
                     onChange={(e) =>
-                      setForm({ ...form, businessName: e.target.value })
+                      setForm({
+                        ...form,
+                        businessName: e.target.value,
+                        // Keep link if user only tweaks spelling; clear if emptied
+                        clientId: e.target.value.trim() ? form.clientId : "",
+                      })
                     }
                   />
                 </div>
